@@ -11,6 +11,20 @@ STATUS_LABELS = {
     'cancelled': 'Đã hủy',
 }
 
+USER_STATUS_LABELS = {
+    'pending': 'Chờ admin xác nhận',
+    'in_progress': 'Admin đang hỗ trợ',
+    'completed': 'Đã hỗ trợ xong',
+    'cancelled': 'Đã hủy yêu cầu',
+}
+
+USER_STATUS_HINTS = {
+    'pending': 'Admin đã nhận đơn và sẽ hỗ trợ nâng cấp/kích hoạt tài khoản sớm.',
+    'in_progress': 'Admin đang xử lý nâng cấp/kích hoạt tài khoản cho bạn.',
+    'completed': 'Tài khoản đã được hỗ trợ/kích hoạt thành công.',
+    'cancelled': 'Yêu cầu hỗ trợ đã bị hủy. Liên hệ Zalo nếu cần trợ giúp.',
+}
+
 ACTION_MAP = {
     'in_progress': 'start',
     'completed': 'complete',
@@ -86,6 +100,44 @@ def list_notifications(conn, status=None, q=None):
 def get_notification(conn, nid):
     row = db.fetchone(conn, _select_sql() + ' WHERE sn.id = ?', (nid,))
     return fmt_notification(row)
+
+
+def fmt_user_support(row):
+    if not row:
+        return None
+    status = row['status']
+    return {
+        'id': row['id'],
+        'orderId': row['order_id'],
+        'status': status,
+        'statusLabel': USER_STATUS_LABELS.get(status, status),
+        'hint': USER_STATUS_HINTS.get(status, ''),
+        'updatedAt': str(row.get('updated_at', '')),
+        'completedAt': str(row['completed_at']) if row.get('completed_at') else None,
+    }
+
+
+def get_by_order_id(conn, order_id, user_id=None):
+    sql = 'SELECT * FROM support_notifications WHERE order_id = ?'
+    params = [order_id]
+    if user_id is not None:
+        sql += ' AND user_id = ?'
+        params.append(user_id)
+    row = db.fetchone(conn, sql, tuple(params))
+    return fmt_user_support(row)
+
+
+def map_by_order_ids(conn, order_ids, user_id=None):
+    if not order_ids:
+        return {}
+    placeholders = ','.join(['?'] * len(order_ids))
+    sql = f'SELECT * FROM support_notifications WHERE order_id IN ({placeholders})'
+    params = list(order_ids)
+    if user_id is not None:
+        sql += f' AND user_id = ?'
+        params.append(user_id)
+    rows = db.fetchall(conn, sql, tuple(params))
+    return {r['order_id']: fmt_user_support(r) for r in rows}
 
 
 def pending_count(conn):

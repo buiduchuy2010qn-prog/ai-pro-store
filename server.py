@@ -131,7 +131,7 @@ def fmt_order_row(row, extra=None):
     return item
 
 
-def fetch_order_detail(conn, oid):
+def fetch_order_detail(conn, oid, user_view=False):
     order = db.fetchone(conn, 'SELECT * FROM orders WHERE id = ?', (oid,))
     if not order:
         return None
@@ -147,6 +147,17 @@ def fetch_order_detail(conn, oid):
     detail['contactMode'] = norm_contact_mode((product or {}).get('contact_mode'))
     detail.update(order_contact_fields(order))
     detail['customer'] = {'fullName': user['name'], 'email': user['email']} if user else None
+    from services.support_notification_service import get_by_order_id, fmt_notification
+    sn_row = db.fetchone(conn, 'SELECT * FROM support_notifications WHERE order_id = ?', (oid,))
+    if sn_row:
+        if user_view:
+            detail['support'] = get_by_order_id(conn, oid, order['user_id'])
+        else:
+            detail['support'] = fmt_notification({
+                **sn_row,
+                'order_code': order.get('order_code'),
+                'contact_phone': order.get('contact_phone'),
+            })
     if tx:
         detail['transaction'] = {
             'id': tx['id'],
@@ -603,8 +614,15 @@ def user_orders():
     rows = db.fetchall(conn,
         'SELECT id,product_id,product_name AS product,price,status,order_code,created_at AS date FROM orders WHERE user_id = ? ORDER BY id DESC',
         (request.user['id'],))
+    from services.support_notification_service import map_by_order_ids
+    support_map = map_by_order_ids(conn, [r['id'] for r in rows], request.user['id'])
+    orders = []
+    for r in rows:
+        item = fmt_order_row(r)
+        item['support'] = support_map.get(r['id'])
+        orders.append(item)
     db.close(conn)
-    return jsonify({'orders': [fmt_order_row(r) for r in rows]})
+    return jsonify({'orders': orders})
 
 
 # ─── Products & Orders ───
@@ -654,10 +672,18 @@ def order_create():
     db.commit(conn)
     bal = db.fetchone(conn, 'SELECT balance FROM users WHERE id = ?', (user['id'],))['balance']
     db.close(conn)
+    from services.support_notification_service import USER_STATUS_LABELS, USER_STATUS_HINTS
     return jsonify({
         'orderId': oid, 'orderCode': order_code, 'transactionCode': gen_tx_code(txid),
         'product': product['name'], 'price': product['price'], 'balance': bal,
         'supportNotificationId': support_nid,
+        'support': {
+            'id': support_nid,
+            'orderId': oid,
+            'status': 'pending',
+            'statusLabel': USER_STATUS_LABELS['pending'],
+            'hint': USER_STATUS_HINTS['pending'],
+        },
     }), 201
 
 
@@ -672,7 +698,8 @@ def order_detail(oid):
     if order['user_id'] != request.user['id'] and request.user['role'] != 'admin':
         db.close(conn)
         return jsonify({'error': 'Không có quyền.'}), 403
-    detail = fetch_order_detail(conn, oid)
+    user_view = order['user_id'] == request.user['id'] and request.user['role'] != 'admin'
+    detail = fetch_order_detail(conn, oid, user_view=user_view)
     db.close(conn)
     return jsonify({'order': detail})
 
@@ -1726,12 +1753,22 @@ def admin_orders():
         SELECT o.id,o.product_id,o.product_name AS product,o.price,o.status,o.order_code,o.created_at AS date,
                o.contact_email,o.contact_phone,u.email,u.name AS customer_name
         FROM orders o JOIN users u ON u.id=o.user_id ORDER BY o.id DESC''')
+    from services.support_notification_service import map_by_order_ids, STATUS_LABELS
+    support_map = map_by_order_ids(conn, [r['id'] for r in rows])
+    orders = []
+    for r in rows:
+        item = fmt_order_row(r, {
+            'email': r['email'], 'customerName': r['customer_name'],
+            'contactEmail': r.get('contact_email') or '',
+            'contactPhone': r.get('contact_phone') or '',
+        })
+        sup = support_map.get(r['id'])
+        if sup:
+            sup['statusLabel'] = STATUS_LABELS.get(sup['status'], sup['status'])
+        item['support'] = sup
+        orders.append(item)
     db.close(conn)
-    return jsonify({'orders': [fmt_order_row(r, {
-        'email': r['email'], 'customerName': r['customer_name'],
-        'contactEmail': r.get('contact_email') or '',
-        'contactPhone': r.get('contact_phone') or '',
-    }) for r in rows]})
+    return jsonify({'orders': orders})
 
 
 @app.route('/api/admin/transactions')

@@ -593,6 +593,7 @@ let currentAdminTab = 'dashboard';
 let activeTopupId = null;
 let pollTimer = null;
 let supportPollTimer = null;
+let orderSupportPollTimer = null;
 let lastSupportPendingCount = 0;
 let supportFilterStatus = '';
 let forgotEmail = '';
@@ -672,6 +673,56 @@ function statusBadge(s) {
     return `<span class="status-badge ${m[s] || 'badge-muted'}">${escapeHtml(labels[s] || s)}</span>`;
 }
 
+function supportStatusBadge(support, forUser = true) {
+    if (!support?.status) return '';
+    const cls = {
+        pending: 'badge-pending',
+        in_progress: 'badge-in-progress',
+        completed: 'badge-success',
+        cancelled: 'badge-cancelled',
+    };
+    const labels = forUser ? {
+        pending: 'Chờ admin xác nhận',
+        in_progress: 'Admin đang hỗ trợ',
+        completed: 'Đã hỗ trợ xong',
+        cancelled: 'Đã hủy yêu cầu',
+    } : {
+        pending: 'Chờ xử lý',
+        in_progress: 'Đang hỗ trợ',
+        completed: 'Hoàn thành',
+        cancelled: 'Đã hủy',
+    };
+    const text = support.statusLabel || labels[support.status] || support.status;
+    return `<span class="status-badge ${cls[support.status] || 'badge-muted'}">${escapeHtml(text)}</span>`;
+}
+
+function supportStatusBlock(support) {
+    if (!support?.status) return '';
+    const hints = {
+        pending: 'Admin đã nhận đơn và sẽ hỗ trợ nâng cấp/kích hoạt tài khoản sớm.',
+        in_progress: 'Admin đang xử lý nâng cấp/kích hoạt tài khoản cho bạn.',
+        completed: 'Tài khoản đã được hỗ trợ/kích hoạt thành công.',
+        cancelled: 'Yêu cầu hỗ trợ đã bị hủy. Liên hệ Zalo 0944255413 nếu cần trợ giúp.',
+    };
+    const hint = support.hint || hints[support.status] || '';
+    const doneAt = support.completedAt ? `<div class="text-xs text-slate-500 mt-2"><i class="fas fa-check-circle mr-1 text-emerald-500"></i>Hoàn thành lúc ${escapeHtml(support.completedAt)}</div>` : '';
+    const boxCls = {
+        pending: 'bg-amber-50 border-amber-200',
+        in_progress: 'bg-sky-50 border-sky-200',
+        completed: 'bg-emerald-50 border-emerald-200',
+        cancelled: 'bg-slate-50 border-slate-200',
+    }[support.status] || 'bg-slate-50 border-slate-200';
+    return `
+        <div class="${boxCls} border rounded-xl p-4 sm:col-span-2">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <div class="text-slate-500 text-xs uppercase tracking-wide"><i class="fas fa-headset mr-1"></i>Trạng thái hỗ trợ nâng cấp</div>
+                ${supportStatusBadge(support)}
+            </div>
+            <p class="text-sm text-slate-700">${escapeHtml(hint)}</p>
+            ${doneAt}
+        </div>`;
+}
+
 function productStyle(color) {
     return PRODUCT_COLORS[color] || PRODUCT_COLORS.sky;
 }
@@ -734,6 +785,7 @@ function showForgotPanel(step = 1) {
 function showAuth() {
     stopPolling();
     stopSupportPolling();
+    stopOrderSupportPolling();
     currentUser = null;
     forgotEmail = '';
     forgotOtp = '';
@@ -801,7 +853,12 @@ function navigateTo(view) {
     document.getElementById('mobile-menu').classList.add('hidden');
     if (view === 'products') loadProducts();
     if (view === 'wallet') renderWallet();
-    if (view === 'orders') loadMyOrders();
+    if (view === 'orders') {
+        loadMyOrders();
+        startOrderSupportPolling();
+    } else {
+        stopOrderSupportPolling();
+    }
     if (view === 'transactions') loadMyTransactions();
     if (viewId === 'dressroom') loadDressRoom();
     if (viewId === 'admin') loadAdmin();
@@ -900,6 +957,7 @@ async function submitPurchase(id, contact = {}) {
         7000
     );
     loadProducts();
+    if (currentView === 'orders') loadMyOrders();
 }
 
 function confirmPurchase() {
@@ -1047,6 +1105,7 @@ async function openOrderDetail(id) {
                         <div class="text-slate-500">${escapeHtml(order.customer.email)}</div>
                     </div>` : ''}
                     ${orderContactBlock(order)}
+                    ${supportStatusBlock(order.support)}
                     ${order.productDesc ? `
                     <div class="bg-slate-50 rounded-xl p-3 border sm:col-span-2">
                         <div class="text-slate-500 text-xs mb-1">Mô tả</div>
@@ -1093,6 +1152,9 @@ async function loadMyOrders() {
                     <div class="font-semibold">${escapeHtml(o.product)}</div>
                     <div class="text-sm mt-1">${orderCodeBtn(o)}</div>
                     <div class="text-sm text-slate-500">${escapeHtml(o.date)}</div>
+                    ${o.support ? `<div class="mt-2 flex items-center gap-2 text-xs">
+                        <span class="text-slate-500">Hỗ trợ:</span>${supportStatusBadge(o.support)}
+                    </div>` : ''}
                 </div>
                 <div class="text-right">
                     <div class="font-bold text-brand-600">${formatMoney(o.price)}</div>
@@ -1604,6 +1666,20 @@ function stopSupportPolling() {
     updateSupportBadge(0);
 }
 
+function startOrderSupportPolling() {
+    stopOrderSupportPolling();
+    orderSupportPollTimer = setInterval(() => {
+        if (currentView === 'orders') loadMyOrders();
+    }, 20000);
+}
+
+function stopOrderSupportPolling() {
+    if (orderSupportPollTimer) {
+        clearInterval(orderSupportPollTimer);
+        orderSupportPollTimer = null;
+    }
+}
+
 function supportCardActions(n) {
     const phone = (n.customerPhone || '').replace(/\D/g, '');
     const zaloBtn = phone
@@ -1725,6 +1801,7 @@ async function loadAdminOrders() {
                     <div class="text-sm mt-1">${orderCodeBtn(o)}</div>
                     <div class="text-sm text-slate-500">${escapeHtml(o.date)} • ${escapeHtml(o.email || o.customerName || '')}</div>
                     ${contactBits ? `<div class="text-xs text-amber-700 mt-1">${contactBits}</div>` : ''}
+                    ${o.support ? `<div class="mt-1 flex items-center gap-2 text-xs"><span class="text-slate-500">Hỗ trợ:</span>${supportStatusBadge(o.support, false)}</div>` : ''}
                 </div>
                 <div class="text-right">
                     <div class="font-bold">${formatMoney(o.price)}</div>
