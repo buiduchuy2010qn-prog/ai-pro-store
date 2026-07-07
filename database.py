@@ -109,50 +109,43 @@ def init_schema():
     n = sql_now()
 
     if IS_PG:
-        execute(conn, '''
-            CREATE TABLE IF NOT EXISTS users (
+        for stmt in (
+            '''CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL,
                 role TEXT NOT NULL DEFAULT 'user', name TEXT NOT NULL, balance INTEGER NOT NULL DEFAULT 0,
                 topup_code TEXT NOT NULL UNIQUE, is_blocked BOOLEAN DEFAULT FALSE,
-                created_at TIMESTAMP NOT NULL DEFAULT NOW()
-            );
-            CREATE TABLE IF NOT EXISTS password_otps (
+                created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS password_otps (
                 id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
                 otp_hash TEXT NOT NULL, expires_at TIMESTAMP NOT NULL, used BOOLEAN DEFAULT FALSE,
-                attempts INTEGER DEFAULT 0, created_at TIMESTAMP NOT NULL DEFAULT NOW()
-            );
-            CREATE TABLE IF NOT EXISTS products (
+                attempts INTEGER DEFAULT 0, created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS products (
                 id SERIAL PRIMARY KEY, name TEXT NOT NULL, description TEXT, price INTEGER NOT NULL,
-                image TEXT, color TEXT, stock INTEGER DEFAULT 99, created_at TIMESTAMP NOT NULL DEFAULT NOW()
-            );
-            CREATE TABLE IF NOT EXISTS topup_requests (
+                image TEXT, color TEXT, stock INTEGER DEFAULT 99, created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS topup_requests (
                 id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
                 amount INTEGER NOT NULL, topup_code TEXT NOT NULL, status TEXT DEFAULT 'pending',
-                qr_url TEXT, created_at TIMESTAMP NOT NULL DEFAULT NOW(), completed_at TIMESTAMP
-            );
-            CREATE TABLE IF NOT EXISTS transactions (
+                qr_url TEXT, created_at TIMESTAMP NOT NULL DEFAULT NOW(), completed_at TIMESTAMP)''',
+            '''CREATE TABLE IF NOT EXISTS transactions (
                 id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
                 type TEXT NOT NULL, amount INTEGER NOT NULL, description TEXT NOT NULL, status TEXT NOT NULL,
                 bank_transaction_id TEXT, topup_request_id INTEGER, order_id INTEGER,
-                created_at TIMESTAMP NOT NULL DEFAULT NOW()
-            );
-            CREATE TABLE IF NOT EXISTS processed_bank_transactions (
+                created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS processed_bank_transactions (
                 id SERIAL PRIMARY KEY, bank_transaction_id TEXT NOT NULL UNIQUE,
                 amount INTEGER NOT NULL, description TEXT NOT NULL, user_id INTEGER,
-                bank_account TEXT, processed_at TIMESTAMP NOT NULL DEFAULT NOW()
-            );
-            CREATE TABLE IF NOT EXISTS orders (
+                bank_account TEXT, processed_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS orders (
                 id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
                 product_id INTEGER NOT NULL, product_name TEXT NOT NULL, price INTEGER NOT NULL,
                 status TEXT DEFAULT 'completed', order_code TEXT UNIQUE,
-                created_at TIMESTAMP NOT NULL DEFAULT NOW()
-            );
-            CREATE TABLE IF NOT EXISTS mock_bank_incoming (
+                created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS mock_bank_incoming (
                 id SERIAL PRIMARY KEY, bank_transaction_id TEXT NOT NULL UNIQUE,
                 amount INTEGER NOT NULL, description TEXT NOT NULL, account_number TEXT NOT NULL,
-                received_at TIMESTAMP NOT NULL DEFAULT NOW(), processed INTEGER DEFAULT 0
-            );
-        ''')
+                received_at TIMESTAMP NOT NULL DEFAULT NOW(), processed INTEGER DEFAULT 0)''',
+        ):
+            execute(conn, stmt)
     else:
         conn.executescript(f'''
             CREATE TABLE IF NOT EXISTS users (

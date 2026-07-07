@@ -22,8 +22,6 @@ from services.email_service import send_otp_email
 from services.bank_service import (
     gen_topup_code, build_qr, bank_loop, ingest_webhook, process_bank_tx, check_bank
 )
-from services.ai_support import chat as ai_chat, status as ai_status
-
 BASE = Path(__file__).parent
 PUBLIC = BASE / 'public'
 app = Flask(__name__, static_folder=str(PUBLIC), static_url_path='')
@@ -151,7 +149,10 @@ def init_app_data():
                (admin_email,))
     if admin_email != LEGACY_ADMIN_EMAIL:
         for row in db.fetchall(conn, 'SELECT id FROM users WHERE LOWER(email) = ?', (LEGACY_ADMIN_EMAIL,)):
-            purge_user(conn, row['id'])
+            try:
+                purge_user(conn, row['id'])
+            except Exception as e:
+                print(f'[Init] Không xóa được {LEGACY_ADMIN_EMAIL} id={row["id"]}: {e}')
     db.commit(conn)
     for row in db.fetchall(conn, "SELECT id,email FROM users WHERE topup_code IS NULL OR topup_code IN ('','TEMP')"):
         db.execute(conn, 'UPDATE users SET topup_code = ? WHERE id = ?', (gen_topup_code(row['email'], row['id']), row['id']))
@@ -211,13 +212,23 @@ def optional_auth(f):
     return deco
 
 
+def _boot_worker():
+    for attempt in range(5):
+        try:
+            init_app_data()
+            break
+        except Exception as e:
+            print(f'[Init] Lần {attempt + 1} thất bại: {e}')
+            time.sleep(min(3 * (attempt + 1), 15))
+    threading.Thread(target=bank_loop, daemon=True).start()
+
+
 def start_bg():
     global _checker_started
     if _checker_started:
         return
     _checker_started = True
-    init_app_data()
-    threading.Thread(target=bank_loop, daemon=True).start()
+    threading.Thread(target=_boot_worker, daemon=True).start()
 
 
 # ─── Meta ───
@@ -234,12 +245,14 @@ def site_info():
 
 @app.route('/api/support/status')
 def support_status():
+    from services.ai_support import status as ai_status
     return jsonify(ai_status())
 
 
 @app.route('/api/support/chat', methods=['POST'])
 @optional_auth
 def support_chat():
+    from services.ai_support import chat as ai_chat
     d = request.get_json() or {}
     message = d.get('message', '')
     history = d.get('history') or []
