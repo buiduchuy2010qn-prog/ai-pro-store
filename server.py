@@ -58,6 +58,56 @@ def valid_email(email):
     return bool(re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email))
 
 
+def gen_order_code(oid):
+    return f'DH{oid:06d}'
+
+
+def gen_tx_code(tid):
+    return f'GD{tid:06d}'
+
+
+def fmt_order_row(row, extra=None):
+    item = {
+        'id': row['id'],
+        'orderCode': row.get('order_code') or gen_order_code(row['id']),
+        'product': row.get('product') or row.get('product_name'),
+        'productId': row.get('product_id'),
+        'price': row['price'],
+        'status': row['status'],
+        'date': str(row.get('date') or row.get('created_at', '')),
+    }
+    if extra:
+        item.update(extra)
+    return item
+
+
+def fetch_order_detail(conn, oid):
+    order = db.fetchone(conn, 'SELECT * FROM orders WHERE id = ?', (oid,))
+    if not order:
+        return None
+    user = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (order['user_id'],))
+    product = db.fetchone(conn, 'SELECT * FROM products WHERE id = ?', (order['product_id'],))
+    tx = db.fetchone(conn, 'SELECT * FROM transactions WHERE order_id = ? ORDER BY id DESC LIMIT 1', (oid,))
+    if not tx:
+        tx = db.fetchone(conn,
+            "SELECT * FROM transactions WHERE user_id = ? AND type = 'purchase' AND description LIKE ? ORDER BY id DESC LIMIT 1",
+            (order['user_id'], f"%{order['product_name']}%"))
+    detail = fmt_order_row(order)
+    detail['productDesc'] = (product or {}).get('description', '')
+    detail['customer'] = {'fullName': user['name'], 'email': user['email']} if user else None
+    if tx:
+        detail['transaction'] = {
+            'id': tx['id'],
+            'transactionCode': gen_tx_code(tx['id']),
+            'type': tx['type'],
+            'amount': tx['amount'],
+            'description': tx['description'],
+            'status': tx['status'],
+            'date': str(tx['created_at']),
+        }
+    return detail
+
+
 def init_app_data():
     db.init_schema()
     conn = db.get_conn()
@@ -314,11 +364,14 @@ def user_balance():
 def user_transactions():
     conn = db.get_conn()
     rows = db.fetchall(conn,
-        'SELECT id,type,amount,description,status,bank_transaction_id AS "bankTransactionId",created_at AS date FROM transactions WHERE user_id = ? ORDER BY id DESC',
+        'SELECT id,type,amount,description,status,bank_transaction_id AS "bankTransactionId",order_id,created_at AS date FROM transactions WHERE user_id = ? ORDER BY id DESC',
         (request.user['id'],))
     db.close(conn)
     for r in rows:
         r['date'] = str(r['date'])
+        r['transactionCode'] = gen_tx_code(r['id'])
+        if r.get('order_id'):
+            r['orderCode'] = gen_order_code(r['order_id'])
     return jsonify({'transactions': rows})
 
 
@@ -328,12 +381,10 @@ def user_transactions():
 def user_orders():
     conn = db.get_conn()
     rows = db.fetchall(conn,
-        'SELECT id,product_name AS product,price,status,created_at AS date FROM orders WHERE user_id = ? ORDER BY id DESC',
+        'SELECT id,product_id,product_name AS product,price,status,order_code,created_at AS date FROM orders WHERE user_id = ? ORDER BY id DESC',
         (request.user['id'],))
     db.close(conn)
-    for r in rows:
-        r['date'] = str(r['date'])
-    return jsonify({'orders': rows})
+    return jsonify({'orders': [fmt_order_row(r) for r in rows]})
 
 
 # ─── Products & Orders ───
@@ -362,12 +413,34 @@ def order_create():
     db.execute(conn, 'UPDATE products SET stock = stock - 1 WHERE id = ?', (pid,))
     oid = db.insert_returning_id(conn, 'INSERT INTO orders (user_id,product_id,product_name,price,status) VALUES (?,?,?,?,?)',
                                  (user['id'], pid, product['name'], product['price'], 'completed'))
-    db.execute(conn, 'INSERT INTO transactions (user_id,type,amount,description,status) VALUES (?,?,?,?,?)',
-               (user['id'], 'purchase', product['price'], f"Mua {product['name']}", 'success'))
+    order_code = gen_order_code(oid)
+    db.execute(conn, 'UPDATE orders SET order_code = ? WHERE id = ?', (order_code, oid))
+    txid = db.insert_returning_id(conn,
+        'INSERT INTO transactions (user_id,type,amount,description,status,order_id) VALUES (?,?,?,?,?,?)',
+        (user['id'], 'purchase', product['price'], f"Mua {product['name']}", 'success', oid))
     db.commit(conn)
     bal = db.fetchone(conn, 'SELECT balance FROM users WHERE id = ?', (user['id'],))['balance']
     db.close(conn)
-    return jsonify({'orderId': oid, 'product': product['name'], 'price': product['price'], 'balance': bal}), 201
+    return jsonify({
+        'orderId': oid, 'orderCode': order_code, 'transactionCode': gen_tx_code(txid),
+        'product': product['name'], 'price': product['price'], 'balance': bal
+    }), 201
+
+
+@app.route('/api/orders/<int:oid>')
+@auth_required
+def order_detail(oid):
+    conn = db.get_conn()
+    order = db.fetchone(conn, 'SELECT user_id FROM orders WHERE id = ?', (oid,))
+    if not order:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy đơn hàng.'}), 404
+    if order['user_id'] != request.user['id'] and request.user['role'] != 'admin':
+        db.close(conn)
+        return jsonify({'error': 'Không có quyền.'}), 403
+    detail = fetch_order_detail(conn, oid)
+    db.close(conn)
+    return jsonify({'order': detail})
 
 
 # ─── Topup ───
@@ -472,17 +545,24 @@ def admin_user_detail(uid):
         db.close(conn)
         return jsonify({'error': 'Không tìm thấy.'}), 404
     orders = db.fetchall(conn,
-        'SELECT id, product_name AS product, price, status, created_at AS date FROM orders WHERE user_id = ? ORDER BY id DESC',
+        'SELECT id, product_id, product_name AS product, price, status, order_code, created_at AS date FROM orders WHERE user_id = ? ORDER BY id DESC',
         (uid,))
     transactions = db.fetchall(conn,
-        'SELECT id, type, amount, description, status, bank_transaction_id, created_at AS date FROM transactions WHERE user_id = ? ORDER BY id DESC',
+        'SELECT id, type, amount, description, status, bank_transaction_id, order_id, created_at AS date FROM transactions WHERE user_id = ? ORDER BY id DESC',
         (uid,))
     db.close(conn)
-    for row in orders:
-        row['date'] = str(row['date'])
+    order_items = [fmt_order_row(row) for row in orders]
+    tx_items = []
     for row in transactions:
-        row['date'] = str(row['date'])
-    return jsonify({'user': fmt_user(r), 'orders': orders, 'transactions': transactions})
+        tx_items.append({
+            'id': row['id'], 'transactionCode': gen_tx_code(row['id']),
+            'type': row['type'], 'amount': row['amount'], 'description': row['description'],
+            'status': row['status'], 'bankTransactionId': row.get('bank_transaction_id'),
+            'orderId': row.get('order_id'),
+            'orderCode': gen_order_code(row['order_id']) if row.get('order_id') else None,
+            'date': str(row['date']),
+        })
+    return jsonify({'user': fmt_user(r), 'orders': order_items, 'transactions': tx_items})
 
 
 @app.route('/api/admin/users/<int:uid>', methods=['PATCH'])
@@ -558,12 +638,13 @@ def admin_user_delete(uid):
 def admin_orders():
     conn = db.get_conn()
     rows = db.fetchall(conn, '''
-        SELECT o.id,o.product_name AS product,o.price,o.status,o.created_at AS date,u.email,u.name
+        SELECT o.id,o.product_id,o.product_name AS product,o.price,o.status,o.order_code,o.created_at AS date,
+               u.email,u.name AS customer_name
         FROM orders o JOIN users u ON u.id=o.user_id ORDER BY o.id DESC''')
     db.close(conn)
-    for r in rows:
-        r['date'] = str(r['date'])
-    return jsonify({'orders': rows})
+    return jsonify({'orders': [fmt_order_row(r, {
+        'email': r['email'], 'customerName': r['customer_name']
+    }) for r in rows]})
 
 
 @app.route('/api/admin/transactions')
@@ -572,11 +653,19 @@ def admin_transactions():
     conn = db.get_conn()
     rows = db.fetchall(conn, '''
         SELECT t.id,t.type,t.amount,t.description,t.status,t.bank_transaction_id AS "bankTransactionId",
-               t.created_at AS date,u.email FROM transactions t JOIN users u ON u.id=t.user_id ORDER BY t.id DESC''')
+               t.order_id,t.created_at AS date,u.email FROM transactions t JOIN users u ON u.id=t.user_id ORDER BY t.id DESC''')
     db.close(conn)
+    items = []
     for r in rows:
-        r['date'] = str(r['date'])
-    return jsonify({'transactions': rows})
+        items.append({
+            'id': r['id'], 'transactionCode': gen_tx_code(r['id']),
+            'type': r['type'], 'amount': r['amount'], 'description': r['description'],
+            'status': r['status'], 'bankTransactionId': r.get('bankTransactionId'),
+            'orderId': r.get('order_id'),
+            'orderCode': gen_order_code(r['order_id']) if r.get('order_id') else None,
+            'email': r['email'], 'date': str(r['date']),
+        })
+    return jsonify({'transactions': items})
 
 
 @app.route('/api/admin/products', methods=['GET'])
