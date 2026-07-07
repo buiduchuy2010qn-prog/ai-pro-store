@@ -207,9 +207,14 @@
         <!-- Products -->
         <section id="view-products" class="app-section">
             <div class="shop-hero">
-                <div class="shop-wordmark">Shop<span class="wm-accent">.</span> Đức Hi</div>
-                <p class="shop-hero-sub">Chào mừng đến Web Shop của Đức Hi — Khám phá & mua sản phẩm AI</p>
-                <div class="category-row">
+                <div class="hero-float-layer" aria-hidden="true">
+                    <div class="float-card fc-1"><i class="fas fa-robot"></i></div>
+                    <div class="float-card fc-2"><i class="fas fa-gem"></i></div>
+                    <div class="float-card fc-3"><i class="fas fa-shirt"></i></div>
+                </div>
+                <div class="shop-wordmark relative z-10">Shop<span class="wm-accent">.</span> Đức Hi</div>
+                <p class="shop-hero-sub relative z-10">Chào mừng đến Web Shop của Đức Hi — Khám phá & mua sản phẩm AI</p>
+                <div class="category-row relative z-10">
                     <button type="button" data-view="products" class="category-pill"><span class="pill-icon"><i class="fas fa-box-open"></i></span>Sản phẩm</button>
                     <button type="button" data-view="wallet" class="category-pill"><span class="pill-icon"><i class="fas fa-wallet"></i></span>Ví tiền</button>
                     <button type="button" data-view="dressroom" class="category-pill"><span class="pill-icon"><i class="fas fa-shirt"></i></span>Phòng Thay Đồ</button>
@@ -727,7 +732,11 @@ function navigateTo(view) {
     if (view === 'admin' && currentUser?.role !== 'admin') {
         currentView = view;
         document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
-        document.getElementById('view-admin').classList.remove('hidden');
+        const adminEl = document.getElementById('view-admin');
+        adminEl.classList.remove('hidden');
+        adminEl.classList.remove('view-animate');
+        void adminEl.offsetWidth;
+        adminEl.classList.add('view-animate');
         document.getElementById('admin-denied').classList.remove('hidden');
         document.getElementById('admin-content').classList.add('hidden');
         document.getElementById('mobile-menu').classList.add('hidden');
@@ -739,7 +748,11 @@ function navigateTo(view) {
     const viewId = dressAliases[view] || view;
     currentView = viewId;
     document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
-    document.getElementById('view-' + viewId).classList.remove('hidden');
+    const viewEl = document.getElementById('view-' + viewId);
+    viewEl.classList.remove('hidden');
+    viewEl.classList.remove('view-animate');
+    void viewEl.offsetWidth;
+    viewEl.classList.add('view-animate');
     document.getElementById('mobile-menu').classList.add('hidden');
     if (view === 'products') loadProducts();
     if (view === 'wallet') renderWallet();
@@ -759,20 +772,21 @@ function highlightNav(view) {
 
 /* ─── Products ─── */
 async function loadProducts() {
+    const grid = document.getElementById('products-grid');
+    grid.innerHTML = Array(4).fill('<div class="anim-shimmer" style="min-height:280px"></div>').join('');
     try {
         const { products } = await api('/products');
         productsCache = Object.fromEntries(products.map(p => [p.id, p]));
-        const grid = document.getElementById('products-grid');
         if (!products.length) {
             grid.innerHTML = emptyState('Hiện chưa có sản phẩm.');
             return;
         }
-        grid.innerHTML = products.map(p => {
+        grid.innerHTML = products.map((p, i) => {
             const st = productStyle(p.color);
             const icon = p.icon || 'fa-box';
             const mode = p.contactMode || 'none';
             return `
-            <div class="product-card">
+            <div class="product-card" style="animation-delay:${Math.min(i * 70, 420)}ms">
                 <div class="product-card-visual ${st.bg}">
                     <i class="fas ${escapeHtml(icon)} ${st.ic}"></i>
                 </div>

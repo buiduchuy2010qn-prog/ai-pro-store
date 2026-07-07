@@ -52,6 +52,30 @@ body.app-bg {
     letter-spacing: -0.031em;
     line-height: 1.38;
     -webkit-font-smoothing: antialiased;
+    position: relative;
+    overflow-x: hidden;
+}
+body.app-bg::before,
+body.app-bg::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.35;
+    filter: blur(70px);
+}
+body.app-bg::before {
+    width: 320px; height: 320px;
+    background: #bae6fd;
+    top: -80px; right: -60px;
+    animation: blob-drift 22s ease-in-out infinite;
+}
+body.app-bg::after {
+    width: 280px; height: 280px;
+    background: #c4b5fd;
+    bottom: 10%; left: -80px;
+    animation: blob-drift 18s ease-in-out infinite reverse;
 }
 
 #app { position: relative; z-index: 1; }
@@ -735,3 +759,191 @@ body.app-bg {
 .app-section { margin-bottom: var(--section-gap); }
 
 .dr-item-card:active { transform: scale(0.97); }
+
+/* ══════════════════════════════════════
+   Hoạt ảnh — mượt, nhẹ, không lag
+   ══════════════════════════════════════ */
+
+@keyframes blob-drift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(24px, 16px) scale(1.04); }
+    66% { transform: translate(-12px, 28px) scale(0.98); }
+}
+@keyframes fade-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes scale-in {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+}
+@keyframes float-gentle {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(2deg); }
+}
+@keyframes float-slow {
+    0%, 100% { transform: translateY(0) translateX(0); }
+    50% { transform: translateY(-14px) translateX(6px); }
+}
+@keyframes pulse-dot {
+    0%, 100% { box-shadow: var(--shadow-accent); transform: scale(1); }
+    50% { box-shadow: 0 0 0 6px rgba(14, 165, 233, 0.15), var(--shadow-accent); transform: scale(1.15); }
+}
+@keyframes pulse-fab {
+    0%, 100% { box-shadow: var(--shadow-accent); }
+    50% { box-shadow: 0 6px 32px rgba(14, 165, 233, 0.5), 0 0 20px rgba(6, 182, 212, 0.25); }
+}
+@keyframes chevron-nudge {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(4px); }
+}
+@keyframes shimmer {
+    0% { background-position: 200% center; }
+    100% { background-position: -200% center; }
+}
+@keyframes arrow-slide {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(3px); }
+}
+@keyframes view-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes card-in {
+    from { opacity: 0; transform: translateY(24px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Hero */
+.shop-hero {
+    position: relative;
+    overflow: visible;
+}
+.shop-wordmark {
+    animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.shop-hero-sub {
+    animation: fade-up 0.7s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.category-row .category-pill:nth-child(1) { animation: fade-up 0.5s 0.15s both; }
+.category-row .category-pill:nth-child(2) { animation: fade-up 0.5s 0.22s both; }
+.category-row .category-pill:nth-child(3) { animation: fade-up 0.5s 0.29s both; }
+.category-row .category-pill:nth-child(4) { animation: fade-up 0.5s 0.36s both; }
+
+.hero-float-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: visible;
+    z-index: 0;
+}
+.float-card {
+    position: absolute;
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: var(--color-accent);
+    opacity: 0.85;
+}
+.float-card.fc-1 { top: 8%; left: 8%; animation: float-slow 5s ease-in-out infinite; }
+.float-card.fc-2 { top: 18%; right: 10%; animation: float-gentle 6s 0.5s ease-in-out infinite; color: var(--color-violet); }
+.float-card.fc-3 { bottom: 20%; left: 18%; animation: float-slow 7s 1s ease-in-out infinite reverse; color: var(--color-cyan); }
+
+.brand-dot { animation: pulse-dot 2.5s ease-in-out infinite; }
+
+.section-header .fa-chevron-right {
+    animation: chevron-nudge 2s ease-in-out infinite;
+}
+
+/* Cards & buttons */
+.product-card {
+    animation: card-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.product-card:hover .product-card-visual i {
+    animation: float-gentle 2s ease-in-out infinite;
+}
+.product-card-buy:hover i {
+    animation: arrow-slide 0.8s ease-in-out infinite;
+}
+.product-card-buy i { display: inline-block; transition: transform 0.2s; }
+
+.hover-lift {
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+}
+.category-pill {
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.category-pill:hover { transform: translateY(-3px); }
+.category-pill:active { transform: scale(0.97); }
+
+.view-animate {
+    animation: view-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.glass-card.padded,
+.elevated-card {
+    animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+#wallet-balance.gradient-text {
+    background: linear-gradient(90deg, var(--color-accent-dark), var(--color-cyan), var(--color-accent-dark));
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer 4s linear infinite;
+}
+
+.ai-fab { animation: pulse-fab 3s ease-in-out infinite; }
+.ai-fab.ai-fab-active { animation: none; }
+
+.zalo-float {
+    animation: pulse-fab 3s ease-in-out infinite;
+}
+.zalo-float:hover { animation: none; }
+
+.nav-pill { transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
+.nav-pill.nav-active { animation: scale-in 0.3s ease both; }
+
+.toast-inner { animation: fade-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+.auth-card { animation: scale-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+.dr-preview-frame {
+    animation: float-gentle 6s ease-in-out infinite;
+}
+
+.empty-state { animation: fade-up 0.5s ease both; }
+
+/* Loading shimmer skeleton */
+.anim-shimmer {
+    background: linear-gradient(90deg, #e2e8f0 25%, #f8fafc 50%, #e2e8f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    border-radius: var(--radius-card);
+    min-height: 200px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    body.app-bg::before, body.app-bg::after { display: none; }
+    .hero-float-layer { display: none; }
+}
