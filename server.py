@@ -213,10 +213,15 @@ def optional_auth(f):
     return deco
 
 
-def _boot_worker():
+def _ensure_ready():
+    global _checker_started
+    if _checker_started:
+        return
+    _checker_started = True
     for attempt in range(5):
         try:
             init_app_data()
+            print('[Init] Database ready')
             break
         except Exception as e:
             print(f'[Init] Lần {attempt + 1} thất bại: {e}')
@@ -224,22 +229,22 @@ def _boot_worker():
     threading.Thread(target=bank_loop, daemon=True).start()
 
 
-def start_bg():
-    global _checker_started
-    if _checker_started:
-        return
-    _checker_started = True
-    threading.Thread(target=_boot_worker, daemon=True).start()
-
-
 # ─── Meta ───
 @app.route('/api/health')
 def health():
-    return jsonify({
+    status = {
         'ok': True, 'site': SITE_NAME, 'bankMode': BANK['mode'],
         'casso': bool(CASSO['secure_token'] or CASSO['checksum_key']),
         'database': 'postgresql' if db.IS_PG else 'sqlite',
-    })
+    }
+    try:
+        conn = db.get_conn()
+        status['products'] = int(db.fetchone(conn, 'SELECT COUNT(*) AS c FROM products')['c'])
+        db.close(conn)
+    except Exception as e:
+        status['ok'] = False
+        status['dbError'] = str(e)
+    return jsonify(status), (200 if status['ok'] else 503)
 
 
 @app.route('/api/site-info')
@@ -471,10 +476,14 @@ def user_orders():
 # ─── Products & Orders ───
 @app.route('/api/products')
 def products_list():
-    conn = db.get_conn()
-    rows = db.fetchall(conn, 'SELECT * FROM products WHERE stock > 0 ORDER BY id')
-    db.close(conn)
-    return jsonify({'products': [fmt_product(r) for r in rows]})
+    try:
+        conn = db.get_conn()
+        rows = db.fetchall(conn, 'SELECT * FROM products WHERE stock > 0 ORDER BY id')
+        db.close(conn)
+        return jsonify({'products': [fmt_product(r) for r in rows]})
+    except Exception as e:
+        print(f'[Products] {e}')
+        return jsonify({'error': 'Không tải được sản phẩm.'}), 500
 
 
 @app.route('/api/orders/create', methods=['POST'])
@@ -948,7 +957,7 @@ def static_files(path):
     return send_from_directory(PUBLIC, path)
 
 
-start_bg()
+_ensure_ready()
 
 if __name__ == '__main__':
     print(f'{SITE_NAME}: http://localhost:{PORT}')
