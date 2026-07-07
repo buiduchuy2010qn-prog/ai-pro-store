@@ -26,13 +26,18 @@
             0%, 100% { box-shadow: 0 4px 20px rgba(2, 132, 199, 0.35); }
             50% { box-shadow: 0 4px 28px rgba(2, 132, 199, 0.55); }
         }
-        .deco-page { background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 40%, #ede9fe 100%); }
+        .dr-page { background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 40%, #ede9fe 100%); }
         .sakura-float { animation: sakura-drift 8s ease-in-out infinite; opacity: 0.4; pointer-events: none; }
         @keyframes sakura-drift {
             0%, 100% { transform: translateY(0) rotate(0deg); }
             50% { transform: translateY(-12px) rotate(8deg); }
         }
-        .deco-item-card:active { transform: scale(0.97); }
+        .dr-item-card:active { transform: scale(0.97); }
+        .dr-sparkle { animation: dr-sparkle 3s ease-in-out infinite; pointer-events: none; }
+        @keyframes dr-sparkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen">
@@ -183,8 +188,7 @@
                 <button data-view="wallet" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium">Ví tiền</button>
                 <button data-view="orders" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium">Đơn hàng</button>
                 <button data-view="transactions" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium">Lịch sử</button>
-                <button data-view="avatar" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium"><i class="fas fa-shirt mr-1"></i>Phòng Thay Đồ</button>
-                <button data-view="decoration" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium"><i class="fas fa-palette mr-1"></i>Cuộc Thi</button>
+                <button data-view="dressroom" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium"><i class="fas fa-shirt mr-1"></i>Phòng Thay Đồ</button>
                 <button data-view="admin" id="admin-nav-btn" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium hidden text-red-600">
                     <i class="fas fa-shield-alt mr-1"></i>Quản trị
                 </button>
@@ -207,8 +211,7 @@
             <button data-view="wallet" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium">Ví tiền</button>
             <button data-view="orders" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium">Đơn hàng</button>
             <button data-view="transactions" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium">Lịch sử</button>
-            <button data-view="avatar" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-shirt mr-1"></i>Phòng Thay Đồ</button>
-            <button data-view="decoration" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-palette mr-1"></i>Cuộc Thi Trang Trí</button>
+            <button data-view="dressroom" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-shirt mr-1"></i>Phòng Thay Đồ</button>
             <button data-view="admin" id="admin-mobile-nav-btn" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium text-red-600 hidden">Quản trị</button>
         </div>
     </header>
@@ -319,61 +322,19 @@
             </div>
         </div>
 
-        <!-- Phòng Thay Đồ -->
-        <section id="view-avatar" class="hidden">
-            <div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                    <h1 class="text-2xl font-bold"><i class="fas fa-shirt text-brand-600 mr-2"></i>Phòng Thay Đồ</h1>
-                    <p class="text-slate-500 text-sm mt-1">Tạo nhân vật, thay trang phục và mua vật phẩm bằng số dư ví</p>
-                </div>
-                <div class="flex gap-2">
-                    <button type="button" data-gender="female" class="avatar-gender-btn px-4 py-2 rounded-xl text-sm font-medium bg-brand-600 text-white">Nữ</button>
-                    <button type="button" data-gender="male" class="avatar-gender-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200 text-slate-700">Nam</button>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-                <div class="lg:col-span-5 space-y-4">
-                    <div class="bg-white rounded-2xl border shadow-sm p-4">
-                        <div id="avatar-preview" class="aspect-[4/5] max-h-[440px] flex items-center justify-center bg-slate-50 rounded-xl overflow-hidden border"></div>
-                        <div class="flex flex-wrap gap-2 mt-4">
-                            <button type="button" id="avatar-save-outfit-btn" class="flex-1 min-w-[120px] bg-brand-600 hover:bg-brand-700 text-white text-sm py-2.5 rounded-xl font-medium"><i class="fas fa-bookmark mr-1"></i>Lưu outfit</button>
-                            <button type="button" id="avatar-save-image-btn" class="flex-1 min-w-[120px] bg-violet-600 hover:bg-violet-700 text-white text-sm py-2.5 rounded-xl font-medium"><i class="fas fa-download mr-1"></i>Lưu ảnh</button>
-                            <button type="button" id="avatar-share-btn" class="flex-1 min-w-[120px] bg-slate-200 hover:bg-slate-300 text-sm py-2.5 rounded-xl font-medium"><i class="fas fa-share-alt mr-1"></i>Chia sẻ</button>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-2xl border shadow-sm p-4">
-                        <h3 class="font-semibold text-sm mb-2"><i class="fas fa-box-open mr-1 text-brand-600"></i>Kho đồ của bạn</h3>
-                        <div id="avatar-wardrobe-list" class="flex flex-wrap gap-1.5"></div>
-                    </div>
-                    <div class="bg-white rounded-2xl border shadow-sm p-4">
-                        <h3 class="font-semibold text-sm mb-2"><i class="fas fa-bookmark mr-1 text-brand-600"></i>Outfit đã lưu</h3>
-                        <div id="avatar-outfits-list" class="space-y-2 max-h-40 overflow-y-auto"></div>
-                    </div>
-                </div>
-                <div class="lg:col-span-7">
-                    <div class="bg-white rounded-2xl border shadow-sm p-4">
-                        <div id="avatar-category-tabs" class="flex gap-1.5 overflow-x-auto pb-3 mb-3 border-b"></div>
-                        <div id="avatar-items-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[600px] overflow-y-auto"></div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Cuộc Thi Trang Trí -->
-        <section id="view-decoration" class="hidden deco-page -mx-4 px-4 py-2 rounded-none sm:rounded-2xl relative overflow-hidden">
+        <!-- Phòng Thay Đồ Nhân Vật -->
+        <section id="view-dressroom" class="hidden dr-page -mx-4 px-4 py-2 rounded-none sm:rounded-2xl relative overflow-hidden">
             <div class="sakura-float absolute top-4 right-8 text-2xl text-pink-300">🌸</div>
             <div class="sakura-float absolute top-20 left-6 text-xl text-pink-200" style="animation-delay:2s">❀</div>
+            <div class="dr-sparkle absolute bottom-32 right-12 text-lg text-violet-300">✦</div>
             <div class="mb-5 relative">
-                <h1 class="text-2xl font-bold text-pink-800"><i class="fas fa-palette text-pink-500 mr-2"></i>Cuộc Thi Trang Trí Nhân Vật</h1>
-                <p class="text-pink-600/80 text-sm mt-1">Phong cách Nhật Bản · Anime Idol · Trang trí đẹp và gửi admin chấm điểm nhận thưởng</p>
-            </div>
-            <div class="bg-white/70 backdrop-blur border border-pink-200 rounded-2xl p-4 mb-4 text-xs text-pink-700 space-y-1">
-                <p><strong>📜 Quy định:</strong> Đúng chủ đề Nhật/anime · Không phản cảm · Không nội dung người lớn · Admin quyết định điểm & thưởng · Tối đa 5 bài/ngày</p>
+                <h1 class="text-2xl font-bold text-pink-800"><i class="fas fa-shirt text-pink-500 mr-2"></i>Phòng Thay Đồ Nhân Vật</h1>
+                <p class="text-pink-600/80 text-sm mt-1">Trang trí nhân vật anime phong cách Nhật Bản, phối đồ, trang điểm và lưu outfit của bạn</p>
             </div>
             <div class="flex flex-wrap gap-2 mb-4 items-center">
-                <button type="button" data-gender="female" class="deco-gender-btn px-4 py-2 rounded-xl text-sm font-medium bg-pink-500 text-white shadow-md">Nữ</button>
-                <button type="button" data-gender="male" class="deco-gender-btn px-4 py-2 rounded-xl text-sm font-medium bg-white/80 text-pink-700 border border-pink-200">Nam</button>
-                <select id="deco-theme-select" class="border border-pink-200 rounded-xl px-3 py-2 text-sm bg-white/90 text-pink-800">
+                <button type="button" data-gender="female" class="dr-gender-btn px-4 py-2 rounded-xl text-sm font-medium bg-pink-500 text-white shadow-md">Nữ</button>
+                <button type="button" data-gender="male" class="dr-gender-btn px-4 py-2 rounded-xl text-sm font-medium bg-white/80 text-pink-700 border border-pink-200">Nam</button>
+                <select id="dr-theme-select" class="border border-pink-200 rounded-xl px-3 py-2 text-sm bg-white/90 text-pink-800">
                     <option value="japanese_cute">Nhật Bản dễ thương</option>
                     <option value="idol">Anime Idol</option>
                     <option value="kimono">Kimono</option>
@@ -389,29 +350,23 @@
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
                 <div class="lg:col-span-5 space-y-4">
                     <div class="bg-white/90 backdrop-blur rounded-2xl border border-pink-200 shadow-lg p-4">
-                        <div id="deco-preview" class="aspect-[4/5] max-h-[460px] flex items-center justify-center bg-gradient-to-b from-pink-50 to-violet-50 rounded-2xl overflow-hidden border-2 border-pink-100 shadow-inner"></div>
+                        <div id="dr-preview" class="aspect-[4/5] max-h-[500px] flex items-center justify-center bg-gradient-to-b from-pink-50 to-violet-50 rounded-2xl overflow-hidden border-2 border-pink-100 shadow-inner"></div>
                         <div class="grid grid-cols-2 gap-2 mt-4">
-                            <button type="button" id="deco-save-draft-btn" class="bg-white border border-pink-200 hover:bg-pink-50 text-pink-700 text-sm py-2.5 rounded-xl font-medium"><i class="fas fa-save mr-1"></i>Lưu nháp</button>
-                            <button type="button" id="deco-reset-btn" class="bg-white border border-pink-200 hover:bg-pink-50 text-pink-700 text-sm py-2.5 rounded-xl font-medium"><i class="fas fa-redo mr-1"></i>Làm lại</button>
-                            <button type="button" id="deco-save-image-btn" class="bg-violet-500 hover:bg-violet-600 text-white text-sm py-2.5 rounded-xl font-medium"><i class="fas fa-download mr-1"></i>Lưu ảnh</button>
-                            <button type="button" id="deco-submit-btn" class="col-span-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-sm py-3 rounded-xl font-bold shadow-md"><i class="fas fa-paper-plane mr-1"></i>Gửi bài chấm điểm</button>
+                            <button type="button" id="dr-save-outfit-btn" class="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-sm py-2.5 rounded-xl font-medium shadow-md"><i class="fas fa-bookmark mr-1"></i>Lưu Outfit</button>
+                            <button type="button" id="dr-save-image-btn" class="bg-violet-500 hover:bg-violet-600 text-white text-sm py-2.5 rounded-xl font-medium"><i class="fas fa-download mr-1"></i>Tải ảnh</button>
+                            <button type="button" id="dr-reset-btn" class="bg-white border border-pink-200 hover:bg-pink-50 text-pink-700 text-sm py-2.5 rounded-xl font-medium"><i class="fas fa-redo mr-1"></i>Làm lại</button>
+                            <button type="button" id="dr-share-btn" class="bg-white border border-pink-200 hover:bg-pink-50 text-pink-700 text-sm py-2.5 rounded-xl font-medium"><i class="fas fa-share-alt mr-1"></i>Chia sẻ</button>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="bg-white/90 border border-pink-100 rounded-2xl p-3">
-                            <h3 class="font-semibold text-xs text-pink-700 mb-2"><i class="fas fa-list mr-1"></i>Bài của tôi</h3>
-                            <div id="deco-my-submissions" class="space-y-2 max-h-36 overflow-y-auto"></div>
-                        </div>
-                        <div class="bg-white/90 border border-pink-100 rounded-2xl p-3">
-                            <h3 class="font-semibold text-xs text-pink-700 mb-2"><i class="fas fa-trophy mr-1"></i>Bảng xếp hạng</h3>
-                            <div id="deco-leaderboard" class="space-y-1"></div>
-                        </div>
+                    <div class="bg-white/90 border border-pink-100 rounded-2xl p-4 shadow-sm">
+                        <h3 class="font-semibold text-sm text-pink-700 mb-2"><i class="fas fa-bookmark mr-1 text-pink-500"></i>Outfit đã lưu</h3>
+                        <div id="dr-outfits-list" class="space-y-2 max-h-48 overflow-y-auto"></div>
                     </div>
                 </div>
                 <div class="lg:col-span-7">
                     <div class="bg-white/90 backdrop-blur rounded-2xl border border-pink-200 shadow-lg p-4">
-                        <div id="deco-category-tabs" class="flex gap-1.5 overflow-x-auto pb-3 mb-3 border-b border-pink-100"></div>
-                        <div id="deco-items-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-[560px] overflow-y-auto pr-1"></div>
+                        <div id="dr-category-tabs" class="flex gap-1.5 overflow-x-auto pb-3 mb-3 border-b border-pink-100 scrollbar-thin"></div>
+                        <div id="dr-items-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-[580px] overflow-y-auto pr-1"></div>
                     </div>
                 </div>
             </div>
@@ -441,8 +396,7 @@
                         <button data-admin-tab="orders" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Đơn hàng</button>
                         <button data-admin-tab="transactions" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Giao dịch</button>
                         <button data-admin-tab="bank-transactions" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Bank TX</button>
-                        <button data-admin-tab="avatar" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Phòng Thay Đồ</button>
-                        <button data-admin-tab="decoration" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Chấm Trang Trí</button>
+                        <button data-admin-tab="dressroom" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Quản lý Phòng Thay Đồ</button>
                     </div>
                 </div>
                 <div id="admin-dashboard" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"></div>
@@ -521,46 +475,11 @@
                 <div id="admin-orders" class="hidden space-y-3"></div>
                 <div id="admin-transactions" class="hidden space-y-3"></div>
                 <div id="admin-bank-transactions" class="hidden space-y-3"></div>
-                <div id="admin-avatar" class="hidden">
-                    <div id="admin-avatar-stats"></div>
-                    <div class="mb-4">
-                        <button id="admin-avatar-add-btn" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium">
-                            <i class="fas fa-plus mr-1"></i>Thêm vật phẩm
-                        </button>
-                    </div>
-                    <div id="admin-avatar-form" class="hidden mb-4 bg-white rounded-2xl border p-5 shadow-sm">
-                        <h3 class="font-semibold mb-3">Thêm vật phẩm thay đồ</h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            <input id="new-avatar-name" type="text" placeholder="Tên vật phẩm *" class="border rounded-xl px-3 py-2 text-sm">
-                            <select id="new-avatar-category" class="border rounded-xl px-3 py-2 text-sm">
-                                <option value="hair">Tóc</option><option value="top">Áo</option><option value="bottom">Quần/Váy</option>
-                                <option value="shoes">Giày</option><option value="hat">Mũ</option><option value="glasses">Kính</option>
-                                <option value="accessory">Phụ kiện</option><option value="makeup">Trang điểm</option>
-                                <option value="background">Nền</option><option value="eyes">Mắt</option><option value="effect">Hiệu ứng</option>
-                            </select>
-                            <select id="new-avatar-gender" class="border rounded-xl px-3 py-2 text-sm">
-                                <option value="all">Tất cả</option><option value="male">Nam</option><option value="female">Nữ</option>
-                            </select>
-                            <input id="new-avatar-price" type="number" placeholder="Giá (VNĐ)" value="0" class="border rounded-xl px-3 py-2 text-sm">
-                            <input id="new-avatar-preview" type="text" placeholder="Preview emoji 👕" class="border rounded-xl px-3 py-2 text-sm">
-                            <input id="new-avatar-layer" type="text" placeholder="Layer key (vd: top-hoodie)" class="border rounded-xl px-3 py-2 text-sm">
-                            <select id="new-avatar-free" class="border rounded-xl px-3 py-2 text-sm">
-                                <option value="1">Miễn phí</option><option value="0">Trả phí</option>
-                            </select>
-                        </div>
-                        <button id="new-avatar-save" class="mt-3 bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium">Lưu vật phẩm</button>
-                    </div>
-                    <div id="admin-avatar-list" class="space-y-3"></div>
-                </div>
-                <div id="admin-decoration" class="hidden space-y-6">
-                    <div>
-                        <h2 class="text-lg font-bold text-pink-700 mb-3"><i class="fas fa-star mr-1"></i>Chấm Điểm Trang Trí</h2>
-                        <div id="admin-deco-submissions" class="space-y-4"></div>
-                    </div>
-                    <div>
-                        <h2 class="text-lg font-bold mb-2">Quản lý Vật Phẩm Trang Trí <span id="admin-deco-item-count" class="text-sm font-normal text-slate-500"></span></h2>
-                        <div id="admin-deco-items-list"></div>
-                    </div>
+                <div id="admin-dressroom" class="hidden space-y-4">
+                    <h2 class="text-lg font-bold text-pink-700"><i class="fas fa-shirt mr-1"></i>Quản lý Phòng Thay Đồ</h2>
+                    <p class="text-sm text-slate-500">Thêm, sửa, bật/tắt vật phẩm trang phục và xem số outfit đã lưu.</p>
+                    <div id="admin-dr-stats"></div>
+                    <div id="admin-dr-items-list" class="space-y-2 max-h-[70vh] overflow-y-auto"></div>
                 </div>
                 <div id="admin-mock-panel" class="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-5">
                     <h3 class="font-semibold text-amber-800 mb-2"><i class="fas fa-flask mr-1"></i>Mock Bank (dev/test)</h3>
@@ -874,19 +793,20 @@ function navigateTo(view) {
         if (location.hash !== '#' + view) location.hash = view;
         return;
     }
-    currentView = view;
+    const dressAliases = { avatar: 'dressroom', decoration: 'dressroom' };
+    const viewId = dressAliases[view] || view;
+    currentView = viewId;
     document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
-    document.getElementById('view-' + view).classList.remove('hidden');
+    document.getElementById('view-' + viewId).classList.remove('hidden');
     document.getElementById('mobile-menu').classList.add('hidden');
     if (view === 'products') loadProducts();
     if (view === 'wallet') renderWallet();
     if (view === 'orders') loadMyOrders();
     if (view === 'transactions') loadMyTransactions();
-    if (view === 'avatar') loadAvatarRoom();
-    if (view === 'decoration') loadDecorationRoom();
-    if (view === 'admin') loadAdmin();
-    highlightNav(view);
-    if (location.hash !== '#' + view) location.hash = view;
+    if (viewId === 'dressroom') loadDressRoom();
+    if (viewId === 'admin') loadAdmin();
+    highlightNav(viewId);
+    if (location.hash !== '#' + viewId) location.hash = viewId;
 }
 
 function highlightNav(view) {
@@ -1231,11 +1151,12 @@ function adminCard(label, value, color = '') {
 }
 
 async function showAdminTab(tab) {
+    if (tab === 'avatar' || tab === 'decoration') tab = 'dressroom';
     currentAdminTab = tab;
     document.querySelectorAll('.admin-tab-btn').forEach(btn => {
         btn.className = `admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium ${btn.dataset.adminTab === tab ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-700'}`;
     });
-    ['dashboard', 'products', 'users', 'topups', 'orders', 'transactions', 'bank-transactions', 'avatar', 'decoration'].forEach(t => {
+    ['dashboard', 'products', 'users', 'topups', 'orders', 'transactions', 'bank-transactions', 'dressroom'].forEach(t => {
         const el = document.getElementById('admin-' + t);
         if (el) el.classList.toggle('hidden', t !== tab);
     });
@@ -1246,13 +1167,9 @@ async function showAdminTab(tab) {
             const d = await api('/admin/dashboard');
             document.getElementById('admin-dashboard').innerHTML = `
                 ${adminCard('Doanh thu sản phẩm', formatMoney(d.revenue), 'text-emerald-600')}
-                ${adminCard('Doanh thu thay đồ', formatMoney(d.avatarRevenue || 0), 'text-violet-600')}
                 ${adminCard('Tổng doanh thu', formatMoney(d.totalRevenue || d.revenue), 'text-brand-600')}
-                ${adminCard('Vật phẩm đã bán', d.avatarItemsSold || 0)}
-                ${adminCard('User Phòng Thay Đồ', d.avatarUsers || 0)}
-                ${adminCard('Thưởng trang trí', formatMoney(d.decorationRewards || 0), 'text-pink-600')}
-                ${adminCard('Bài chờ chấm', d.decorationPending || 0, 'text-amber-500')}
-                ${adminCard('Vật phẩm trang trí', d.decorationItems || 0)}
+                ${adminCard('Vật phẩm Phòng Thay Đồ', d.decorationItems || 0, 'text-pink-600')}
+                ${adminCard('Outfit đã lưu', d.savedOutfits || 0, 'text-violet-600')}
                 ${adminCard('Tổng đơn hàng', d.totalOrders)}
                 ${adminCard('Nạp chờ xử lý', d.pendingTopups, 'text-amber-500')}
                 ${adminCard('Người dùng', d.totalUsers)}
@@ -1268,8 +1185,7 @@ async function showAdminTab(tab) {
         if (tab === 'orders') loadAdminOrders();
         if (tab === 'transactions') loadAdminTransactions();
         if (tab === 'bank-transactions') loadAdminBankTransactions();
-        if (tab === 'avatar') loadAdminAvatar();
-        if (tab === 'decoration') loadAdminDecoration();
+        if (tab === 'dressroom') loadAdminDressRoom();
     } catch (e) {
         toast(e.message, true);
     }
@@ -1921,7 +1837,9 @@ document.getElementById('ai-quick-chips').onclick = e => {
             await refreshUser();
             await showApp();
             const h = location.hash.replace('#', '');
-            if (['products', 'wallet', 'orders', 'transactions', 'avatar', 'decoration', 'admin'].includes(h)) navigateTo(h);
+            const viewMap = { avatar: 'dressroom', decoration: 'dressroom' };
+            const v = viewMap[h] || h;
+            if (['products', 'wallet', 'orders', 'transactions', 'dressroom', 'avatar', 'decoration', 'admin'].includes(h)) navigateTo(v);
         } catch {
             clearToken();
             showAuth();
@@ -1931,8 +1849,8 @@ document.getElementById('ai-quick-chips').onclick = e => {
     }
 })();
 </script>
-<script src="/avatar.js"></script>
+<script src="/dressroom-render.js"></script>
 <script src="/decoration.js"></script>
-<script>initAvatarRoomEvents(); initAvatarAdminEvents(); initDecorationEvents(); initAdminDecorationEvents();</script>
+<script>initDressRoomEvents(); initAdminDressRoomEvents();</script>
 </body>
 </html>

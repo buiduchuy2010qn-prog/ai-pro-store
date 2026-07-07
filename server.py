@@ -168,6 +168,7 @@ def purge_user(conn, uid):
         ('DELETE FROM password_otps WHERE user_id = ?', (uid,)),
         ('DELETE FROM saved_outfits WHERE user_id = ?', (uid,)),
         ('DELETE FROM decoration_submissions WHERE user_id = ?', (uid,)),
+        ('DELETE FROM decoration_saved_outfits WHERE user_id = ?', (uid,)),
         ('DELETE FROM decoration_drafts WHERE user_id = ?', (uid,)),
         ('DELETE FROM user_avatar_items WHERE user_id = ?', (uid,)),
         ('DELETE FROM user_avatars WHERE user_id = ?', (uid,)),
@@ -1021,6 +1022,100 @@ def decoration_get_draft():
     })
 
 
+@app.route('/api/decoration/outfits')
+@auth_required
+def decoration_outfits_list():
+    conn = db.get_conn()
+    rows = db.fetchall(conn,
+        'SELECT * FROM decoration_saved_outfits WHERE user_id = ? ORDER BY id DESC',
+        (request.user['id'],))
+    db.close(conn)
+    return jsonify({'outfits': [{
+        'id': r['id'], 'name': r['name'], 'gender': r['gender'],
+        'theme': r.get('theme') or 'japanese_cute',
+        'items': deco.parse_json(r.get('items_used')),
+        'previewImage': r.get('preview_image') or '',
+        'createdAt': str(r.get('created_at', '')),
+    } for r in rows]})
+
+
+@app.route('/api/decoration/outfits', methods=['POST'])
+@auth_required
+def decoration_outfit_save():
+    d = request.get_json() or {}
+    name = (d.get('name') or '').strip() or 'Outfit của tôi'
+    gender = d.get('gender', 'female').strip().lower()
+    if gender not in ('male', 'female'):
+        gender = 'female'
+    theme = deco.norm_theme(d.get('theme'))
+    preview = (d.get('previewImage') or '')[:500000]
+    items_map = d.get('items') or d.get('itemsUsed') or {}
+    conn = db.get_conn()
+    item_ids = deco.resolve_items(conn, gender, items_map)
+    oid = db.insert_returning_id(conn,
+        'INSERT INTO decoration_saved_outfits (user_id,name,gender,theme,items_used,preview_image) VALUES (?,?,?,?,?,?)',
+        (request.user['id'], name[:80], gender, theme, deco.to_json(item_ids), preview or None))
+    db.commit(conn)
+    row = db.fetchone(conn, 'SELECT * FROM decoration_saved_outfits WHERE id = ?', (oid,))
+    db.close(conn)
+    return jsonify({'outfit': {
+        'id': row['id'], 'name': row['name'], 'gender': row['gender'], 'theme': row['theme'],
+        'items': deco.parse_json(row.get('items_used')),
+        'previewImage': row.get('preview_image') or '',
+        'createdAt': str(row.get('created_at', '')),
+    }}), 201
+
+
+@app.route('/api/decoration/outfits/<int:oid>', methods=['DELETE'])
+@auth_required
+def decoration_outfit_delete(oid):
+    conn = db.get_conn()
+    row = db.fetchone(conn,
+        'SELECT * FROM decoration_saved_outfits WHERE id = ? AND user_id = ?',
+        (oid, request.user['id']))
+    if not row:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy outfit.'}), 404
+    db.execute(conn, 'DELETE FROM decoration_saved_outfits WHERE id = ?', (oid,))
+    db.commit(conn)
+    db.close(conn)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/decoration/outfits/<int:oid>/apply', methods=['POST'])
+@auth_required
+def decoration_outfit_apply(oid):
+    conn = db.get_conn()
+    row = db.fetchone(conn,
+        'SELECT * FROM decoration_saved_outfits WHERE id = ? AND user_id = ?',
+        (oid, request.user['id']))
+    if not row:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy outfit.'}), 404
+    gender = row['gender']
+    theme = row.get('theme') or 'japanese_cute'
+    item_ids = deco.parse_json(row.get('items_used'))
+    now = db.sql_now()
+    existing = db.fetchone(conn, 'SELECT id FROM decoration_drafts WHERE user_id = ?', (request.user['id'],))
+    preview = row.get('preview_image') or ''
+    if existing:
+        db.execute(conn,
+            f'UPDATE decoration_drafts SET gender=?, theme=?, items_used=?, preview_image=?, updated_at={now} WHERE user_id=?',
+            (gender, theme, deco.to_json(item_ids), preview or None, request.user['id']))
+    else:
+        db.insert_returning_id(conn,
+            'INSERT INTO decoration_drafts (user_id,gender,theme,items_used,preview_image) VALUES (?,?,?,?,?)',
+            (request.user['id'], gender, theme, deco.to_json(item_ids), preview or None))
+    db.commit(conn)
+    equipped = deco.equipped_from_ids(conn, item_ids)
+    db.close(conn)
+    return jsonify({
+        'ok': True, 'gender': gender, 'theme': theme,
+        'items': item_ids, 'equipped': equipped,
+        'previewImage': preview,
+    })
+
+
 @app.route('/api/decoration/submit', methods=['POST'])
 @auth_required
 def decoration_submit():
@@ -1326,6 +1421,7 @@ def admin_dashboard():
         "SELECT COUNT(*) AS c FROM decoration_submissions WHERE status='approved'")['c']
     deco_items = db.fetchone(conn, 'SELECT COUNT(*) AS c FROM decoration_items WHERE is_active = ?',
                              (True if db.IS_PG else 1,))['c']
+    deco_outfits = db.fetchone(conn, 'SELECT COUNT(*) AS c FROM decoration_saved_outfits')['c']
     db.close(conn)
     return jsonify({
         'revenue': int(product_rev),
@@ -1337,6 +1433,7 @@ def admin_dashboard():
         'decorationPending': int(deco_pending),
         'decorationApproved': int(deco_approved),
         'decorationItems': int(deco_items),
+        'savedOutfits': int(deco_outfits),
         'topAvatarItems': [{
             'description': r['description'], 'count': int(r['cnt']), 'revenue': int(r['revenue'] or 0),
         } for r in top_items],

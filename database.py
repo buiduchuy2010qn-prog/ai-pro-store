@@ -187,6 +187,11 @@ def init_schema():
                 gender TEXT NOT NULL DEFAULT 'female', theme TEXT DEFAULT 'japanese_cute',
                 items_used TEXT, preview_image TEXT,
                 updated_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS decoration_saved_outfits (
+                id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
+                name TEXT NOT NULL, gender TEXT NOT NULL, theme TEXT DEFAULT 'japanese_cute',
+                items_used TEXT NOT NULL, preview_image TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
         ):
             execute(conn, stmt)
     else:
@@ -282,6 +287,13 @@ def init_schema():
                 gender TEXT NOT NULL DEFAULT 'female', theme TEXT DEFAULT 'japanese_cute',
                 items_used TEXT, preview_image TEXT,
                 updated_at TEXT DEFAULT ({n}),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+            CREATE TABLE IF NOT EXISTS decoration_saved_outfits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+                name TEXT NOT NULL, gender TEXT NOT NULL, theme TEXT DEFAULT 'japanese_cute',
+                items_used TEXT NOT NULL, preview_image TEXT,
+                created_at TEXT DEFAULT ({n}),
                 FOREIGN KEY (user_id) REFERENCES users(id)
             );
         ''')
