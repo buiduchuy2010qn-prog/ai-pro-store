@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Pro Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        tailwind.config = { theme: { extend: { colors: { brand: { 50:'#f5f3ff',100:'#ede9fe',500:'#8b5cf6',600:'#7c3aed',700:'#6d28d9' } } } } };
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+<div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-brand-50 via-white to-slate-100">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+        <div class="bg-brand-600 text-white text-center py-8 px-6">
+            <div class="text-3xl font-bold">AI<span class="text-brand-100">Pro</span> Store</div>
+            <p class="text-brand-100 text-sm mt-2">Nạp tiền tự động qua QR VietQR</p>
+        </div>
+        <div class="flex border-b border-slate-200">
+            <button id="tab-login" class="flex-1 py-3 text-sm font-medium text-brand-600 border-b-2 border-brand-600">Đăng nhập</button>
+            <button id="tab-register" class="flex-1 py-3 text-sm font-medium text-slate-500 border-b-2 border-transparent">Đăng ký</button>
+        </div>
+        <div class="p-6">
+            <form id="login-form" class="space-y-4">
+                <div><label class="text-sm font-medium text-slate-600 block mb-1">Email</label>
+                    <input id="login-email" type="email" required class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500"></div>
+                <div><label class="text-sm font-medium text-slate-600 block mb-1">Mật khẩu</label>
+                    <input id="login-password" type="password" required class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500"></div>
+                <p id="login-error" class="text-red-500 text-sm hidden"></p>
+                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-xl font-medium">Đăng nhập</button>
+            </form>
+            <form id="register-form" class="space-y-4 hidden">
+                <div><label class="text-sm font-medium text-slate-600 block mb-1">Họ tên</label>
+                    <input id="register-name" type="text" required class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500"></div>
+                <div><label class="text-sm font-medium text-slate-600 block mb-1">Email</label>
+                    <input id="register-email" type="email" required class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500"></div>
+                <div><label class="text-sm font-medium text-slate-600 block mb-1">Mật khẩu</label>
+                    <input id="register-password" type="password" required minlength="6" class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500"></div>
+                <p id="register-error" class="text-red-500 text-sm hidden"></p>
+                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-xl font-medium">Tạo tài khoản</button>
+            </form>
+            <p class="text-xs text-slate-400 text-center mt-4">Admin: admin@gmail.com / admin123</p>
+        </div>
+    </div>
+</div>
+
+<div id="app" class="hidden min-h-screen flex flex-col">
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+            <button id="brand-btn" class="text-xl font-bold text-brand-600">AI<span class="text-slate-800">Pro</span></button>
+            <div class="hidden md:flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+                <button data-view="products" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium">Sản phẩm</button>
+                <button data-view="wallet" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium">Ví tiền</button>
+                <button data-view="orders" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium">Đơn hàng</button>
+                <button data-view="transactions" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium">Lịch sử</button>
+                <button data-view="admin" id="admin-nav-btn" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium hidden text-red-600">
+                    <i class="fas fa-shield-alt mr-1"></i>Quản trị
+                    <span id="pending-badge" class="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full hidden">0</span>
+                </button>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="text-right hidden sm:block">
+                    <div id="user-name" class="text-sm font-medium"></div>
+                    <div id="header-balance" class="text-xs text-emerald-600 font-semibold"></div>
+                </div>
+                <button id="logout-btn" class="text-slate-500 hover:text-red-500 p-2"><i class="fas fa-sign-out-alt"></i></button>
+                <button id="mobile-menu-btn" class="md:hidden text-slate-600 p-2"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+        <div id="mobile-menu" class="hidden md:hidden border-t px-4 py-3 space-y-1 bg-white">
+            <button data-view="products" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium">Sản phẩm</button>
+            <button data-view="wallet" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium">Ví tiền</button>
+            <button data-view="orders" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium">Đơn hàng</button>
+            <button data-view="transactions" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium">Lịch sử</button>
+            <button data-view="admin" id="admin-mobile-nav-btn" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium text-red-600 hidden">Quản trị</button>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
+        <section id="view-products">
+            <h1 class="text-2xl font-bold mb-6">Sản phẩm</h1>
+            <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+        </section>
+
+        <section id="view-wallet" class="hidden">
+            <h1 class="text-2xl font-bold mb-6">Ví tiền</h1>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="space-y-6">
+                    <div class="bg-white rounded-2xl border p-6 shadow-sm">
+                        <div class="text-slate-500 text-sm">Số dư hiện tại</div>
+                        <div id="wallet-balance" class="text-4xl font-bold text-emerald-600 mt-2">0đ</div>
+                    </div>
+                    <div class="bg-white rounded-2xl border p-6 shadow-sm">
+                        <h2 class="font-semibold mb-1">Nạp tiền tự động</h2>
+                        <p class="text-xs text-slate-500 mb-3">Mã nội dung CK cố định của bạn:</p>
+                        <div class="flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-xl px-4 py-3 mb-4">
+                            <code id="user-topup-code" class="text-brand-700 font-bold text-sm flex-1"></code>
+                            <button id="copy-topup-code" class="text-brand-600"><i class="fas fa-copy"></i></button>
+                        </div>
+                        <div class="space-y-3">
+                            <input id="topup-amount" type="number" min="10000" step="10000" placeholder="100000"
+                                   class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-brand-500">
+                            <button id="create-topup-btn" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-xl font-medium">
+                                Tạo QR & yêu cầu nạp tiền
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-3">Chuyển khoản theo QR → hệ thống tự kiểm tra và cộng tiền (không cần admin duyệt).</p>
+                    </div>
+                </div>
+                <div>
+                    <div id="qr-panel" class="hidden bg-white rounded-2xl border p-6 shadow-sm">
+                        <div id="topup-status-banner" class="mb-4 p-3 rounded-xl text-sm font-medium text-center"></div>
+                        <h2 class="font-semibold mb-4 text-center">Quét mã QR chuyển khoản</h2>
+                        <div class="flex justify-center mb-4"><img id="qr-image" class="rounded-xl border max-w-[260px] w-full" alt="QR"></div>
+                        <div class="space-y-2 text-sm bg-slate-50 rounded-xl p-4 border">
+                            <div class="flex justify-between"><span class="text-slate-500">Ngân hàng</span><span id="qr-bank-name" class="font-medium"></span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">STK</span><span id="qr-bank-account" class="font-mono font-medium"></span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Số tiền</span><span id="qr-amount" class="font-bold text-emerald-600"></span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Nội dung CK</span><span id="qr-add-info" class="font-bold text-brand-600 break-all text-right"></span></div>
+                        </div>
+                        <p id="polling-hint" class="text-xs text-slate-500 text-center mt-4 hidden">
+                            <i class="fas fa-sync fa-spin mr-1"></i>Đang tự động kiểm tra giao dịch ngân hàng...
+                        </p>
+                    </div>
+                    <div id="qr-placeholder" class="bg-white rounded-2xl border border-dashed p-6 flex items-center justify-center min-h-[300px]">
+                        <div class="text-center text-slate-400">
+                            <i class="fas fa-qrcode text-5xl mb-3"></i>
+                            <p class="text-sm">Nhập số tiền và bấm "Tạo QR" để bắt đầu</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-orders" class="hidden">
+            <h1 class="text-2xl font-bold mb-6">Đơn hàng của tôi</h1>
+            <div id="my-orders-list" class="space-y-3"></div>
+        </section>
+
+        <section id="view-transactions" class="hidden">
+            <h1 class="text-2xl font-bold mb-6">Lịch sử giao dịch</h1>
+            <div id="my-transactions-list" class="space-y-3"></div>
+        </section>
+
+        <section id="view-admin" class="hidden">
+            <div id="admin-denied" class="hidden text-center py-20">
+                <i class="fas fa-lock text-4xl text-red-400 mb-4"></i>
+                <h2 class="text-xl font-bold text-red-600">Bạn không có quyền truy cập</h2>
+            </div>
+            <div id="admin-content" class="hidden">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <h1 class="text-2xl font-bold">Admin Panel</h1>
+                    <div class="flex gap-2 flex-wrap">
+                        <button data-admin-tab="dashboard" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-brand-600 text-white">Dashboard</button>
+                        <button data-admin-tab="pending" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Chờ duyệt</button>
+                        <button data-admin-tab="all-orders" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Đơn hàng</button>
+                        <button data-admin-tab="all-transactions" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Giao dịch</button>
+                    </div>
+                </div>
+                <div id="admin-dashboard" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+                <div id="admin-pending" class="hidden space-y-3"></div>
+                <div id="admin-all-orders" class="hidden space-y-3"></div>
+                <div id="admin-all-transactions" class="hidden space-y-3"></div>
+                <div id="admin-mock-panel" class="hidden mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-5">
+                    <h3 class="font-semibold text-amber-800 mb-2"><i class="fas fa-flask mr-1"></i>Mock Bank (dev/test)</h3>
+                    <p class="text-sm text-amber-700 mb-3">Mô phỏng giao dịch ngân hàng để test tự động cộng tiền.</p>
+                    <div class="flex flex-wrap gap-2">
+                        <input id="mock-topup-code" placeholder="NAP usercode" class="border rounded-xl px-3 py-2 text-sm flex-1 min-w-[140px]">
+                        <input id="mock-amount" type="number" placeholder="Số tiền" class="border rounded-xl px-3 py-2 text-sm w-32">
+                        <button id="mock-transfer-btn" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-sm">Giả lập CK</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div id="toast" class="fixed bottom-6 right-6 z-50 hidden"><div id="toast-inner" class="px-5 py-3 rounded-xl shadow-lg text-sm text-white max-w-xs"></div></div>
+
+<script>
+const API = '/api';
+let currentUser = null;
+let currentView = 'products';
+let currentAdminTab = 'dashboard';
+let activeTopupId = null;
+let pollTimer = null;
+
+function getToken() { return localStorage.getItem('auth_token'); }
+function setToken(t) { localStorage.setItem('auth_token', t); }
+function clearToken() { localStorage.removeItem('auth_token'); }
+
+async function api(path, opts = {}) {
+    const headers = { 'Content-Type': 'application/json', ...opts.headers };
+    const token = getToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(API + path, { ...opts, headers });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Lỗi hệ thống');
+    return data;
+}
+
+function escapeHtml(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatMoney(n) { return Number(n||0).toLocaleString('vi-VN') + 'đ'; }
+function toast(msg, err = false) {
+    const el = document.getElementById('toast'), inner = document.getElementById('toast-inner');
+    inner.textContent = msg;
+    inner.className = `px-5 py-3 rounded-xl shadow-lg text-sm max-w-xs text-white ${err ? 'bg-red-600' : 'bg-slate-800'}`;
+    el.classList.remove('hidden');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => el.classList.add('hidden'), 3500);
+}
+function emptyState(msg) {
+    return `<div class="text-center py-16 text-slate-400 bg-white rounded-2xl border">${escapeHtml(msg)}</div>`;
+}
+function statusBadge(s) {
+    const m = { success:'bg-emerald-100 text-emerald-700', pending:'bg-amber-100 text-amber-700', rejected:'bg-red-100 text-red-700', completed:'bg-emerald-100 text-emerald-700' };
+    return `<span class="text-xs px-2.5 py-1 rounded-full font-medium ${m[s]||'bg-slate-100 text-slate-600'}">${escapeHtml(s)}</span>`;
+}
+
+function showAuth() {
+    stopPolling();
+    currentUser = null;
+    document.getElementById('auth-screen').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+}
+
+async function refreshUser() {
+    const { user } = await api('/me');
+    currentUser = user;
+    updateHeader();
+}
+
+function updateHeader() {
+    if (!currentUser) return;
+    document.getElementById('user-name').textContent = currentUser.name || currentUser.email;
+    document.getElementById('header-balance').textContent = formatMoney(currentUser.balance);
+    document.getElementById('wallet-balance').textContent = formatMoney(currentUser.balance);
+    document.getElementById('user-topup-code').textContent = currentUser.topupCode;
+    const isAdmin = currentUser.role === 'admin';
+    document.getElementById('admin-nav-btn').classList.toggle('hidden', !isAdmin);
+    document.getElementById('admin-mobile-nav-btn').classList.toggle('hidden', !isAdmin);
+}
+
+async function showApp() {
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    await refreshUser();
+    navigateTo('products');
+}
+
+function navigateTo(view) {
+    if (view === 'admin' && currentUser?.role !== 'admin') {
+        document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
+        document.getElementById('view-admin').classList.remove('hidden');
+        document.getElementById('admin-denied').classList.remove('hidden');
+        document.getElementById('admin-content').classList.add('hidden');
+        return;
+    }
+    currentView = view;
+    document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
+    document.getElementById('view-' + view).classList.remove('hidden');
+    document.getElementById('mobile-menu').classList.add('hidden');
+    if (view === 'products') loadProducts();
+    if (view === 'wallet') renderWallet();
+    if (view === 'orders') loadMyOrders();
+    if (view === 'transactions') loadMyTransactions();
+    if (view === 'admin') loadAdmin();
+    document.querySelectorAll('.nav-btn,.mobile-nav-btn').forEach(btn => {
+        const a = btn.dataset.view === view;
+        btn.classList.toggle('bg-white', btn.classList.contains('nav-btn') && a);
+        btn.classList.toggle('text-brand-600', a);
+        btn.classList.toggle('bg-brand-50', btn.classList.contains('mobile-nav-btn') && a);
+    });
+    if (location.hash !== '#' + view) location.hash = view;
+}
+
+async function loadProducts() {
+    const { products } = await api('/products');
+    document.getElementById('products-grid').innerHTML = products.map(p => `
+        <div class="bg-white rounded-2xl border shadow-sm overflow-hidden hover:shadow-md transition">
+            <div class="${p.bg} p-6 flex justify-center"><i class="fas ${p.icon} text-4xl ${p.ic}"></i></div>
+            <div class="p-5">
+                <h3 class="font-bold text-lg">${escapeHtml(p.name)}</h3>
+                <p class="text-slate-500 text-sm mt-1">${escapeHtml(p.desc)}</p>
+                <div class="flex justify-between items-center mt-4">
+                    <span class="text-xl font-bold text-brand-600">${formatMoney(p.price)}</span>
+                    <button data-buy="${p.id}" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-xl text-sm font-medium">Mua ngay</button>
+                </div>
+            </div>
+        </div>`).join('');
+}
+
+async function buyProduct(id) {
+    if (!confirm('Xác nhận mua sản phẩm này?')) return;
+    try {
+        const r = await api('/orders/create', { method:'POST', body: JSON.stringify({ productId: id }) });
+        currentUser.balance = r.balance;
+        updateHeader();
+        toast('Mua hàng thành công!');
+    } catch (e) { toast(e.message, true); }
+}
+
+function renderWallet() {
+    updateHeader();
+}
+
+async function createTopup() {
+    const amount = parseInt(document.getElementById('topup-amount').value, 10);
+    if (!amount || amount < 10000) return toast('Số tiền tối thiểu 10.000đ', true);
+    try {
+        const r = await api('/topup/create', { method:'POST', body: JSON.stringify({ amount }) });
+        activeTopupId = r.id;
+        showQrPanel(r);
+        startPolling(r.id);
+        toast('Đã tạo yêu cầu. Chuyển khoản theo QR — hệ thống tự cộng tiền.');
+    } catch (e) { toast(e.message, true); }
+}
+
+function showQrPanel(data) {
+    document.getElementById('qr-panel').classList.remove('hidden');
+    document.getElementById('qr-placeholder').classList.add('hidden');
+    document.getElementById('qr-image').src = data.qrUrl;
+    document.getElementById('qr-bank-name').textContent = data.bank.name;
+    document.getElementById('qr-bank-account').textContent = data.bank.account;
+    document.getElementById('qr-amount').textContent = formatMoney(data.amount);
+    document.getElementById('qr-add-info').textContent = data.topupCode;
+    setTopupBanner(data.status, data.amount);
+}
+
+function setTopupBanner(status, amount) {
+    const el = document.getElementById('topup-status-banner');
+    const hint = document.getElementById('polling-hint');
+    if (status === 'pending') {
+        el.className = 'mb-4 p-3 rounded-xl text-sm font-medium text-center bg-amber-100 text-amber-800';
+        el.textContent = `Đang chờ chuyển khoản ${formatMoney(amount)}...`;
+        hint.classList.remove('hidden');
+    } else if (status === 'success') {
+        el.className = 'mb-4 p-3 rounded-xl text-sm font-medium text-center bg-emerald-100 text-emerald-800';
+        el.textContent = `Đã nhận tiền! +${formatMoney(amount)} vào ví.`;
+        hint.classList.add('hidden');
+    } else {
+        el.className = 'mb-4 p-3 rounded-xl text-sm font-medium text-center bg-red-100 text-red-800';
+        el.textContent = 'Yêu cầu nạp tiền bị từ chối.';
+        hint.classList.add('hidden');
+    }
+}
+
+function startPolling(id) {
+    stopPolling();
+    pollTimer = setInterval(async () => {
+        try {
+            const s = await api(`/topup/status/${id}`);
+            setTopupBanner(s.status, s.amount);
+            if (s.status === 'success') {
+                currentUser.balance = s.balance;
+                updateHeader();
+                stopPolling();
+                toast('Tiền đã được cộng tự động vào ví!');
+                loadMyTransactions();
+            } else if (s.status === 'rejected') {
+                stopPolling();
+            }
+        } catch (_) {}
+    }, 5000);
+}
+
+function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    document.getElementById('polling-hint')?.classList.add('hidden');
+}
+
+async function loadMyOrders() {
+    const { orders } = await api('/orders/my');
+    const el = document.getElementById('my-orders-list');
+    if (!orders.length) { el.innerHTML = emptyState('Chưa có đơn hàng.'); return; }
+    el.innerHTML = orders.map(o => `
+        <div class="bg-white rounded-xl border p-4 flex justify-between shadow-sm">
+            <div><div class="font-semibold">${escapeHtml(o.product)}</div><div class="text-sm text-slate-500">${escapeHtml(o.date)}</div></div>
+            <div class="text-right"><div class="font-bold text-brand-600">${formatMoney(o.price)}</div>${statusBadge(o.status)}</div>
+        </div>`).join('');
+}
+
+async function loadMyTransactions() {
+    const { transactions } = await api('/transactions/my');
+    const el = document.getElementById('my-transactions-list');
+    if (!transactions.length) { el.innerHTML = emptyState('Chưa có giao dịch.'); return; }
+    el.innerHTML = transactions.map(tx => {
+        const topup = tx.type === 'topup';
+        const col = tx.status === 'rejected' ? 'text-slate-400 line-through' : topup ? 'text-emerald-600' : 'text-red-500';
+        return `<div class="bg-white rounded-xl border p-4 flex justify-between shadow-sm text-sm">
+            <div><span class="font-medium">${escapeHtml(tx.description)}</span> ${statusBadge(tx.status)}
+            <div class="text-slate-400 text-xs mt-1">${escapeHtml(tx.date)}</div></div>
+            <div class="${col} font-bold">${topup?'+':'-'}${formatMoney(tx.amount)}</div></div>`;
+    }).join('');
+}
+
+async function loadAdmin() {
+    document.getElementById('admin-denied').classList.add('hidden');
+    if (currentUser?.role !== 'admin') {
+        document.getElementById('admin-content').classList.add('hidden');
+        document.getElementById('admin-denied').classList.remove('hidden');
+        return;
+    }
+    document.getElementById('admin-content').classList.remove('hidden');
+    document.getElementById('admin-mock-panel').classList.remove('hidden');
+    showAdminTab(currentAdminTab);
+}
+
+async function showAdminTab(tab) {
+    currentAdminTab = tab;
+    document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+        btn.className = `admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium ${btn.dataset.adminTab === tab ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-700'}`;
+    });
+    ['dashboard','pending','all-orders','all-transactions'].forEach(t => {
+        const el = document.getElementById('admin-' + t);
+        if (el) el.classList.toggle('hidden', t !== tab);
+    });
+    if (tab === 'dashboard') {
+        const d = await api('/admin/dashboard');
+        document.getElementById('admin-dashboard').innerHTML = `
+            ${card('Tổng doanh thu', formatMoney(d.revenue), 'text-emerald-600')}
+            ${card('Tổng đơn hàng', d.totalOrders)}
+            ${card('Nạp chờ duyệt', d.pendingTopups, 'text-amber-500')}
+            ${card('Người dùng', d.totalUsers)}`;
+        const badge = document.getElementById('pending-badge');
+        badge.textContent = d.pendingTopups;
+        badge.classList.toggle('hidden', !d.pendingTopups);
+    }
+    if (tab === 'pending') {
+        const { topups } = await api('/admin/topups');
+        const pending = topups.filter(t => t.status === 'pending');
+        const el = document.getElementById('admin-pending');
+        if (!pending.length) { el.innerHTML = emptyState('Không có yêu cầu pending.'); return; }
+        el.innerHTML = pending.map(t => `
+            <div class="bg-white rounded-xl border border-amber-200 p-4 shadow-sm">
+                <div class="flex flex-col lg:flex-row lg:justify-between gap-3">
+                    <div class="space-y-1">
+                        <div class="font-bold text-lg">+${formatMoney(t.amount)}</div>
+                        <div class="text-sm">${escapeHtml(t.email)}</div>
+                        <div class="text-sm">Nội dung CK: <code class="bg-amber-50 px-2 py-0.5 rounded font-bold">${escapeHtml(t.topupCode)}</code></div>
+                        <div class="text-sm text-slate-500">${escapeHtml(t.createdAt)} ${statusBadge(t.status)}</div>
+                    </div>
+                    <div class="flex gap-2 shrink-0">
+                        <button data-approve="${t.id}" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm">Xác nhận</button>
+                        <button data-reject="${t.id}" class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm">Từ chối</button>
+                    </div>
+                </div>
+            </div>`).join('');
+    }
+    if (tab === 'all-orders') {
+        const { orders } = await api('/admin/orders');
+        const el = document.getElementById('admin-all-orders');
+        if (!orders.length) { el.innerHTML = emptyState('Chưa có đơn hàng.'); return; }
+        el.innerHTML = orders.map(o => `
+            <div class="bg-white rounded-xl border p-4 flex justify-between shadow-sm">
+                <div><div class="font-semibold">${escapeHtml(o.product)}</div><div class="text-sm text-slate-500">${escapeHtml(o.date)} • ${escapeHtml(o.email)}</div></div>
+                <div class="text-right"><div class="font-bold">${formatMoney(o.price)}</div>${statusBadge(o.status)}</div>
+            </div>`).join('');
+    }
+    if (tab === 'all-transactions') {
+        const { transactions } = await api('/admin/transactions');
+        const el = document.getElementById('admin-all-transactions');
+        if (!transactions.length) { el.innerHTML = emptyState('Chưa có giao dịch.'); return; }
+        el.innerHTML = transactions.map(tx => {
+            const topup = tx.type === 'topup';
+            const col = topup ? 'text-emerald-600' : 'text-red-500';
+            return `<div class="bg-white rounded-xl border p-4 flex justify-between shadow-sm text-sm">
+                <div><span class="font-medium">${escapeHtml(tx.description)}</span> <span class="text-slate-400">(${escapeHtml(tx.email)})</span> ${statusBadge(tx.status)}
+                ${tx.bankTransactionId ? `<div class="text-xs text-slate-400">Bank TX: ${escapeHtml(tx.bankTransactionId)}</div>` : ''}</div>
+                <div class="${col} font-bold">${topup?'+':'-'}${formatMoney(tx.amount)}</div></div>`;
+        }).join('');
+    }
+}
+
+function card(label, value, color = '') {
+    return `<div class="bg-white rounded-2xl border p-5 shadow-sm"><div class="text-slate-500 text-sm">${label}</div><div class="text-3xl font-bold mt-1 ${color}">${value}</div></div>`;
+}
+
+document.getElementById('tab-login').onclick = () => {
+    document.getElementById('tab-login').className = 'flex-1 py-3 text-sm font-medium text-brand-600 border-b-2 border-brand-600';
+    document.getElementById('tab-register').className = 'flex-1 py-3 text-sm font-medium text-slate-500 border-b-2 border-transparent';
+    document.getElementById('login-form').classList.remove('hidden');
+    document.getElementById('register-form').classList.add('hidden');
+};
+document.getElementById('tab-register').onclick = () => {
+    document.getElementById('tab-register').className = 'flex-1 py-3 text-sm font-medium text-brand-600 border-b-2 border-brand-600';
+    document.getElementById('tab-login').className = 'flex-1 py-3 text-sm font-medium text-slate-500 border-b-2 border-transparent';
+    document.getElementById('register-form').classList.remove('hidden');
+    document.getElementById('login-form').classList.add('hidden');
+};
+
+document.getElementById('login-form').onsubmit = async e => {
+    e.preventDefault();
+    try {
+        const r = await api('/login', { method:'POST', body: JSON.stringify({
+            email: document.getElementById('login-email').value,
+            password: document.getElementById('login-password').value
+        })});
+        setToken(r.token);
+        currentUser = r.user;
+        document.getElementById('login-error').classList.add('hidden');
+        await showApp();
+        toast('Đăng nhập thành công!');
+    } catch (err) {
+        const el = document.getElementById('login-error');
+        el.textContent = err.message;
+        el.classList.remove('hidden');
+    }
+};
+
+document.getElementById('register-form').onsubmit = async e => {
+    e.preventDefault();
+    try {
+        const r = await api('/register', { method:'POST', body: JSON.stringify({
+            name: document.getElementById('register-name').value,
+            email: document.getElementById('register-email').value,
+            password: document.getElementById('register-password').value
+        })});
+        setToken(r.token);
+        currentUser = r.user;
+        document.getElementById('register-error').classList.add('hidden');
+        await showApp();
+        toast('Đăng ký thành công!');
+    } catch (err) {
+        const el = document.getElementById('register-error');
+        el.textContent = err.message;
+        el.classList.remove('hidden');
+    }
+};
+
+document.getElementById('logout-btn').onclick = () => { clearToken(); stopPolling(); showAuth(); };
+document.getElementById('brand-btn').onclick = () => navigateTo('products');
+document.querySelectorAll('.nav-btn,.mobile-nav-btn').forEach(b => b.onclick = () => navigateTo(b.dataset.view));
+document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('mobile-menu').classList.toggle('hidden');
+document.getElementById('create-topup-btn').onclick = createTopup;
+document.getElementById('copy-topup-code').onclick = () => {
+    navigator.clipboard.writeText(currentUser?.topupCode || '').then(() => toast('Đã sao chép!'));
+};
+document.getElementById('products-grid').onclick = e => {
+    const b = e.target.closest('[data-buy]');
+    if (b) buyProduct(Number(b.dataset.buy));
+};
+document.querySelectorAll('.admin-tab-btn').forEach(b => b.onclick = () => showAdminTab(b.dataset.adminTab));
+document.getElementById('admin-pending').onclick = async e => {
+    const approve = e.target.closest('[data-approve]');
+    const reject = e.target.closest('[data-reject]');
+    try {
+        if (approve) { await api(`/admin/topups/${approve.dataset.approve}/approve`, { method:'POST' }); toast('Đã xác nhận thủ công.'); }
+        if (reject) { await api(`/admin/topups/${reject.dataset.reject}/reject`, { method:'POST' }); toast('Đã từ chối.'); }
+        if (approve || reject) showAdminTab('pending');
+    } catch (err) { toast(err.message, true); }
+};
+document.getElementById('mock-transfer-btn').onclick = async () => {
+    const topupCode = document.getElementById('mock-topup-code').value.trim();
+    const amount = parseInt(document.getElementById('mock-amount').value, 10);
+    if (!topupCode || !amount) return toast('Nhập topupCode và số tiền', true);
+    try {
+        const r = await api('/admin/simulate-bank-transfer', { method:'POST', body: JSON.stringify({ topupCode, amount }) });
+        toast(r.result?.ok ? 'Giả lập CK thành công — tiền đã cộng!' : 'CK chưa khớp yêu cầu pending.');
+        showAdminTab('dashboard');
+    } catch (err) { toast(err.message, true); }
+};
+
+(async () => {
+    if (getToken()) {
+        try { await refreshUser(); await showApp();
+            const h = location.hash.replace('#','');
+            if (['products','wallet','orders','transactions','admin'].includes(h)) navigateTo(h);
+        } catch { clearToken(); showAuth(); }
+    } else showAuth();
+})();
+</script>
+</body>
+</html>

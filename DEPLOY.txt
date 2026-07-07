@@ -1,0 +1,64 @@
+================================================================================
+  AI PRO STORE - HƯỚNG DẪN DEPLOY LÊN RENDER (LINK CỐ ĐỊNH MIỄN PHÍ)
+================================================================================
+
+Sau khi deploy, bạn sẽ có link dạng:
+  https://ai-pro-store-xxxx.onrender.com
+
+Mọi người trên internet đều vào được link này.
+Admin và user dùng CHUNG một link.
+
+--------------------------------------------------------------------------------
+BƯỚC 1: Đưa code lên GitHub
+--------------------------------------------------------------------------------
+1. Cài Git: https://git-scm.com/download/win
+2. Tạo repo mới trên https://github.com/new (tên ví dụ: ai-pro-store)
+3. Mở PowerShell trong thư mục project:
+
+   cd C:\Users\DucHuyy\.grok\bin\ai-pro-store
+   git init
+   git add .
+   git commit -m "AI Pro Store production"
+   git branch -M main
+   git remote add origin https://github.com/TEN-GITHUB/ai-pro-store.git
+   git push -u origin main
+
+--------------------------------------------------------------------------------
+BƯỚC 2: Deploy trên Render.com
+--------------------------------------------------------------------------------
+1. Vào https://render.com → Đăng ký (miễn phí, dùng GitHub)
+2. Dashboard → New + → Blueprint
+3. Chọn repo ai-pro-store vừa push
+4. Render tự đọc file render.yaml và tạo:
+   - Web Service (Python/Flask)
+   - PostgreSQL Database (dữ liệu dùng chung)
+5. Bấm Apply → chờ 3-5 phút deploy xong
+6. Copy link web service (ví dụ https://ai-pro-store.onrender.com)
+
+--------------------------------------------------------------------------------
+BƯỚC 3: Đăng nhập admin
+--------------------------------------------------------------------------------
+  Email: admin@gmail.com
+  Mật khẩu: admin123
+
+Đổi mật khẩu admin trên Render:
+  Dashboard → ai-pro-store → Environment → sửa ADMIN_PASSWORD
+
+--------------------------------------------------------------------------------
+BIẾN MÔI TRƯỜNG QUAN TRỌNG (Render tự tạo một phần)
+--------------------------------------------------------------------------------
+  DATABASE_URL      → Tự gắn từ PostgreSQL (KHÔNG sửa)
+  JWT_SECRET        → Tự sinh ngẫu nhiên
+  BANK_MODE         → mock (hoặc api khi có API ngân hàng)
+  BANK_ACCOUNT      → 0394709137
+  ADMIN_EMAIL       → admin@gmail.com
+  ADMIN_PASSWORD    → admin123 (nên đổi sau deploy)
+
+--------------------------------------------------------------------------------
+LƯU Ý
+--------------------------------------------------------------------------------
+- Free tier Render: web sleep sau 15 phút không có người vào, lần đầu mở hơi chậm
+- Dữ liệu lưu PostgreSQL trên server, KHÔNG dùng localStorage
+- Muốn domain riêng (aiprostore.vn): Render → Settings → Custom Domain
+
+================================================================================
