@@ -176,6 +176,7 @@
                 <button data-view="wallet" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium">Ví tiền</button>
                 <button data-view="orders" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium">Đơn hàng</button>
                 <button data-view="transactions" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium">Lịch sử</button>
+                <button data-view="avatar" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium"><i class="fas fa-shirt mr-1"></i>Phòng Thay Đồ</button>
                 <button data-view="admin" id="admin-nav-btn" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium hidden text-red-600">
                     <i class="fas fa-shield-alt mr-1"></i>Quản trị
                 </button>
@@ -198,6 +199,7 @@
             <button data-view="wallet" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium">Ví tiền</button>
             <button data-view="orders" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium">Đơn hàng</button>
             <button data-view="transactions" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium">Lịch sử</button>
+            <button data-view="avatar" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-shirt mr-1"></i>Phòng Thay Đồ</button>
             <button data-view="admin" id="admin-mobile-nav-btn" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium text-red-600 hidden">Quản trị</button>
         </div>
     </header>
@@ -308,6 +310,46 @@
             </div>
         </div>
 
+        <!-- Phòng Thay Đồ -->
+        <section id="view-avatar" class="hidden">
+            <div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <h1 class="text-2xl font-bold"><i class="fas fa-shirt text-brand-600 mr-2"></i>Phòng Thay Đồ</h1>
+                    <p class="text-slate-500 text-sm mt-1">Tạo nhân vật, thay trang phục và mua vật phẩm bằng số dư ví</p>
+                </div>
+                <div class="flex gap-2">
+                    <button type="button" data-gender="female" class="avatar-gender-btn px-4 py-2 rounded-xl text-sm font-medium bg-brand-600 text-white">Nữ</button>
+                    <button type="button" data-gender="male" class="avatar-gender-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200 text-slate-700">Nam</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                <div class="lg:col-span-5 space-y-4">
+                    <div class="bg-white rounded-2xl border shadow-sm p-4">
+                        <div id="avatar-preview" class="aspect-[4/5] max-h-[440px] flex items-center justify-center bg-slate-50 rounded-xl overflow-hidden border"></div>
+                        <div class="flex flex-wrap gap-2 mt-4">
+                            <button type="button" id="avatar-save-outfit-btn" class="flex-1 min-w-[120px] bg-brand-600 hover:bg-brand-700 text-white text-sm py-2.5 rounded-xl font-medium"><i class="fas fa-bookmark mr-1"></i>Lưu outfit</button>
+                            <button type="button" id="avatar-save-image-btn" class="flex-1 min-w-[120px] bg-violet-600 hover:bg-violet-700 text-white text-sm py-2.5 rounded-xl font-medium"><i class="fas fa-download mr-1"></i>Lưu ảnh</button>
+                            <button type="button" id="avatar-share-btn" class="flex-1 min-w-[120px] bg-slate-200 hover:bg-slate-300 text-sm py-2.5 rounded-xl font-medium"><i class="fas fa-share-alt mr-1"></i>Chia sẻ</button>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl border shadow-sm p-4">
+                        <h3 class="font-semibold text-sm mb-2"><i class="fas fa-box-open mr-1 text-brand-600"></i>Kho đồ của bạn</h3>
+                        <div id="avatar-wardrobe-list" class="flex flex-wrap gap-1.5"></div>
+                    </div>
+                    <div class="bg-white rounded-2xl border shadow-sm p-4">
+                        <h3 class="font-semibold text-sm mb-2"><i class="fas fa-bookmark mr-1 text-brand-600"></i>Outfit đã lưu</h3>
+                        <div id="avatar-outfits-list" class="space-y-2 max-h-40 overflow-y-auto"></div>
+                    </div>
+                </div>
+                <div class="lg:col-span-7">
+                    <div class="bg-white rounded-2xl border shadow-sm p-4">
+                        <div id="avatar-category-tabs" class="flex gap-1.5 overflow-x-auto pb-3 mb-3 border-b"></div>
+                        <div id="avatar-items-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[600px] overflow-y-auto"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Transactions -->
         <section id="view-transactions" class="hidden">
             <h1 class="text-2xl font-bold mb-6">Lịch sử giao dịch</h1>
@@ -332,6 +374,7 @@
                         <button data-admin-tab="orders" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Đơn hàng</button>
                         <button data-admin-tab="transactions" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Giao dịch</button>
                         <button data-admin-tab="bank-transactions" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Bank TX</button>
+                        <button data-admin-tab="avatar" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Phòng Thay Đồ</button>
                     </div>
                 </div>
                 <div id="admin-dashboard" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"></div>
@@ -410,6 +453,37 @@
                 <div id="admin-orders" class="hidden space-y-3"></div>
                 <div id="admin-transactions" class="hidden space-y-3"></div>
                 <div id="admin-bank-transactions" class="hidden space-y-3"></div>
+                <div id="admin-avatar" class="hidden">
+                    <div id="admin-avatar-stats"></div>
+                    <div class="mb-4">
+                        <button id="admin-avatar-add-btn" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium">
+                            <i class="fas fa-plus mr-1"></i>Thêm vật phẩm
+                        </button>
+                    </div>
+                    <div id="admin-avatar-form" class="hidden mb-4 bg-white rounded-2xl border p-5 shadow-sm">
+                        <h3 class="font-semibold mb-3">Thêm vật phẩm thay đồ</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <input id="new-avatar-name" type="text" placeholder="Tên vật phẩm *" class="border rounded-xl px-3 py-2 text-sm">
+                            <select id="new-avatar-category" class="border rounded-xl px-3 py-2 text-sm">
+                                <option value="hair">Tóc</option><option value="top">Áo</option><option value="bottom">Quần/Váy</option>
+                                <option value="shoes">Giày</option><option value="hat">Mũ</option><option value="glasses">Kính</option>
+                                <option value="accessory">Phụ kiện</option><option value="makeup">Trang điểm</option>
+                                <option value="background">Nền</option><option value="eyes">Mắt</option><option value="effect">Hiệu ứng</option>
+                            </select>
+                            <select id="new-avatar-gender" class="border rounded-xl px-3 py-2 text-sm">
+                                <option value="all">Tất cả</option><option value="male">Nam</option><option value="female">Nữ</option>
+                            </select>
+                            <input id="new-avatar-price" type="number" placeholder="Giá (VNĐ)" value="0" class="border rounded-xl px-3 py-2 text-sm">
+                            <input id="new-avatar-preview" type="text" placeholder="Preview emoji 👕" class="border rounded-xl px-3 py-2 text-sm">
+                            <input id="new-avatar-layer" type="text" placeholder="Layer key (vd: top-hoodie)" class="border rounded-xl px-3 py-2 text-sm">
+                            <select id="new-avatar-free" class="border rounded-xl px-3 py-2 text-sm">
+                                <option value="1">Miễn phí</option><option value="0">Trả phí</option>
+                            </select>
+                        </div>
+                        <button id="new-avatar-save" class="mt-3 bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium">Lưu vật phẩm</button>
+                    </div>
+                    <div id="admin-avatar-list" class="space-y-3"></div>
+                </div>
                 <div id="admin-mock-panel" class="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-5">
                     <h3 class="font-semibold text-amber-800 mb-2"><i class="fas fa-flask mr-1"></i>Mock Bank (dev/test)</h3>
                     <p class="text-sm text-amber-700 mb-3">Mô phỏng giao dịch ngân hàng để test tự động cộng tiền.</p>
@@ -730,6 +804,7 @@ function navigateTo(view) {
     if (view === 'wallet') renderWallet();
     if (view === 'orders') loadMyOrders();
     if (view === 'transactions') loadMyTransactions();
+    if (view === 'avatar') loadAvatarRoom();
     if (view === 'admin') loadAdmin();
     highlightNav(view);
     if (location.hash !== '#' + view) location.hash = view;
@@ -1036,7 +1111,8 @@ async function loadMyTransactions() {
         el.innerHTML = transactions.map(tx => {
             const topup = tx.type === 'topup';
             const purchase = tx.type === 'purchase';
-            const col = tx.status === 'rejected' ? 'text-slate-400 line-through' : topup ? 'text-emerald-600' : 'text-red-500';
+            const avatarBuy = tx.type === 'avatar_item_purchase';
+            const col = tx.status === 'rejected' ? 'text-slate-400 line-through' : topup ? 'text-emerald-600' : (avatarBuy || purchase) ? 'text-red-500' : 'text-red-500';
             const orderLink = purchase && tx.orderId
                 ? `<div class="mt-1">${orderCodeBtn({ id: tx.orderId, orderCode: tx.orderCode })}</div>` : '';
             const txCode = tx.transactionCode ? `<span class="font-mono text-xs text-slate-400">${escapeHtml(tx.transactionCode)}</span> ` : '';
@@ -1079,7 +1155,7 @@ async function showAdminTab(tab) {
     document.querySelectorAll('.admin-tab-btn').forEach(btn => {
         btn.className = `admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium ${btn.dataset.adminTab === tab ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-700'}`;
     });
-    ['dashboard', 'products', 'users', 'topups', 'orders', 'transactions', 'bank-transactions'].forEach(t => {
+    ['dashboard', 'products', 'users', 'topups', 'orders', 'transactions', 'bank-transactions', 'avatar'].forEach(t => {
         const el = document.getElementById('admin-' + t);
         if (el) el.classList.toggle('hidden', t !== tab);
     });
@@ -1089,11 +1165,19 @@ async function showAdminTab(tab) {
         if (tab === 'dashboard') {
             const d = await api('/admin/dashboard');
             document.getElementById('admin-dashboard').innerHTML = `
-                ${adminCard('Tổng doanh thu', formatMoney(d.revenue), 'text-emerald-600')}
+                ${adminCard('Doanh thu sản phẩm', formatMoney(d.revenue), 'text-emerald-600')}
+                ${adminCard('Doanh thu thay đồ', formatMoney(d.avatarRevenue || 0), 'text-violet-600')}
+                ${adminCard('Tổng doanh thu', formatMoney(d.totalRevenue || d.revenue), 'text-brand-600')}
+                ${adminCard('Vật phẩm đã bán', d.avatarItemsSold || 0)}
+                ${adminCard('User Phòng Thay Đồ', d.avatarUsers || 0)}
                 ${adminCard('Tổng đơn hàng', d.totalOrders)}
                 ${adminCard('Nạp chờ xử lý', d.pendingTopups, 'text-amber-500')}
                 ${adminCard('Người dùng', d.totalUsers)}
-                ${adminCard('Giao dịch Bank', d.bankTransactions, 'text-brand-600')}`;
+                ${adminCard('Giao dịch Bank', d.bankTransactions, 'text-brand-600')}
+                ${(d.topAvatarItems || []).length ? `<div class="sm:col-span-2 lg:col-span-3 xl:col-span-5 bg-white rounded-2xl border p-5 shadow-sm">
+                    <div class="text-slate-500 text-sm mb-2">Top vật phẩm bán chạy</div>
+                    <div class="space-y-1 text-sm">${d.topAvatarItems.map(t => `<div class="flex justify-between"><span class="truncate mr-2">${escapeHtml(t.description)}</span><span class="font-medium shrink-0">${t.count} · ${formatMoney(t.revenue)}</span></div>`).join('')}</div>
+                </div>` : ''}`;
         }
         if (tab === 'products') loadAdminProducts();
         if (tab === 'users') loadAdminUsers();
@@ -1101,6 +1185,7 @@ async function showAdminTab(tab) {
         if (tab === 'orders') loadAdminOrders();
         if (tab === 'transactions') loadAdminTransactions();
         if (tab === 'bank-transactions') loadAdminBankTransactions();
+        if (tab === 'avatar') loadAdminAvatar();
     } catch (e) {
         toast(e.message, true);
     }
@@ -1752,7 +1837,7 @@ document.getElementById('ai-quick-chips').onclick = e => {
             await refreshUser();
             await showApp();
             const h = location.hash.replace('#', '');
-            if (['products', 'wallet', 'orders', 'transactions', 'admin'].includes(h)) navigateTo(h);
+            if (['products', 'wallet', 'orders', 'transactions', 'avatar', 'admin'].includes(h)) navigateTo(h);
         } catch {
             clearToken();
             showAuth();
@@ -1762,5 +1847,7 @@ document.getElementById('ai-quick-chips').onclick = e => {
     }
 })();
 </script>
+<script src="/avatar.js"></script>
+<script>initAvatarRoomEvents(); initAvatarAdminEvents();</script>
 </body>
 </html>

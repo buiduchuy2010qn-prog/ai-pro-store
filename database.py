@@ -152,6 +152,24 @@ def init_schema():
                 id SERIAL PRIMARY KEY, bank_transaction_id TEXT NOT NULL UNIQUE,
                 amount INTEGER NOT NULL, description TEXT NOT NULL, account_number TEXT NOT NULL,
                 received_at TIMESTAMP NOT NULL DEFAULT NOW(), processed INTEGER DEFAULT 0)''',
+            '''CREATE TABLE IF NOT EXISTS avatar_items (
+                id SERIAL PRIMARY KEY, name TEXT NOT NULL, category TEXT NOT NULL,
+                gender TEXT NOT NULL DEFAULT 'all', price INTEGER NOT NULL DEFAULT 0,
+                is_free BOOLEAN DEFAULT FALSE, preview_image TEXT, layer_image TEXT,
+                layer_order INTEGER DEFAULT 99, created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS user_avatar_items (
+                id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
+                item_id INTEGER NOT NULL REFERENCES avatar_items(id),
+                purchased_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                UNIQUE(user_id, item_id))''',
+            '''CREATE TABLE IF NOT EXISTS user_avatars (
+                id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL UNIQUE REFERENCES users(id),
+                gender TEXT NOT NULL DEFAULT 'female', current_items TEXT,
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS saved_outfits (
+                id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
+                name TEXT NOT NULL, gender TEXT NOT NULL, items TEXT NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
         ):
             execute(conn, stmt)
     else:
@@ -202,9 +220,36 @@ def init_schema():
                 amount INTEGER NOT NULL, description TEXT NOT NULL, account_number TEXT NOT NULL,
                 received_at TEXT DEFAULT ({n}), processed INTEGER DEFAULT 0
             );
+            CREATE TABLE IF NOT EXISTS avatar_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, category TEXT NOT NULL,
+                gender TEXT NOT NULL DEFAULT 'all', price INTEGER NOT NULL DEFAULT 0,
+                is_free INTEGER DEFAULT 0, preview_image TEXT, layer_image TEXT,
+                layer_order INTEGER DEFAULT 99, created_at TEXT DEFAULT ({n})
+            );
+            CREATE TABLE IF NOT EXISTS user_avatar_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+                item_id INTEGER NOT NULL, purchased_at TEXT DEFAULT ({n}),
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                FOREIGN KEY (item_id) REFERENCES avatar_items(id),
+                UNIQUE(user_id, item_id)
+            );
+            CREATE TABLE IF NOT EXISTS user_avatars (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL UNIQUE,
+                gender TEXT NOT NULL DEFAULT 'female', current_items TEXT,
+                updated_at TEXT DEFAULT ({n}),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+            CREATE TABLE IF NOT EXISTS saved_outfits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+                name TEXT NOT NULL, gender TEXT NOT NULL, items TEXT NOT NULL,
+                created_at TEXT DEFAULT ({n}),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
         ''')
 
     migrate(conn)
+    from services.avatar_service import seed_avatar_items
+    seed_avatar_items(conn)
     count = fetchone(conn, 'SELECT COUNT(*) AS c FROM products')['c']
     if count == 0:
         for name, desc, price, icon, color, stock in SEED_PRODUCTS:

@@ -23,6 +23,7 @@ from services.bank_service import (
     gen_topup_code, build_qr, bank_loop, ingest_webhook, ingest_casso_webhook,
     process_bank_tx, check_bank
 )
+from services import avatar_service as av
 BASE = Path(__file__).parent
 PUBLIC = BASE / 'public'
 app = Flask(__name__, static_folder=str(PUBLIC), static_url_path='')
@@ -164,6 +165,9 @@ LEGACY_ADMIN_EMAIL = 'admin@gmail.com'
 def purge_user(conn, uid):
     for sql, params in [
         ('DELETE FROM password_otps WHERE user_id = ?', (uid,)),
+        ('DELETE FROM saved_outfits WHERE user_id = ?', (uid,)),
+        ('DELETE FROM user_avatar_items WHERE user_id = ?', (uid,)),
+        ('DELETE FROM user_avatars WHERE user_id = ?', (uid,)),
         ('DELETE FROM topup_requests WHERE user_id = ?', (uid,)),
         ('DELETE FROM transactions WHERE user_id = ?', (uid,)),
         ('DELETE FROM orders WHERE user_id = ?', (uid,)),
@@ -659,19 +663,314 @@ def bank_webhook():
         return jsonify({'error': str(e)}), 400
 
 
+# ─── Avatar / Phòng Thay Đồ ───
+@app.route('/api/avatar/items')
+@auth_required
+def avatar_items_list():
+    gender = request.args.get('gender', '').strip().lower()
+    category = request.args.get('category', '').strip().lower()
+    conn = db.get_conn()
+    owned = av.get_owned_item_ids(conn, request.user['id'])
+    free_ids = av.get_free_item_ids(conn)
+    sql = 'SELECT * FROM avatar_items WHERE 1=1'
+    params = []
+    if gender in ('male', 'female'):
+        sql += ' AND (gender = ? OR gender = ?)'
+        params.extend([gender, 'all'])
+    if category in av.VALID_CATEGORIES:
+        sql += ' AND category = ?'
+        params.append(category)
+    sql += ' ORDER BY layer_order, category, price, id'
+    rows = db.fetchall(conn, sql, tuple(params))
+    db.close(conn)
+    return jsonify({'items': [
+        av.fmt_avatar_item(r, owned=(r['id'] in owned or r['id'] in free_ids))
+        for r in rows
+    ]})
+
+
+@app.route('/api/avatar/my-items')
+@auth_required
+def avatar_my_items():
+    conn = db.get_conn()
+    rows = db.fetchall(conn, '''
+        SELECT ai.*, uai.purchased_at FROM user_avatar_items uai
+        JOIN avatar_items ai ON ai.id = uai.item_id
+        WHERE uai.user_id = ? ORDER BY uai.purchased_at DESC''', (request.user['id'],))
+    free_rows = db.fetchall(conn, 'SELECT * FROM avatar_items WHERE is_free = ? ORDER BY category, id',
+                            (True if db.IS_PG else 1,))
+    db.close(conn)
+    seen = set()
+    items = []
+    for r in free_rows:
+        if r['id'] in seen:
+            continue
+        seen.add(r['id'])
+        items.append(av.fmt_avatar_item(r, owned=True))
+    for r in rows:
+        if r['id'] in seen:
+            continue
+        seen.add(r['id'])
+        item = av.fmt_avatar_item(r, owned=True)
+        item['purchasedAt'] = str(r.get('purchased_at', ''))
+        items.append(item)
+    return jsonify({'items': items})
+
+
+@app.route('/api/avatar/buy-item', methods=['POST'])
+@auth_required
+def avatar_buy_item():
+    d = request.get_json() or {}
+    try:
+        item_id = int(d.get('itemId', 0))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Vật phẩm không hợp lệ.'}), 400
+    conn = db.get_conn()
+    item = db.fetchone(conn, 'SELECT * FROM avatar_items WHERE id = ?', (item_id,))
+    if not item:
+        db.close(conn)
+        return jsonify({'error': 'Vật phẩm không tồn tại.'}), 404
+    if item.get('is_free'):
+        db.close(conn)
+        return jsonify({'error': 'Vật phẩm này miễn phí, không cần mua.'}), 400
+    uid = request.user['id']
+    if av.user_can_use_item(conn, uid, item):
+        db.close(conn)
+        return jsonify({'error': 'Bạn đã sở hữu vật phẩm này.'}), 400
+    user = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (uid,))
+    price = int(item['price'])
+    if user['balance'] < price:
+        db.close(conn)
+        return jsonify({'error': 'Số dư không đủ, vui lòng nạp thêm.', 'needTopup': True}), 400
+    db.execute(conn, 'UPDATE users SET balance = balance - ? WHERE id = ?', (price, uid))
+    db.execute(conn, 'INSERT INTO user_avatar_items (user_id, item_id) VALUES (?, ?)', (uid, item_id))
+    desc = f"Mua vật phẩm #{item_id}: {item['name']}"
+    db.execute(conn,
+        'INSERT INTO transactions (user_id, type, amount, description, status) VALUES (?,?,?,?,?)',
+        (uid, 'avatar_item_purchase', price, desc, 'success'))
+    db.commit(conn)
+    bal = db.fetchone(conn, 'SELECT balance FROM users WHERE id = ?', (uid,))['balance']
+    db.close(conn)
+    return jsonify({'ok': True, 'balance': bal, 'item': av.fmt_avatar_item(item, owned=True)}), 201
+
+
+@app.route('/api/avatar/current')
+@auth_required
+def avatar_current():
+    conn = db.get_conn()
+    state = av.get_current_state(conn, request.user['id'])
+    db.close(conn)
+    return jsonify(state)
+
+
+@app.route('/api/avatar/save-current', methods=['POST'])
+@auth_required
+def avatar_save_current():
+    d = request.get_json() or {}
+    gender = d.get('gender', 'female').strip().lower()
+    if gender not in ('male', 'female'):
+        gender = 'female'
+    items_raw = d.get('items') or {}
+    conn = db.get_conn()
+    item_ids = av.resolve_items_for_gender(conn, gender, items_raw)
+    for cat, iid in item_ids.items():
+        item = db.fetchone(conn, 'SELECT * FROM avatar_items WHERE id = ?', (iid,))
+        if not item or not av.user_can_use_item(conn, request.user['id'], item):
+            db.close(conn)
+            return jsonify({'error': f'Bạn chưa sở hữu vật phẩm ở mục {cat}.'}), 400
+    row = av.get_or_create_avatar(conn, request.user['id'], gender)
+    now = db.sql_now()
+    db.execute(conn,
+        f'UPDATE user_avatars SET gender = ?, current_items = ?, updated_at = {now} WHERE user_id = ?',
+        (gender, av.items_to_json(item_ids), request.user['id']))
+    db.commit(conn)
+    state = av.get_current_state(conn, request.user['id'])
+    db.close(conn)
+    return jsonify({'ok': True, **state})
+
+
+@app.route('/api/avatar/equip-item', methods=['POST'])
+@auth_required
+def avatar_equip_item():
+    d = request.get_json() or {}
+    try:
+        item_id = int(d.get('itemId', 0))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Vật phẩm không hợp lệ.'}), 400
+    conn = db.get_conn()
+    item = db.fetchone(conn, 'SELECT * FROM avatar_items WHERE id = ?', (item_id,))
+    if not item:
+        db.close(conn)
+        return jsonify({'error': 'Vật phẩm không tồn tại.'}), 404
+    uid = request.user['id']
+    if not av.user_can_use_item(conn, uid, item):
+        db.close(conn)
+        return jsonify({'error': 'Bạn chưa sở hữu vật phẩm này.', 'needBuy': True}), 403
+    avatar = av.get_or_create_avatar(conn, uid)
+    gender = (d.get('gender') or avatar.get('gender') or 'female').strip().lower()
+    if item['gender'] not in ('all', gender):
+        db.close(conn)
+        return jsonify({'error': 'Vật phẩm không phù hợp giới tính nhân vật.'}), 400
+    items_map = av.parse_items_json(avatar.get('current_items'))
+    items_map[item['category']] = item_id
+    if item['category'] == 'body':
+        gender = item['gender'] if item['gender'] in ('male', 'female') else gender
+    now = db.sql_now()
+    db.execute(conn,
+        f'UPDATE user_avatars SET gender = ?, current_items = ?, updated_at = {now} WHERE user_id = ?',
+        (gender, av.items_to_json(items_map), uid))
+    db.commit(conn)
+    state = av.get_current_state(conn, uid)
+    db.close(conn)
+    return jsonify({'ok': True, **state})
+
+
+@app.route('/api/avatar/unequip-item', methods=['POST'])
+@auth_required
+def avatar_unequip_item():
+    d = request.get_json() or {}
+    category = av.norm_category(d.get('category', ''))
+    if category in ('background', 'body', 'eyes'):
+        return jsonify({'error': 'Không thể gỡ mục bắt buộc.'}), 400
+    conn = db.get_conn()
+    avatar = av.get_or_create_avatar(conn, request.user['id'])
+    items_map = av.parse_items_json(avatar.get('current_items'))
+    items_map.pop(category, None)
+    gender = avatar.get('gender') or 'female'
+    defaults = av.DEFAULT_ITEMS_MALE if gender == 'male' else av.DEFAULT_ITEMS_FEMALE
+    if category in defaults:
+        by_key = av.items_by_layer_key(conn)
+        row = by_key.get(defaults[category])
+        if row:
+            items_map[category] = row['id']
+    now = db.sql_now()
+    db.execute(conn,
+        f'UPDATE user_avatars SET current_items = ?, updated_at = {now} WHERE user_id = ?',
+        (av.items_to_json(items_map), request.user['id']))
+    db.commit(conn)
+    state = av.get_current_state(conn, request.user['id'])
+    db.close(conn)
+    return jsonify({'ok': True, **state})
+
+
+@app.route('/api/avatar/outfits')
+@auth_required
+def avatar_outfits_list():
+    conn = db.get_conn()
+    rows = db.fetchall(conn,
+        'SELECT * FROM saved_outfits WHERE user_id = ? ORDER BY id DESC', (request.user['id'],))
+    db.close(conn)
+    return jsonify({'outfits': [{
+        'id': r['id'], 'name': r['name'], 'gender': r['gender'],
+        'items': av.parse_items_json(r.get('items')),
+        'createdAt': str(r.get('created_at', '')),
+    } for r in rows]})
+
+
+@app.route('/api/avatar/outfits', methods=['POST'])
+@auth_required
+def avatar_outfit_save():
+    d = request.get_json() or {}
+    name = (d.get('name') or '').strip() or 'Outfit mới'
+    gender = d.get('gender', 'female').strip().lower()
+    if gender not in ('male', 'female'):
+        gender = 'female'
+    conn = db.get_conn()
+    avatar = av.get_or_create_avatar(conn, request.user['id'])
+    items_map = d.get('items') or av.parse_items_json(avatar.get('current_items'))
+    item_ids = av.resolve_items_for_gender(conn, gender, items_map)
+    for iid in item_ids.values():
+        item = db.fetchone(conn, 'SELECT * FROM avatar_items WHERE id = ?', (iid,))
+        if item and not av.user_can_use_item(conn, request.user['id'], item):
+            db.close(conn)
+            return jsonify({'error': 'Outfit chứa vật phẩm chưa sở hữu.'}), 400
+    oid = db.insert_returning_id(conn,
+        'INSERT INTO saved_outfits (user_id, name, gender, items) VALUES (?,?,?,?)',
+        (request.user['id'], name[:80], gender, av.items_to_json(item_ids)))
+    db.commit(conn)
+    row = db.fetchone(conn, 'SELECT * FROM saved_outfits WHERE id = ?', (oid,))
+    db.close(conn)
+    return jsonify({'outfit': {
+        'id': row['id'], 'name': row['name'], 'gender': row['gender'],
+        'items': av.parse_items_json(row.get('items')),
+        'createdAt': str(row.get('created_at', '')),
+    }}), 201
+
+
+@app.route('/api/avatar/outfits/<int:oid>', methods=['DELETE'])
+@auth_required
+def avatar_outfit_delete(oid):
+    conn = db.get_conn()
+    row = db.fetchone(conn, 'SELECT * FROM saved_outfits WHERE id = ? AND user_id = ?',
+                      (oid, request.user['id']))
+    if not row:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy outfit.'}), 404
+    db.execute(conn, 'DELETE FROM saved_outfits WHERE id = ?', (oid,))
+    db.commit(conn)
+    db.close(conn)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/avatar/outfits/<int:oid>/apply', methods=['POST'])
+@auth_required
+def avatar_outfit_apply(oid):
+    conn = db.get_conn()
+    row = db.fetchone(conn, 'SELECT * FROM saved_outfits WHERE id = ? AND user_id = ?',
+                      (oid, request.user['id']))
+    if not row:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy outfit.'}), 404
+    gender = row['gender']
+    item_ids = av.parse_items_json(row.get('items'))
+    for iid in item_ids.values():
+        item = db.fetchone(conn, 'SELECT * FROM avatar_items WHERE id = ?', (iid,))
+        if item and not av.user_can_use_item(conn, request.user['id'], item):
+            db.close(conn)
+            return jsonify({'error': f'Chưa sở hữu: {item["name"]}'}), 400
+    now = db.sql_now()
+    db.execute(conn,
+        f'UPDATE user_avatars SET gender = ?, current_items = ?, updated_at = {now} WHERE user_id = ?',
+        (gender, av.items_to_json(item_ids), request.user['id']))
+    db.commit(conn)
+    state = av.get_current_state(conn, request.user['id'])
+    db.close(conn)
+    return jsonify({'ok': True, **state})
+
+
 # ─── Admin ───
 @app.route('/api/admin/dashboard')
 @admin_required
 def admin_dashboard():
     conn = db.get_conn()
-    revenue = db.fetchone(conn, "SELECT COALESCE(SUM(amount),0) AS t FROM transactions WHERE type='purchase' AND status='success'")['t']
+    product_rev = db.fetchone(conn,
+        "SELECT COALESCE(SUM(amount),0) AS t FROM transactions WHERE type='purchase' AND status='success'")['t']
+    avatar_rev = db.fetchone(conn,
+        "SELECT COALESCE(SUM(amount),0) AS t FROM transactions WHERE type='avatar_item_purchase' AND status='success'")['t']
+    avatar_sold = db.fetchone(conn,
+        "SELECT COUNT(*) AS c FROM transactions WHERE type='avatar_item_purchase' AND status='success'")['c']
+    avatar_users = db.fetchone(conn, 'SELECT COUNT(*) AS c FROM user_avatars')['c']
     orders = db.fetchone(conn, 'SELECT COUNT(*) AS c FROM orders')['c']
     pending = db.fetchone(conn, "SELECT COUNT(*) AS c FROM topup_requests WHERE status='pending'")['c']
     users = db.fetchone(conn, "SELECT COUNT(*) AS c FROM users WHERE role='user'")['c']
     bank_tx = db.fetchone(conn, 'SELECT COUNT(*) AS c FROM processed_bank_transactions')['c']
+    top_items = db.fetchall(conn, '''
+        SELECT description, COUNT(*) AS cnt, SUM(amount) AS revenue
+        FROM transactions WHERE type='avatar_item_purchase' AND status='success'
+        GROUP BY description ORDER BY cnt DESC LIMIT 5''')
     db.close(conn)
-    return jsonify({'revenue': int(revenue), 'totalOrders': int(orders), 'pendingTopups': int(pending),
-                    'totalUsers': int(users), 'bankTransactions': int(bank_tx)})
+    return jsonify({
+        'revenue': int(product_rev),
+        'avatarRevenue': int(avatar_rev),
+        'totalRevenue': int(product_rev) + int(avatar_rev),
+        'avatarItemsSold': int(avatar_sold),
+        'avatarUsers': int(avatar_users),
+        'topAvatarItems': [{
+            'description': r['description'], 'count': int(r['cnt']), 'revenue': int(r['revenue'] or 0),
+        } for r in top_items],
+        'totalOrders': int(orders), 'pendingTopups': int(pending),
+        'totalUsers': int(users), 'bankTransactions': int(bank_tx),
+    })
 
 
 @app.route('/api/admin/users')
@@ -1003,6 +1302,129 @@ def simulate_bank():
     result = process_bank_tx(conn, tx_id, amount, code, BANK['account'])
     db.close(conn)
     return jsonify({'ok': True, 'result': result})
+
+
+@app.route('/api/admin/avatar/items')
+@admin_required
+def admin_avatar_items():
+    conn = db.get_conn()
+    rows = db.fetchall(conn, 'SELECT * FROM avatar_items ORDER BY category, layer_order, id')
+    items = []
+    for r in rows:
+        cnt = av.purchase_count_for_item(conn, r['id'])
+        items.append(av.fmt_avatar_item(r, purchase_count=cnt))
+    db.close(conn)
+    return jsonify({'items': items})
+
+
+@app.route('/api/admin/avatar/items', methods=['POST'])
+@admin_required
+def admin_avatar_item_create():
+    d = request.get_json() or {}
+    name = (d.get('name') or '').strip()
+    if not name:
+        return jsonify({'error': 'Tên vật phẩm không được để trống.'}), 400
+    category = av.norm_category(d.get('category'))
+    gender = av.norm_gender(d.get('gender'))
+    try:
+        price = int(d.get('price', 0))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Giá không hợp lệ.'}), 400
+    if price < 0:
+        return jsonify({'error': 'Giá không hợp lệ.'}), 400
+    is_free = bool(d.get('isFree', price == 0))
+    preview = (d.get('previewImage') or d.get('preview') or '👕').strip()
+    layer = (d.get('layerImage') or d.get('layer') or f'custom-{secrets.token_hex(3)}').strip()
+    layer_order = int(d.get('layerOrder') or av.CATEGORY_ORDER.get(category, 99))
+    conn = db.get_conn()
+    iid = db.insert_returning_id(conn,
+        '''INSERT INTO avatar_items
+           (name, category, gender, price, is_free, preview_image, layer_image, layer_order)
+           VALUES (?,?,?,?,?,?,?,?)''',
+        (name, category, gender, price, is_free if db.IS_PG else (1 if is_free else 0),
+         preview, layer, layer_order))
+    db.commit(conn)
+    row = db.fetchone(conn, 'SELECT * FROM avatar_items WHERE id = ?', (iid,))
+    db.close(conn)
+    return jsonify({'item': av.fmt_avatar_item(row)}), 201
+
+
+@app.route('/api/admin/avatar/items/<int:iid>', methods=['PATCH'])
+@admin_required
+def admin_avatar_item_patch(iid):
+    d = request.get_json() or {}
+    conn = db.get_conn()
+    item = db.fetchone(conn, 'SELECT * FROM avatar_items WHERE id = ?', (iid,))
+    if not item:
+        db.close(conn)
+        return jsonify({'error': 'Vật phẩm không tồn tại.'}), 404
+    name = (d.get('name', item['name']) or '').strip()
+    if not name:
+        db.close(conn)
+        return jsonify({'error': 'Tên không được để trống.'}), 400
+    category = av.norm_category(d.get('category', item['category']))
+    gender = av.norm_gender(d.get('gender', item['gender']))
+    try:
+        price = int(d.get('price', item['price']))
+    except (TypeError, ValueError):
+        db.close(conn)
+        return jsonify({'error': 'Giá không hợp lệ.'}), 400
+    is_free = d.get('isFree', item.get('is_free'))
+    if is_free is None:
+        is_free = price == 0
+    preview = (d.get('previewImage') or item.get('preview_image') or '👕').strip()
+    layer = (d.get('layerImage') or item.get('layer_image') or '').strip()
+    layer_order = int(d.get('layerOrder', item.get('layer_order') or 99))
+    db.execute(conn,
+        '''UPDATE avatar_items SET name=?, category=?, gender=?, price=?, is_free=?,
+           preview_image=?, layer_image=?, layer_order=? WHERE id=?''',
+        (name, category, gender, price, is_free if db.IS_PG else (1 if is_free else 0),
+         preview, layer, layer_order, iid))
+    db.commit(conn)
+    row = db.fetchone(conn, 'SELECT * FROM avatar_items WHERE id = ?', (iid,))
+    db.close(conn)
+    return jsonify({'item': av.fmt_avatar_item(row)})
+
+
+@app.route('/api/admin/avatar/items/<int:iid>', methods=['DELETE'])
+@admin_required
+def admin_avatar_item_delete(iid):
+    conn = db.get_conn()
+    item = db.fetchone(conn, 'SELECT id FROM avatar_items WHERE id = ?', (iid,))
+    if not item:
+        db.close(conn)
+        return jsonify({'error': 'Vật phẩm không tồn tại.'}), 404
+    db.execute(conn, 'DELETE FROM user_avatar_items WHERE item_id = ?', (iid,))
+    db.execute(conn, 'DELETE FROM avatar_items WHERE id = ?', (iid,))
+    db.commit(conn)
+    db.close(conn)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/admin/avatar/revenue')
+@admin_required
+def admin_avatar_revenue():
+    conn = db.get_conn()
+    total = db.fetchone(conn,
+        "SELECT COALESCE(SUM(amount),0) AS t FROM transactions WHERE type='avatar_item_purchase' AND status='success'")['t']
+    count = db.fetchone(conn,
+        "SELECT COUNT(*) AS c FROM transactions WHERE type='avatar_item_purchase' AND status='success'")['c']
+    db.close(conn)
+    return jsonify({'revenue': int(total), 'itemsSold': int(count)})
+
+
+@app.route('/api/admin/avatar/top-selling')
+@admin_required
+def admin_avatar_top_selling():
+    conn = db.get_conn()
+    rows = db.fetchall(conn, '''
+        SELECT description, COUNT(*) AS cnt, SUM(amount) AS revenue
+        FROM transactions WHERE type='avatar_item_purchase' AND status='success'
+        GROUP BY description ORDER BY cnt DESC LIMIT 10''')
+    db.close(conn)
+    return jsonify({'items': [{
+        'description': r['description'], 'count': int(r['cnt']), 'revenue': int(r['revenue'] or 0),
+    } for r in rows]})
 
 
 # ─── Static ───
