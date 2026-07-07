@@ -400,6 +400,7 @@
                         <button data-admin-tab="transactions" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Giao dịch</button>
                         <button data-admin-tab="bank-transactions" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Bank TX</button>
                         <button data-admin-tab="dressroom" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Phòng Thay Đồ</button>
+                        <button data-admin-tab="ai" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Cài đặt AI</button>
                     </div>
                 </div>
                 <div id="admin-dashboard" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"></div>
@@ -486,6 +487,9 @@
                     <div id="admin-dr-stats"></div>
                     <div id="admin-dr-items-list" class="space-y-2 max-h-[70vh] overflow-y-auto"></div>
                 </div>
+                <div id="admin-ai" class="hidden">
+                    <div id="admin-ai-panel"></div>
+                </div>
                 <div id="admin-mock-panel" class="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-5">
                     <h3 class="font-semibold text-amber-800 mb-2"><i class="fas fa-flask mr-1"></i>Mock Bank (dev/test)</h3>
                     <p class="text-sm text-amber-700 mb-3">Mô phỏng giao dịch ngân hàng để test tự động cộng tiền.</p>
@@ -505,31 +509,38 @@
     <div id="toast-inner" class="toast-inner success"></div>
 </div>
 
-<!-- AI Support Chat -->
-<div id="ai-chat-wrap" class="fixed bottom-24 right-6 z-50 flex flex-col items-end gap-3 max-w-[calc(100vw-3rem)]">
-    <div id="ai-chat-panel" class="hidden w-[min(100vw-3rem,380px)] glass-card shadow-2xl overflow-hidden flex flex-col" style="height:min(70vh,520px)">
-        <div class="cyan-purple-gradient text-white px-4 py-3 flex items-center justify-between shrink-0" style="background:linear-gradient(135deg,#0EA5E9,#06B6D4,#8B5CF6)">
-            <div>
-                <div class="font-semibold flex items-center gap-2"><i class="fas fa-robot"></i> Trợ lý AI</div>
-                <div id="ai-chat-mode" class="text-xs text-brand-100">Shop của Đức Hi</div>
+<!-- AI Đức Hi Assistant -->
+<div id="ai-chat-wrap" class="fixed bottom-24 right-4 sm:right-6 z-50 flex flex-col items-end gap-3 max-w-[calc(100vw-2rem)]">
+    <div id="ai-chat-panel" class="hidden glass-card shadow-2xl overflow-hidden flex flex-col">
+        <div class="ai-chat-header shrink-0">
+            <div class="min-w-0">
+                <div class="font-bold flex items-center gap-2 text-sm sm:text-base">
+                    <i class="fas fa-robot"></i> AI Đức Hi Assistant
+                </div>
+                <div id="ai-chat-mode" class="text-[10px] sm:text-xs text-white/80 truncate">Trợ lý thông minh của Shop Đức Hi</div>
             </div>
-            <button id="ai-chat-close" class="text-white/80 hover:text-white text-xl leading-none">&times;</button>
+            <div class="ai-chat-header-actions shrink-0">
+                <button type="button" id="ai-chat-clear" class="ai-header-btn" title="Xóa cuộc trò chuyện"><i class="fas fa-trash-alt text-xs"></i></button>
+                <button type="button" id="ai-chat-minimize" class="ai-header-btn" title="Thu nhỏ"><i class="fas fa-minus text-xs"></i></button>
+                <button type="button" id="ai-chat-close" class="ai-header-btn" title="Đóng"><i class="fas fa-times"></i></button>
+            </div>
         </div>
-        <div id="ai-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50"></div>
-        <div class="p-3 border-t bg-white shrink-0">
-            <div id="ai-quick-chips" class="flex flex-wrap gap-1.5 mb-2"></div>
+        <div id="ai-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 pretty-scrollbar"></div>
+        <div class="p-3 border-t border-sky-100 bg-white/95 shrink-0">
+            <div id="ai-quick-chips" class="flex flex-wrap gap-1.5 mb-2 max-h-16 overflow-y-auto pretty-scrollbar"></div>
             <form id="ai-chat-form" class="flex gap-2">
-                <input id="ai-chat-input" type="text" maxlength="1000" placeholder="Hỏi về nạp tiền, mua hàng..."
-                       class="flex-1 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
-                <button type="submit" class="btn-primary px-4 py-2 text-sm shrink-0">
+                <input id="ai-chat-input" type="text" maxlength="1000" placeholder="Hỏi về nạp tiền, mua hàng, Phòng Thay Đồ..."
+                       class="flex-1 border border-sky-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-cyan-400 focus:outline-none">
+                <button type="submit" class="btn-primary px-4 py-2.5 text-sm shrink-0">
                     <i class="fas fa-paper-plane"></i>
                 </button>
             </form>
-            <p class="text-[10px] text-slate-400 mt-2 text-center">Cần người thật? <a href="https://zalo.me/0944255413" target="_blank" class="text-brand-600 hover:underline">Zalo 0944255413</a></p>
+            <p class="text-[10px] text-slate-400 mt-2 text-center">Cần người thật? <a href="https://zalo.me/0944255413" target="_blank" class="text-brand-600 hover:underline font-medium">Zalo 0944255413</a></p>
         </div>
     </div>
-    <button id="ai-chat-toggle" class="btn-primary w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition hover:scale-105" style="border-radius:9999px">
-        <i class="fas fa-robot text-xl"></i>
+    <button type="button" id="ai-chat-toggle" class="ai-fab">
+        <i class="fas fa-robot text-lg"></i>
+        <span>AI Hỗ Trợ</span>
     </button>
 </div>
 
@@ -550,11 +561,8 @@ let activeTopupId = null;
 let pollTimer = null;
 let forgotEmail = '';
 let forgotOtp = '';
-let aiChatHistory = [];
-let aiChatOpen = false;
 let productsCache = {};
 let pendingPurchaseId = null;
-const AI_QUICK = ['Cách nạp tiền?', 'Mua hàng thế nào?', 'Quên mật khẩu', 'Liên hệ Zalo'];
 const CONTACT_MODE_LABELS = {
     none: 'Không yêu cầu',
     email: 'Yêu cầu email',
@@ -653,79 +661,6 @@ function orderContactBlock(o) {
                 ${phone ? `<div><span class="text-slate-500 text-xs">SĐT/Zalo:</span> <span class="font-medium">${escapeHtml(phone)}</span></div>` : ''}
             </div>
         </div>`;
-}
-
-function renderAiMarkdown(text) {
-    const safe = escapeHtml(text || '');
-    return safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
-}
-
-function appendAiMessage(role, text) {
-    const box = document.getElementById('ai-chat-messages');
-    const isUser = role === 'user';
-    const div = document.createElement('div');
-    div.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
-    div.innerHTML = `
-        <div class="max-w-[85%] rounded-2xl px-3 py-2 text-sm ${isUser
-            ? 'cyan-purple-gradient text-white rounded-br-md soft-shadow'
-            : 'glass-card text-slate-700 rounded-bl-md'}">
-            ${isUser ? escapeHtml(text) : renderAiMarkdown(text)}
-        </div>`;
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
-}
-
-function initAiChat() {
-    const chips = document.getElementById('ai-quick-chips');
-    chips.innerHTML = AI_QUICK.map(q =>
-        `<button type="button" data-ai-quick="${escapeHtml(q)}" class="text-xs bg-slate-100 hover:bg-brand-50 hover:text-brand-700 text-slate-600 px-2.5 py-1 rounded-full border border-slate-200">${escapeHtml(q)}</button>`
-    ).join('');
-    api('/support/status').then(s => {
-        const label = s.mode === 'ai' ? `AI • ${s.model}` : 'FAQ tự động';
-        document.getElementById('ai-chat-mode').textContent = label;
-    }).catch(() => {});
-    if (!aiChatHistory.length) {
-        appendAiMessage('assistant', `Xin chào! Mình là trợ lý **${'Shop của Đức Hi'}**. Hỏi mình về nạp tiền, mua hàng, đăng ký nhé!`);
-    }
-}
-
-function toggleAiChat(open) {
-    aiChatOpen = open ?? !aiChatOpen;
-    document.getElementById('ai-chat-panel').classList.toggle('hidden', !aiChatOpen);
-    if (aiChatOpen) {
-        initAiChat();
-        document.getElementById('ai-chat-input').focus();
-    }
-}
-
-async function sendAiMessage(text) {
-    const msg = (text || '').trim();
-    if (!msg) return;
-    appendAiMessage('user', msg);
-    aiChatHistory.push({ role: 'user', content: msg });
-    const input = document.getElementById('ai-chat-input');
-    input.value = '';
-    input.disabled = true;
-    const loading = document.createElement('div');
-    loading.id = 'ai-loading';
-    loading.className = 'text-xs text-slate-400 px-1';
-    loading.textContent = 'Đang trả lời...';
-    document.getElementById('ai-chat-messages').appendChild(loading);
-    try {
-        const r = await api('/support/chat', {
-            method: 'POST',
-            body: JSON.stringify({ message: msg, history: aiChatHistory.slice(-8) }),
-        });
-        loading.remove();
-        const reply = r.reply || 'Xin lỗi, mình chưa trả lời được. Liên hệ Zalo 0944255413.';
-        appendAiMessage('assistant', reply);
-        aiChatHistory.push({ role: 'assistant', content: reply });
-    } catch (e) {
-        loading.remove();
-        appendAiMessage('assistant', e.message || 'Lỗi kết nối. Thử Zalo 0944255413.');
-    }
-    input.disabled = false;
-    input.focus();
 }
 
 /* ─── Auth UI ─── */
@@ -1159,7 +1094,7 @@ async function showAdminTab(tab) {
     document.querySelectorAll('.admin-tab-btn').forEach(btn => {
         btn.className = `admin-tab-btn px-4 py-2 ${btn.dataset.adminTab === tab ? 'active' : 'bg-slate-100 text-slate-600'}`;
     });
-    ['dashboard', 'products', 'users', 'topups', 'orders', 'transactions', 'bank-transactions', 'dressroom'].forEach(t => {
+    ['dashboard', 'products', 'users', 'topups', 'orders', 'transactions', 'bank-transactions', 'dressroom', 'ai'].forEach(t => {
         const el = document.getElementById('admin-' + t);
         if (el) el.classList.toggle('hidden', t !== tab);
     });
@@ -1189,6 +1124,7 @@ async function showAdminTab(tab) {
         if (tab === 'transactions') loadAdminTransactions();
         if (tab === 'bank-transactions') loadAdminBankTransactions();
         if (tab === 'dressroom') loadAdminDressRoom();
+        if (tab === 'ai') loadAdminAi();
     } catch (e) {
         toast(e.message, true);
     }
@@ -1822,17 +1758,6 @@ document.getElementById('mock-transfer-btn').onclick = async () => {
     }
 };
 
-document.getElementById('ai-chat-toggle').onclick = () => toggleAiChat();
-document.getElementById('ai-chat-close').onclick = () => toggleAiChat(false);
-document.getElementById('ai-chat-form').onsubmit = e => {
-    e.preventDefault();
-    sendAiMessage(document.getElementById('ai-chat-input').value);
-};
-document.getElementById('ai-quick-chips').onclick = e => {
-    const btn = e.target.closest('[data-ai-quick]');
-    if (btn) sendAiMessage(btn.dataset.aiQuick);
-};
-
 /* ─── Init ─── */
 (async () => {
     if (getToken()) {
@@ -1852,8 +1777,9 @@ document.getElementById('ai-quick-chips').onclick = e => {
     }
 })();
 </script>
+<script src="/ai-assistant.js"></script>
 <script src="/dressroom-render.js"></script>
 <script src="/decoration.js"></script>
-<script>initDressRoomEvents(); initAdminDressRoomEvents();</script>
+<script>initAiAssistantEvents(); initDressRoomEvents(); initAdminDressRoomEvents();</script>
 </body>
 </html>

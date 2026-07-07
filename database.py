@@ -200,6 +200,19 @@ def init_schema():
                 name TEXT NOT NULL, gender TEXT NOT NULL, theme TEXT DEFAULT 'japanese_cute',
                 items_used TEXT NOT NULL, preview_image TEXT,
                 created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS ai_settings (
+                key TEXT PRIMARY KEY, value TEXT NOT NULL)''',
+            '''CREATE TABLE IF NOT EXISTS ai_conversations (
+                id TEXT PRIMARY KEY, user_id INTEGER REFERENCES users(id),
+                page TEXT, created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS ai_messages (
+                id SERIAL PRIMARY KEY, conversation_id TEXT NOT NULL REFERENCES ai_conversations(id),
+                role TEXT NOT NULL, content TEXT NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS ai_chat_logs (
+                id SERIAL PRIMARY KEY, user_id INTEGER, intent TEXT, message TEXT NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
         ):
             execute(conn, stmt)
     else:
@@ -304,9 +317,29 @@ def init_schema():
                 created_at TEXT DEFAULT ({n}),
                 FOREIGN KEY (user_id) REFERENCES users(id)
             );
+            CREATE TABLE IF NOT EXISTS ai_settings (
+                key TEXT PRIMARY KEY, value TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS ai_conversations (
+                id TEXT PRIMARY KEY, user_id INTEGER, page TEXT,
+                created_at TEXT DEFAULT ({n}), updated_at TEXT DEFAULT ({n}),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+            CREATE TABLE IF NOT EXISTS ai_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id TEXT NOT NULL,
+                role TEXT NOT NULL, content TEXT NOT NULL,
+                created_at TEXT DEFAULT ({n}),
+                FOREIGN KEY (conversation_id) REFERENCES ai_conversations(id)
+            );
+            CREATE TABLE IF NOT EXISTS ai_chat_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER,
+                intent TEXT, message TEXT NOT NULL,
+                created_at TEXT DEFAULT ({n})
+            );
         ''')
 
     migrate(conn)
+    _seed_ai_settings(conn)
     from services.avatar_service import seed_avatar_items
     from services.decoration_service import seed_decoration_items
     seed_avatar_items(conn)
@@ -318,6 +351,30 @@ def init_schema():
                     (name, desc, price, icon, color, stock))
     commit(conn)
     close(conn)
+
+
+def _seed_ai_settings(conn):
+    import json
+    defaults = {
+        'enabled': '1',
+        'mode': 'auto',
+        'greeting': (
+            'Xin chào! Mình là **AI Đức Hi Assistant** — trợ lý thông minh của Shop của Đức Hi.\n'
+            'Mình có thể hỗ trợ bạn **mua hàng**, **nạp tiền**, **xem đơn hàng**, **Phòng Thay Đồ** và nhiều hơn nữa!'
+        ),
+        'quick_user': json.dumps([
+            'Cách nạp tiền?', 'Mua hàng thế nào?', 'Xem đơn hàng ở đâu?',
+            'Quên mật khẩu?', 'Gợi ý phối đồ nữ Nhật', 'Liên hệ Zalo',
+        ], ensure_ascii=False),
+        'quick_admin': json.dumps([
+            'Xem dashboard admin', 'Quản lý tài khoản', 'Kiểm tra giao dịch',
+            'Quản lý sản phẩm', 'Quản lý Phòng Thay Đồ',
+        ], ensure_ascii=False),
+    }
+    for key, val in defaults.items():
+        if not fetchone(conn, 'SELECT key FROM ai_settings WHERE key = ?', (key,)):
+            execute(conn, 'INSERT INTO ai_settings (key, value) VALUES (?, ?)', (key, val))
+    commit(conn)
 
 
 def insert_ignore_mock(conn, tx_id, amount, description, account):

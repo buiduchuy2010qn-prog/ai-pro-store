@@ -316,26 +316,102 @@ def support_status():
     return jsonify(ai_status())
 
 
-@app.route('/api/support/chat', methods=['POST'])
-@optional_auth
-def support_chat():
-    from services.ai_support import chat as ai_chat
+def _ai_chat_handler():
+    from services.ai_support import chat as ai_chat, status as ai_status
     d = request.get_json() or {}
     message = d.get('message', '')
     history = d.get('history') or []
+    page = d.get('page') or 'products'
+    conversation_id = d.get('conversationId') or d.get('conversation_id')
     user_ctx = request.user if getattr(request, 'user', None) else None
+    if d.get('userContext') and user_ctx:
+        pass
     ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
     try:
-        result = ai_chat(message, history=history, user_ctx=user_ctx, client_ip=ip)
-        return jsonify({'ok': True, **result, 'zalo': ZALO_PHONE})
+        result = ai_chat(
+            message, history=history, user_ctx=user_ctx, client_ip=ip,
+            page=page, conversation_id=conversation_id,
+        )
+        st = ai_status()
+        return jsonify({'ok': True, **result, 'zalo': ZALO_PHONE, 'assistantName': st.get('name')})
     except PermissionError as e:
         return jsonify({'error': str(e)}), 429
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
-    except RuntimeError as e:
-        return jsonify({'error': str(e), 'fallback': True, 'reply': (
-            f'AI tạm lỗi. Liên hệ Zalo **{ZALO_PHONE}** để được hỗ trợ nhanh.'
-        ), 'mode': 'error'}), 200
+    except RuntimeError:
+        st = ai_status()
+        return jsonify({
+            'ok': True,
+            'reply': 'AI đang bận một chút, bạn thử lại sau nhé. Hoặc liên hệ Zalo **{}**.'.format(ZALO_PHONE),
+            'suggestions': st.get('quickUser', []),
+            'actions': [{'label': 'Liên hệ Zalo', 'view': 'zalo'}],
+            'mode': 'error',
+            'zalo': ZALO_PHONE,
+        }), 200
+
+
+@app.route('/api/ai/chat', methods=['POST'])
+@app.route('/api/support/chat', methods=['POST'])
+@optional_auth
+def support_chat():
+    return _ai_chat_handler()
+
+
+@app.route('/api/ai/status')
+def ai_status_route():
+    from services.ai_support import status as ai_status
+    return jsonify(ai_status())
+
+
+@app.route('/api/ai/history', methods=['GET'])
+@auth_required
+def ai_history():
+    from services.ai_support import get_conversation_history, get_settings
+    conv_id = request.args.get('conversationId')
+    msgs, cid = get_conversation_history(request.user['id'], conv_id)
+    settings = get_settings()
+    greeting = settings.get('greeting', '')
+    return jsonify({
+        'messages': msgs,
+        'conversationId': cid,
+        'greeting': greeting,
+        'suggestions': settings['quickAdmin'] if request.user.get('role') == 'admin' else settings['quickUser'],
+    })
+
+
+@app.route('/api/ai/history', methods=['DELETE'])
+@auth_required
+def ai_clear_history():
+    from services.ai_support import clear_conversation
+    d = request.get_json() or {}
+    clear_conversation(request.user['id'], d.get('conversationId'))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/admin/ai/settings', methods=['GET'])
+@admin_required
+def admin_ai_settings_get():
+    from services.ai_support import get_settings, get_admin_stats
+    return jsonify({'settings': get_settings(), 'stats': get_admin_stats()})
+
+
+@app.route('/api/admin/ai/settings', methods=['PATCH'])
+@admin_required
+def admin_ai_settings_patch():
+    from services.ai_support import update_settings
+    d = request.get_json() or {}
+    mapping = {}
+    if 'enabled' in d:
+        mapping['enabled'] = '1' if d['enabled'] else '0'
+    if 'mode' in d:
+        mapping['mode'] = d['mode']
+    if 'greeting' in d:
+        mapping['greeting'] = d['greeting']
+    if 'quickUser' in d:
+        mapping['quick_user'] = d['quickUser']
+    if 'quickAdmin' in d:
+        mapping['quick_admin'] = d['quickAdmin']
+    return jsonify({'settings': update_settings(mapping)})
 
 
 # ─── Auth ───
