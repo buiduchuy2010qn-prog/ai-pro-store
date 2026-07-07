@@ -6,7 +6,24 @@ const DR_HAIR = {
     silver: '#c8cad0', blonde: '#fde68a', purple: '#c4b5fd', red: '#fca5a5',
 };
 
-const DR_HEAD = { cx: 160, cy: 106, rx: 30, ry: 34 };
+const DR_CX = 160;
+const DR_RIG = { cx: DR_CX, headY: 106, headRx: 30, headRy: 34, neckY: 136, shoulderY: 168, waistY: 252, hipY: 262, ankleY: 348, footY: 354 };
+
+const DR_BODY_PRESETS = {
+    'dec-body-f-idol': { head: 'dec-head-f-idol', torso: 'dec-torso-f-idol', arms: 'dec-arms-f-grace', legs: 'dec-legs-f-slim' },
+    'dec-body-f-kimono': { head: 'dec-head-f-oval', torso: 'dec-torso-f-slim', arms: 'dec-arms-f-rest', legs: 'dec-legs-f-slim' },
+    'dec-body-f-school': { head: 'dec-head-f-round', torso: 'dec-torso-f-school', arms: 'dec-arms-f-rest', legs: 'dec-legs-f-school' },
+    'dec-body-f-harajuku': { head: 'dec-head-f-chibi', torso: 'dec-torso-f-curvy', arms: 'dec-arms-f-akimbo', legs: 'dec-legs-f-active' },
+    'dec-body-f-princess': { head: 'dec-head-f-elegant', torso: 'dec-torso-f-princess', arms: 'dec-arms-f-grace', legs: 'dec-legs-f-princess' },
+    'dec-body-m-school': { head: 'dec-head-m-soft', torso: 'dec-torso-m-athletic', arms: 'dec-arms-m-rest', legs: 'dec-legs-m-normal' },
+    'dec-body-m-street': { head: 'dec-head-m-sharp', torso: 'dec-torso-m-slim', arms: 'dec-arms-m-pockets', legs: 'dec-legs-m-athletic' },
+    'dec-body-m-idol': { head: 'dec-head-m-cool', torso: 'dec-torso-m-idol', arms: 'dec-arms-m-confident', legs: 'dec-legs-m-long' },
+};
+
+const DR_DEFAULT_PARTS = {
+    female: { head: 'dec-head-f-idol', torso: 'dec-torso-f-idol', arms: 'dec-arms-f-grace', legs: 'dec-legs-f-slim' },
+    male: { head: 'dec-head-m-cool', torso: 'dec-torso-m-athletic', arms: 'dec-arms-m-rest', legs: 'dec-legs-m-normal' },
+};
 
 function drDefs(uid) {
     const p = uid || 'dr';
@@ -21,35 +38,139 @@ function drDefs(uid) {
     </defs>`;
 }
 
-/* ── Stick figure base (thin body, clothes cover most of it) ── */
-function drStickLimbs(gender) {
-    const sw = gender === 'male' ? 5 : 4;
-    const shoulder = gender === 'male' ? 172 : 168;
+/* ── Modular character: đầu · thân · tay · chân (ghép lên da thịt) ── */
+function drResolveParts(equipped, gender) {
+    const parts = { ...(DR_DEFAULT_PARTS[gender] || DR_DEFAULT_PARTS.female) };
+    for (const item of equipped || []) {
+        if (item.category === 'body' && DR_BODY_PRESETS[item.layerImage]) {
+            Object.assign(parts, DR_BODY_PRESETS[item.layerImage]);
+        }
+    }
+    for (const item of equipped || []) {
+        if (item.category === 'head') parts.head = item.layerImage;
+        if (item.category === 'torso') parts.torso = item.layerImage;
+        if (item.category === 'arms') parts.arms = item.layerImage;
+        if (item.category === 'legs') parts.legs = item.layerImage;
+    }
+    return parts;
+}
+
+function drApplyHeadShape(key) {
+    const shapes = {
+        'dec-head-f-round': [30, 34], 'dec-head-f-oval': [27, 38], 'dec-head-f-cute': [33, 31],
+        'dec-head-f-idol': [29, 35], 'dec-head-f-chibi': [35, 30], 'dec-head-f-elegant': [28, 37],
+        'dec-head-m-soft': [30, 33], 'dec-head-m-sharp': [28, 36], 'dec-head-m-cool': [29, 35],
+        'dec-head-m-athletic': [31, 34], 'dec-head-m-anime': [30, 34], 'dec-head-uni-soft': [30, 34],
+    };
+    const s = shapes[key] || shapes['dec-head-f-round'];
+    DR_RIG.headRx = s[0]; DR_RIG.headRy = s[1];
+}
+
+function drRenderHeadPart(key) {
+    drApplyHeadShape(key);
+    const y = DR_RIG.headY;
+    return `<ellipse cx="${DR_CX}" cy="${y}" rx="${DR_RIG.headRx}" ry="${DR_RIG.headRy}" fill="url(#drskin)" stroke="${DR_SKIN_SH}" stroke-width="0.5"/>`;
+}
+
+function drRenderNeckPart() {
+    return `<rect x="${DR_CX - 4}" y="${DR_RIG.neckY}" width="8" height="14" rx="3" fill="url(#drskin)"/>`;
+}
+
+function drRenderTorsoPart(key) {
+    const R = DR_RIG;
+    const w = key.includes('broad') ? 46 : key.includes('athletic') ? 42 : key.includes('curvy') ? 40 : key.includes('slim') ? 34 : 38;
+    const hw = w / 2;
+    const curve = key.includes('princess') || key.includes('idol') ? 8 : 4;
     return `
-        <line x1="160" y1="${shoulder}" x2="160" y2="252" stroke="${DR_SKIN_SH}" stroke-width="${sw}" stroke-linecap="round" opacity="0.85"/>
-        <line x1="160" y1="182" x2="122" y2="238" stroke="${DR_SKIN_SH}" stroke-width="${sw - 1}" stroke-linecap="round" opacity="0.8"/>
-        <line x1="160" y1="182" x2="198" y2="238" stroke="${DR_SKIN_SH}" stroke-width="${sw - 1}" stroke-linecap="round" opacity="0.8"/>
-        <line x1="160" y1="252" x2="146" y2="348" stroke="${DR_SKIN_SH}" stroke-width="${sw - 1}" stroke-linecap="round" opacity="0.75"/>
-        <line x1="160" y1="252" x2="174" y2="348" stroke="${DR_SKIN_SH}" stroke-width="${sw - 1}" stroke-linecap="round" opacity="0.75"/>
-        <circle cx="122" cy="240" r="5.5" fill="url(#drskin)"/>
-        <circle cx="198" cy="240" r="5.5" fill="url(#drskin)"/>`;
+        <path d="M${DR_CX - hw} ${R.shoulderY} Q${DR_CX - hw + 4} ${R.waistY - 20} ${DR_CX - hw + 6} ${R.waistY} L${DR_CX + hw - 6} ${R.waistY} Q${DR_CX + hw - 4} ${R.waistY - 20} ${DR_CX + hw} ${R.shoulderY} Z" fill="url(#drskin)"/>
+        <ellipse cx="${DR_CX - hw * 0.55}" cy="${R.shoulderY + 18}" rx="5" ry="7" fill="${DR_SKIN_SH}" opacity="0.12"/>
+        <ellipse cx="${DR_CX + hw * 0.55}" cy="${R.shoulderY + 18}" rx="5" ry="7" fill="${DR_SKIN_SH}" opacity="0.12"/>
+        <path d="M${DR_CX - hw + 8} ${R.shoulderY + 6} Q${DR_CX} ${R.shoulderY + curve} ${DR_CX + hw - 8} ${R.shoulderY + 6}" fill="none" stroke="${DR_SKIN_SH}" stroke-width="0.5" opacity="0.25"/>`;
 }
 
-function drHead() {
-    const { cx, cy, rx, ry } = DR_HEAD;
-    return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#drskin)" stroke="${DR_SKIN_SH}" stroke-width="0.6"/>`;
+function drLimbSkin(x1, y1, x2, y2, w) {
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="url(#drskin)" stroke-width="${w}" stroke-linecap="round"/>`;
 }
 
-function drNeck() {
-    return `<rect x="156" y="136" width="8" height="14" rx="3" fill="url(#drskin)"/>`;
+function drRenderArmsPart(key) {
+    const R = DR_RIG;
+    const sw = key.includes('m-') ? 11 : 9;
+    const poses = {
+        'dec-arms-f-akimbo': () => `
+            ${drLimbSkin(DR_CX - 36, R.shoulderY + 4, DR_CX - 48, R.waistY - 10, sw)}
+            ${drLimbSkin(DR_CX - 48, R.waistY - 10, DR_CX - 42, R.waistY + 8, sw)}
+            ${drLimbSkin(DR_CX + 36, R.shoulderY + 4, DR_CX + 48, R.waistY - 10, sw)}
+            ${drLimbSkin(DR_CX + 48, R.waistY - 10, DR_CX + 42, R.waistY + 8, sw)}
+            <circle cx="${DR_CX - 42}" cy="${R.waistY + 10}" r="6" fill="url(#drskin)"/>
+            <circle cx="${DR_CX + 42}" cy="${R.waistY + 10}" r="6" fill="url(#drskin)"/>`,
+        'dec-arms-f-shy': () => `
+            ${drLimbSkin(DR_CX - 34, R.shoulderY + 6, DR_CX - 28, R.waistY - 20, sw)}
+            ${drLimbSkin(DR_CX - 28, R.waistY - 20, DR_CX - 8, R.waistY - 8, sw)}
+            ${drLimbSkin(DR_CX + 34, R.shoulderY + 6, DR_CX + 28, R.waistY - 20, sw)}
+            ${drLimbSkin(DR_CX + 28, R.waistY - 20, DR_CX + 8, R.waistY - 8, sw)}
+            <circle cx="${DR_CX - 6}" cy="${R.waistY - 6}" r="5.5" fill="url(#drskin)"/>
+            <circle cx="${DR_CX + 6}" cy="${R.waistY - 6}" r="5.5" fill="url(#drskin)"/>`,
+        'dec-arms-f-idol': () => `
+            ${drLimbSkin(DR_CX - 36, R.shoulderY + 4, DR_CX - 52, R.waistY + 20, sw)}
+            <circle cx="${DR_CX - 54}" cy="${R.waistY + 24}" r="6" fill="url(#drskin)"/>
+            ${drLimbSkin(DR_CX + 36, R.shoulderY + 4, DR_CX + 44, R.waistY - 30, sw)}
+            ${drLimbSkin(DR_CX + 44, R.waistY - 30, DR_CX + 58, R.waistY - 50, sw)}
+            <circle cx="${DR_CX + 60}" cy="${R.waistY - 52}" r="6" fill="url(#drskin)"/>`,
+        'dec-arms-m-cross': () => `
+            ${drLimbSkin(DR_CX - 38, R.shoulderY + 4, DR_CX + 10, R.waistY - 30, sw + 1)}
+            ${drLimbSkin(DR_CX + 38, R.shoulderY + 4, DR_CX - 10, R.waistY - 24, sw + 1)}
+            <circle cx="${DR_CX - 12}" cy="${R.waistY - 22}" r="6" fill="url(#drskin)"/>
+            <circle cx="${DR_CX + 12}" cy="${R.waistY - 28}" r="6" fill="url(#drskin)"/>`,
+        'dec-arms-m-pockets': () => `
+            ${drLimbSkin(DR_CX - 36, R.shoulderY + 4, DR_CX - 40, R.waistY + 4, sw + 1)}
+            ${drLimbSkin(DR_CX + 36, R.shoulderY + 4, DR_CX + 40, R.waistY + 4, sw + 1)}
+            <circle cx="${DR_CX - 40}" cy="${R.waistY + 6}" r="6" fill="url(#drskin)"/>
+            <circle cx="${DR_CX + 40}" cy="${R.waistY + 6}" r="6" fill="url(#drskin)"/>`,
+        'dec-arms-m-confident': () => `
+            ${drLimbSkin(DR_CX - 38, R.shoulderY + 4, DR_CX - 55, R.waistY + 30, sw + 1)}
+            <circle cx="${DR_CX - 57}" cy="${R.waistY + 34}" r="6.5" fill="url(#drskin)"/>
+            ${drLimbSkin(DR_CX + 38, R.shoulderY + 4, DR_CX + 55, R.waistY + 30, sw + 1)}
+            <circle cx="${DR_CX + 57}" cy="${R.waistY + 34}" r="6.5" fill="url(#drskin)"/>`,
+        'dec-arms-uni-wave': () => `
+            ${drLimbSkin(DR_CX - 36, R.shoulderY + 4, DR_CX - 50, R.waistY + 16, sw)}
+            <circle cx="${DR_CX - 52}" cy="${R.waistY + 20}" r="6" fill="url(#drskin)"/>
+            ${drLimbSkin(DR_CX + 36, R.shoulderY + 4, DR_CX + 50, R.waistY - 40, sw)}
+            ${drLimbSkin(DR_CX + 50, R.waistY - 40, DR_CX + 62, R.waistY - 58, sw)}
+            <circle cx="${DR_CX + 64}" cy="${R.waistY - 60}" r="6" fill="url(#drskin)"/>`,
+    };
+    if (poses[key]) return poses[key]();
+    const hang = key.includes('grace') || key.includes('idol');
+    const ox = hang ? 50 : 46;
+    const oy = hang ? 238 : 242;
+    return `
+        ${drLimbSkin(DR_CX - 34, R.shoulderY + 4, DR_CX - ox, oy, sw)}
+        ${drLimbSkin(DR_CX + 34, R.shoulderY + 4, DR_CX + ox, oy, sw)}
+        <circle cx="${DR_CX - ox - 2}" cy="${oy + 4}" r="6" fill="url(#drskin)"/>
+        <circle cx="${DR_CX + ox + 2}" cy="${oy + 4}" r="6" fill="url(#drskin)"/>`;
 }
 
-function drBodyFemale() {
-    return drStickLimbs('female') + drNeck() + drHead();
+function drRenderLegsPart(key) {
+    const R = DR_RIG;
+    const lw = key.includes('wide') || key.includes('athletic') ? 12 : key.includes('long') ? 9 : 10;
+    const spread = key.includes('wide') ? 14 : key.includes('active') ? 12 : 10;
+    const ankle = key.includes('long') ? R.ankleY + 8 : R.ankleY;
+    return `
+        ${drLimbSkin(DR_CX - spread, R.hipY, DR_CX - spread + 2, R.hipY + 50, lw)}
+        ${drLimbSkin(DR_CX - spread + 2, R.hipY + 50, DR_CX - spread + 4, ankle, lw - 1)}
+        ${drLimbSkin(DR_CX + spread, R.hipY, DR_CX + spread - 2, R.hipY + 50, lw)}
+        ${drLimbSkin(DR_CX + spread - 2, R.hipY + 50, DR_CX + spread - 4, ankle, lw - 1)}
+        <ellipse cx="${DR_CX - spread + 4}" cy="${ankle + 4}" rx="7" ry="5" fill="url(#drskin)"/>
+        <ellipse cx="${DR_CX + spread - 4}" cy="${ankle + 4}" rx="7" ry="5" fill="url(#drskin)"/>`;
 }
 
-function drBodyMale() {
-    return drStickLimbs('male') + drNeck() + drHead();
+function drBuildBodyParts(parts) {
+    drApplyHeadShape(parts.head);
+    return {
+        legs: drRenderLegsPart(parts.legs),
+        torso: drRenderTorsoPart(parts.torso) + drRenderNeckPart(),
+        arms: drRenderArmsPart(parts.arms),
+        head: drRenderHeadPart(parts.head),
+    };
 }
 
 /* ── Anime eyes (on stick head) ── */
@@ -61,7 +182,7 @@ function drAnimeEyes(key) {
         'dec-eyes-cool': '#334155',
     };
     const c = colors[key] || '#6366f1';
-    const y = DR_HEAD.cy + 4;
+    const y = DR_RIG.headY + 4;
     if (key === 'dec-eyes-cool') {
         return `<path d="M138 ${y} Q148 ${y + 4} 158 ${y}" fill="none" stroke="#374151" stroke-width="2.2" stroke-linecap="round"/>
             <path d="M162 ${y} Q172 ${y + 4} 182 ${y}" fill="none" stroke="#374151" stroke-width="2.2" stroke-linecap="round"/>`;
@@ -76,14 +197,14 @@ function drAnimeEyes(key) {
 }
 
 function drExpr(key) {
-    const y = DR_HEAD.cy + 28;
+    const y = DR_RIG.headY + 28;
     const m = {
         'dec-expr-smile': `<path d="M150 ${y} Q160 ${y + 8} 170 ${y}" fill="none" stroke="#c2410c" stroke-width="2" stroke-linecap="round"/>`,
         'dec-expr-happy': `<path d="M148 ${y - 2} Q160 ${y + 12} 172 ${y - 2}" fill="none" stroke="#c2410c" stroke-width="2.2" stroke-linecap="round"/>`,
         'dec-expr-shy': `<ellipse cx="132" cy="${y - 6}" rx="9" ry="5" fill="#fda4af" opacity="0.5"/><ellipse cx="188" cy="${y - 6}" rx="9" ry="5" fill="#fda4af" opacity="0.5"/><path d="M152 ${y + 4} Q160 ${y + 8} 168 ${y + 4}" fill="none" stroke="#c2410c" stroke-width="1.5"/>`,
         'dec-expr-cool': `<line x1="152" y1="${y + 2}" x2="168" y2="${y + 2}" stroke="#374151" stroke-width="2" stroke-linecap="round"/>`,
         'dec-expr-cute': `<path d="M150 ${y} Q160 ${y + 6} 170 ${y}" fill="#f9a8d4" opacity="0.6"/>`,
-        'dec-expr-wink': `<path d="M148 ${y - 2} Q160 ${y + 10} 172 ${y - 2}" fill="none" stroke="#c2410c" stroke-width="2"/><path d="M168 ${DR_HEAD.cy} Q178 ${DR_HEAD.cy + 4} 186 ${DR_HEAD.cy}" fill="none" stroke="#374151" stroke-width="2"/>`,
+        'dec-expr-wink': `<path d="M148 ${y - 2} Q160 ${y + 10} 172 ${y - 2}" fill="none" stroke="#c2410c" stroke-width="2"/><path d="M168 ${DR_RIG.headY} Q178 ${DR_RIG.headY + 4} 186 ${DR_RIG.headY}" fill="none" stroke="#374151" stroke-width="2"/>`,
         'dec-expr-calm': `<path d="M152 ${y + 2} Q160 ${y + 6} 168 ${y + 2}" fill="none" stroke="#c2410c" stroke-width="1.5"/>`,
         'dec-expr-surprise': `<ellipse cx="160" cy="${y + 4}" rx="5" ry="7" fill="#fda4af" opacity="0.5"/>`,
         'dec-expr-confident': `<path d="M150 ${y + 2} L170 ${y + 2}" stroke="#c2410c" stroke-width="2" stroke-linecap="round"/><path d="M170 ${y} L174 ${y + 4}" stroke="#c2410c" stroke-width="1.5"/>`,
@@ -93,8 +214,6 @@ function drExpr(key) {
 }
 
 /* ── Hair: đối xứng quanh cx=160, mái không che mắt ── */
-const DR_CX = 160;
-
 function drParseHair(key) {
     if (key.includes('m-spiky')) return { color: DR_HAIR.black, style: 'spiky' };
     if (key.includes('m-idol')) return { color: DR_HAIR.black, style: 'm-idol' };
@@ -167,7 +286,7 @@ function drHairTwinTails(hc, color) {
 
 function drHairLayers(key) {
     const { color, style } = drParseHair(key);
-    const hc = DR_HEAD.cy;
+    const hc = DR_RIG.headY;
     const frontBase = `${drHairCrown(hc, color)}${drHairBangs(hc, color)}${drHairShade(color)}`;
 
     if (style === 'twintail') return drHairTwinTails(hc, color);
@@ -431,13 +550,13 @@ function drFx(key) {
 }
 
 function drMakeup(key) {
-    const y = DR_HEAD.cy + 28;
+    const y = DR_RIG.headY + 28;
     let lip = `<path d="M150 ${y} Q160 ${y + 5} 170 ${y}" fill="#f472b6" opacity="0.55"/>`;
     if (key.includes('natural')) lip = `<path d="M152 ${y + 2} Q160 ${y + 5} 168 ${y + 2}" fill="#fda4af" opacity="0.4"/>`;
     if (key.includes('idol') || key.includes('festival')) lip = `<path d="M148 ${y - 1} Q160 ${y + 7} 172 ${y - 1}" fill="#e11d48" opacity="0.6"/>`;
     return `
-        <ellipse cx="132" cy="${DR_HEAD.cy + 14}" rx="10" ry="5" fill="#fda4af" opacity="0.38"/>
-        <ellipse cx="188" cy="${DR_HEAD.cy + 14}" rx="10" ry="5" fill="#fda4af" opacity="0.38"/>
+        <ellipse cx="132" cy="${DR_RIG.headY + 14}" rx="10" ry="5" fill="#fda4af" opacity="0.38"/>
+        <ellipse cx="188" cy="${DR_RIG.headY + 14}" rx="10" ry="5" fill="#fda4af" opacity="0.38"/>
         ${lip}`;
 }
 
@@ -461,7 +580,11 @@ function drBg(key) {
 function drRenderLayer(key, gender) {
     if (!key) return '';
     if (key.startsWith('dec-bg-')) return drBg(key);
-    if (key.startsWith('dec-body-')) return gender === 'male' ? drBodyMale() : drBodyFemale();
+    if (key.startsWith('dec-head-')) return drRenderHeadPart(key);
+    if (key.startsWith('dec-torso-')) return drRenderTorsoPart(key) + drRenderNeckPart();
+    if (key.startsWith('dec-arms-')) return drRenderArmsPart(key);
+    if (key.startsWith('dec-legs-')) return drRenderLegsPart(key);
+    if (key.startsWith('dec-body-')) return '';
     if (key.startsWith('dec-eyes-')) return drAnimeEyes(key);
     if (key.startsWith('dec-expr-')) return drExpr(key);
     if (key.startsWith('dec-hair-')) return drHair(key);
@@ -474,8 +597,8 @@ function drRenderLayer(key, gender) {
 }
 
 const DR_LAYER_RANK = {
-    background: 0, body: 20, bottom: 30, top: 40, shoes: 50,
-    eyes: 60, expression: 65, makeup: 68, accessory: 80, effect: 90,
+    background: 0, body: 2, head: 3, torso: 4, arms: 5, legs: 6,
+    bottom: 30, top: 40, shoes: 50, eyes: 60, expression: 65, makeup: 68, accessory: 80, effect: 90,
 };
 
 function drSortEquipped(equipped) {
@@ -488,42 +611,42 @@ function drSortEquipped(equipped) {
 
 function drBuildSvg(equipped, gender) {
     const sorted = drSortEquipped(equipped);
-    const parts = {
-        bg: [], hairBack: [], body: [], bottom: [], top: [], shoes: [],
+    const charParts = drResolveParts(sorted, gender);
+    const body = drBuildBodyParts(charParts);
+    const layers = {
+        bg: [], hairBack: [], bottom: [], top: [], shoes: [],
         eyes: [], expr: [], makeup: [], hairFront: [], acc: [], fx: [],
     };
     const slotOf = {
-        background: 'bg', body: 'body', bottom: 'bottom', top: 'top', shoes: 'shoes',
+        background: 'bg', bottom: 'bottom', top: 'top', shoes: 'shoes',
         eyes: 'eyes', expression: 'expr', makeup: 'makeup', accessory: 'acc', effect: 'fx',
     };
-    let hasBody = false;
 
     for (const item of sorted) {
+        if (['head', 'torso', 'arms', 'legs', 'body'].includes(item.category)) continue;
         if (item.category === 'hair') {
             const { back, front } = drHairLayers(item.layerImage);
-            if (back) parts.hairBack.push(back);
-            if (front) parts.hairFront.push(front);
+            if (back) layers.hairBack.push(back);
+            if (front) layers.hairFront.push(front);
             continue;
         }
         const svg = drRenderLayer(item.layerImage, gender);
         if (!svg) continue;
-        const slot = slotOf[item.category] || 'body';
-        parts[slot].push(svg);
-        if (item.category === 'body') hasBody = true;
+        const slot = slotOf[item.category];
+        if (slot) layers[slot].push(svg);
     }
 
-    if (!hasBody) parts.body.push(gender === 'male' ? drBodyMale() : drBodyFemale());
-    if (!parts.bg.length && !parts.body.length) {
-        parts.bg.push(drBg('dec-bg-sakura'));
-        parts.body.push(drBodyFemale());
-    }
+    if (!layers.bg.length) layers.bg.push(drBg('dec-bg-sakura'));
 
-    const layers = [
-        ...parts.bg, ...parts.hairBack, ...parts.body, ...parts.bottom, ...parts.top,
-        ...parts.shoes, ...parts.eyes, ...parts.expr, ...parts.makeup, ...parts.hairFront,
-        ...parts.acc, ...parts.fx,
+    const order = [
+        ...layers.bg, ...layers.hairBack,
+        body.legs, body.torso, body.arms,
+        ...layers.bottom, ...layers.top, ...layers.shoes,
+        body.head,
+        ...layers.eyes, ...layers.expr, ...layers.makeup,
+        ...layers.hairFront, ...layers.acc, ...layers.fx,
     ];
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 400">${drDefs('dr')}${layers.join('')}</svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 400">${drDefs('dr')}${order.join('')}</svg>`;
 }
 
 function drItemThumb(layerKey, category) {

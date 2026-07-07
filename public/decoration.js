@@ -1,6 +1,10 @@
 /* Phòng Thay Đồ Nhân Vật — UI (158+ vật phẩm) */
 const DR_CATEGORIES = [
-    { id: 'body', label: 'Nhân vật', icon: 'fa-user' },
+    { id: 'head', label: 'Đầu', icon: 'fa-face-smile' },
+    { id: 'torso', label: 'Thân', icon: 'fa-user' },
+    { id: 'arms', label: 'Tay', icon: 'fa-hand' },
+    { id: 'legs', label: 'Chân', icon: 'fa-shoe-prints' },
+    { id: 'body', label: 'Mẫu nhanh', icon: 'fa-wand-magic-sparkles' },
     { id: 'background', label: 'Nền', icon: 'fa-image' },
     { id: 'hair', label: 'Tóc', icon: 'fa-user' },
     { id: 'eyes', label: 'Mắt', icon: 'fa-eye' },
@@ -15,7 +19,7 @@ const DR_CATEGORIES = [
 
 let drState = { gender: 'female', theme: 'japanese_cute', equipped: [], items: {} };
 let drCatalog = [];
-let drCategory = 'hair';
+let drCategory = 'head';
 let drOutfits = [];
 
 function drBuildEquipped(itemIds) {
@@ -30,8 +34,8 @@ function drBuildEquipped(itemIds) {
 
 function drResetDefaults() {
     const defaults = drState.gender === 'male'
-        ? { background: 'dec-bg-school', body: 'dec-body-m-school', eyes: 'dec-eyes-brown', expression: 'dec-expr-cool', hair: 'dec-hair-black-layer', top: 'dec-top-m-uniform', bottom: 'dec-bottom-m-pants', shoes: 'dec-shoes-sneaker-white' }
-        : { background: 'dec-bg-sakura', body: 'dec-body-f-idol', eyes: 'dec-eyes-blue', expression: 'dec-expr-cute', hair: 'dec-hair-silver-long', top: 'dec-top-idol-dress', bottom: 'dec-bottom-skirt-pastel', shoes: 'dec-shoes-loafer' };
+        ? { background: 'dec-bg-school', head: 'dec-head-m-cool', torso: 'dec-torso-m-athletic', arms: 'dec-arms-m-rest', legs: 'dec-legs-m-normal', eyes: 'dec-eyes-brown', expression: 'dec-expr-cool', hair: 'dec-hair-black-layer', top: 'dec-top-m-uniform', bottom: 'dec-bottom-m-pants', shoes: 'dec-shoes-sneaker-white' }
+        : { background: 'dec-bg-sakura', head: 'dec-head-f-idol', torso: 'dec-torso-f-idol', arms: 'dec-arms-f-grace', legs: 'dec-legs-f-slim', eyes: 'dec-eyes-blue', expression: 'dec-expr-cute', hair: 'dec-hair-silver-long', top: 'dec-top-idol-dress', bottom: 'dec-bottom-skirt-pastel', shoes: 'dec-shoes-loafer' };
     drState.items = {};
     drState.equipped = [];
     for (const [cat, key] of Object.entries(defaults)) {
@@ -86,7 +90,7 @@ function drRenderItems() {
         `<button type="button" data-dr-cat="${c.id}" class="dr-cat-btn shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition ${c.id === drCategory ? 'bg-pink-500 text-white shadow' : 'bg-white/90 text-pink-600 border border-pink-200 hover:bg-pink-50'}"><i class="fas ${c.icon} mr-1"></i>${c.label}</button>`
     ).join('');
     let items = drCatalog.filter(i => i.category === drCategory);
-    if (drState.theme && !['body', 'background'].includes(drCategory)) {
+    if (drState.theme && !['body', 'background', 'head', 'torso', 'arms', 'legs'].includes(drCategory)) {
         items = items.filter(i => i.theme === drState.theme || i.theme === 'japanese_cute');
     }
     if (!items.length) { grid.innerHTML = '<div class="col-span-full text-center py-10 text-pink-300 text-sm">Chưa có vật phẩm.</div>'; return; }
@@ -105,6 +109,14 @@ function drEquip(itemId) {
     const item = drCatalog.find(i => i.id === itemId);
     if (!item) return;
     if (item.gender !== 'all' && item.gender !== drState.gender) return toast('Vật phẩm không phù hợp giới tính', true);
+    if (item.category === 'body') {
+        ['head', 'torso', 'arms', 'legs'].forEach(c => { delete drState.items[c]; });
+        drState.equipped = drState.equipped.filter(e => !['head', 'torso', 'arms', 'legs'].includes(e.category));
+    }
+    if (['head', 'torso', 'arms', 'legs'].includes(item.category)) {
+        delete drState.items.body;
+        drState.equipped = drState.equipped.filter(e => e.category !== 'body');
+    }
     drState.items[item.category] = item.id;
     drState.equipped = drState.equipped.filter(e => e.category !== item.category);
     drState.equipped.push({ ...item, slot: item.category });

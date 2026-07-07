@@ -4,8 +4,8 @@ import json
 import database as db
 
 VALID_CATEGORIES = {
-    'body', 'hair', 'eyes', 'expression', 'makeup', 'top', 'bottom',
-    'shoes', 'accessory', 'background', 'effect',
+    'head', 'torso', 'arms', 'legs', 'body', 'hair', 'eyes', 'expression', 'makeup',
+    'top', 'bottom', 'shoes', 'accessory', 'background', 'effect',
 }
 VALID_GENDERS = {'male', 'female', 'all'}
 VALID_THEMES = {
@@ -14,8 +14,9 @@ VALID_THEMES = {
 }
 VALID_STATUSES = {'pending_review', 'approved', 'rejected'}
 CATEGORY_ORDER = {
-    'background': 1, 'body': 2, 'eyes': 3, 'expression': 4, 'makeup': 5,
-    'hair': 6, 'top': 7, 'bottom': 8, 'shoes': 9, 'accessory': 10, 'effect': 11,
+    'background': 1, 'body': 2, 'head': 3, 'torso': 4, 'arms': 5, 'legs': 6,
+    'eyes': 7, 'expression': 8, 'makeup': 9, 'hair': 10, 'top': 11, 'bottom': 12,
+    'shoes': 13, 'accessory': 14, 'effect': 15,
 }
 MAX_SUBMISSIONS_PER_DAY = 5
 THEME_LABELS = {
@@ -34,15 +35,19 @@ THEME_LABELS = {
 }
 
 DEFAULT_FEMALE = {
-    'background': 'dec-bg-sakura', 'body': 'dec-body-f-idol',
+    'background': 'dec-bg-sakura',
+    'head': 'dec-head-f-idol', 'torso': 'dec-torso-f-idol',
+    'arms': 'dec-arms-f-grace', 'legs': 'dec-legs-f-slim',
     'eyes': 'dec-eyes-blue', 'expression': 'dec-expr-cute',
-    'hair': 'dec-hair-black-long', 'top': 'dec-top-idol-dress',
+    'hair': 'dec-hair-silver-long', 'top': 'dec-top-idol-dress',
     'bottom': 'dec-bottom-skirt-pastel', 'shoes': 'dec-shoes-loafer',
 }
 DEFAULT_MALE = {
-    'background': 'dec-bg-school', 'body': 'dec-body-m-school',
+    'background': 'dec-bg-school',
+    'head': 'dec-head-m-cool', 'torso': 'dec-torso-m-athletic',
+    'arms': 'dec-arms-m-rest', 'legs': 'dec-legs-m-normal',
     'eyes': 'dec-eyes-brown', 'expression': 'dec-expr-cool',
-    'hair': 'dec-hair-m-layer', 'top': 'dec-top-m-uniform',
+    'hair': 'dec-hair-black-layer', 'top': 'dec-top-m-uniform',
     'bottom': 'dec-bottom-m-pants', 'shoes': 'dec-shoes-sneaker-white',
 }
 
@@ -124,18 +129,80 @@ def build_seed_items():
     def add(name, cat, gender, theme, emoji, layer):
         items.append((name, cat, gender, theme, emoji, layer, CATEGORY_ORDER.get(cat, 99)))
 
-    # ── Body templates ──
+    # ── Mẫu nhanh (preset cả nhân vật) ──
     for name, g, layer in [
-        ('Nữ Anime Idol', 'female', 'dec-body-f-idol'),
-        ('Nữ Kimono', 'female', 'dec-body-f-kimono'),
-        ('Nữ Học đường', 'female', 'dec-body-f-school'),
-        ('Nữ Harajuku', 'female', 'dec-body-f-harajuku'),
-        ('Nữ Công chúa', 'female', 'dec-body-f-princess'),
-        ('Nam Học đường', 'male', 'dec-body-m-school'),
-        ('Nam Streetwear', 'male', 'dec-body-m-street'),
-        ('Nam Idol', 'male', 'dec-body-m-idol'),
+        ('Mẫu Nữ Idol', 'female', 'dec-body-f-idol'),
+        ('Mẫu Nữ Kimono', 'female', 'dec-body-f-kimono'),
+        ('Mẫu Nữ Học đường', 'female', 'dec-body-f-school'),
+        ('Mẫu Nữ Harajuku', 'female', 'dec-body-f-harajuku'),
+        ('Mẫu Nữ Công chúa', 'female', 'dec-body-f-princess'),
+        ('Mẫu Nam Học đường', 'male', 'dec-body-m-school'),
+        ('Mẫu Nam Streetwear', 'male', 'dec-body-m-street'),
+        ('Mẫu Nam Idol', 'male', 'dec-body-m-idol'),
     ]:
         add(name, 'body', g, 'japanese_cute', '👤', layer)
+
+    # ── Đầu (12) ──
+    for name, g, layer, theme in [
+        ('Đầu tròn nữ', 'female', 'dec-head-f-round', 'japanese_cute'),
+        ('Đầu oval nữ', 'female', 'dec-head-f-oval', 'kimono'),
+        ('Đầu dễ thương', 'female', 'dec-head-f-cute', 'japanese_cute'),
+        ('Đầu idol nữ', 'female', 'dec-head-f-idol', 'idol'),
+        ('Đầu chibi nữ', 'female', 'dec-head-f-chibi', 'harajuku'),
+        ('Đầu thanh mảnh', 'female', 'dec-head-f-elegant', 'princess'),
+        ('Đầu nam mềm', 'male', 'dec-head-m-soft', 'japanese_cute'),
+        ('Đầu nam góc cạnh', 'male', 'dec-head-m-sharp', 'streetwear'),
+        ('Đầu nam cool', 'male', 'dec-head-m-cool', 'idol'),
+        ('Đầu nam thể thao', 'male', 'dec-head-m-athletic', 'school'),
+        ('Đầu nam anime', 'male', 'dec-head-m-anime', 'japanese_cute'),
+        ('Đầu trung tính', 'all', 'dec-head-uni-soft', 'japanese_cute'),
+    ]:
+        add(name, 'head', g, theme, '🙂', layer)
+
+    # ── Thân (10) ──
+    for name, g, layer, theme in [
+        ('Thân mảnh nữ', 'female', 'dec-torso-f-slim', 'japanese_cute'),
+        ('Thân idol nữ', 'female', 'dec-torso-f-idol', 'idol'),
+        ('Thân học sinh', 'female', 'dec-torso-f-school', 'school'),
+        ('Thân công chúa', 'female', 'dec-torso-f-princess', 'princess'),
+        ('Thân Harajuku', 'female', 'dec-torso-f-curvy', 'harajuku'),
+        ('Thân mảnh nam', 'male', 'dec-torso-m-slim', 'streetwear'),
+        ('Thân thể thao nam', 'male', 'dec-torso-m-athletic', 'school'),
+        ('Thân idol nam', 'male', 'dec-torso-m-idol', 'idol'),
+        ('Thân casual nam', 'male', 'dec-torso-m-casual', 'japanese_cute'),
+        ('Thân rộng nam', 'male', 'dec-torso-m-broad', 'streetwear'),
+    ]:
+        add(name, 'torso', g, theme, '🧍', layer)
+
+    # ── Tay (10) ──
+    for name, g, layer, theme in [
+        ('Tay thả tự nhiên', 'female', 'dec-arms-f-rest', 'japanese_cute'),
+        ('Tay thanh mảnh', 'female', 'dec-arms-f-grace', 'idol'),
+        ('Tay chống hông', 'female', 'dec-arms-f-akimbo', 'harajuku'),
+        ('Tay idol pose', 'female', 'dec-arms-f-idol', 'idol'),
+        ('Tay ôm trước', 'female', 'dec-arms-f-shy', 'japanese_cute'),
+        ('Tay nam thả', 'male', 'dec-arms-m-rest', 'school'),
+        ('Tay nam khoanh', 'male', 'dec-arms-m-cross', 'streetwear'),
+        ('Tay nam tự tin', 'male', 'dec-arms-m-confident', 'idol'),
+        ('Tay nam trong túi', 'male', 'dec-arms-m-pockets', 'streetwear'),
+        ('Tay vẫy chào', 'all', 'dec-arms-uni-wave', 'japanese_cute'),
+    ]:
+        add(name, 'arms', g, theme, '💪', layer)
+
+    # ── Chân (10) ──
+    for name, g, layer, theme in [
+        ('Chân mảnh nữ', 'female', 'dec-legs-f-slim', 'japanese_cute'),
+        ('Chân dài nữ', 'female', 'dec-legs-f-long', 'idol'),
+        ('Chân học sinh', 'female', 'dec-legs-f-school', 'school'),
+        ('Chân công chúa', 'female', 'dec-legs-f-princess', 'princess'),
+        ('Chân năng động', 'female', 'dec-legs-f-active', 'harajuku'),
+        ('Chân nam thường', 'male', 'dec-legs-m-normal', 'school'),
+        ('Chân nam thể thao', 'male', 'dec-legs-m-athletic', 'streetwear'),
+        ('Chân nam dài', 'male', 'dec-legs-m-long', 'idol'),
+        ('Chân nam rộng', 'male', 'dec-legs-m-wide', 'streetwear'),
+        ('Chân đứng cân', 'all', 'dec-legs-uni-stand', 'japanese_cute'),
+    ]:
+        add(name, 'legs', g, theme, '🦵', layer)
 
     # ── Backgrounds (10) ──
     bgs = [
@@ -304,6 +371,7 @@ def build_seed_items():
 def seed_decoration_items(conn):
     count = db.fetchone(conn, 'SELECT COUNT(*) AS c FROM decoration_items')['c']
     if count > 0:
+        sync_decoration_items(conn)
         return
     for name, cat, gender, theme, emoji, layer, order in build_seed_items():
         db.execute(conn,
@@ -312,6 +380,22 @@ def seed_decoration_items(conn):
                VALUES (?,?,?,?,?,?,?,?)''',
             (name, cat, gender, theme, emoji, layer,
              order, True if db.IS_PG else 1))
+
+
+def sync_decoration_items(conn):
+    """Thêm vật phẩm mới nếu layer_image chưa có (upgrade không mất dữ liệu cũ)."""
+    rows = db.fetchall(conn, 'SELECT layer_image FROM decoration_items')
+    existing = {r['layer_image'] for r in rows if r.get('layer_image')}
+    for name, cat, gender, theme, emoji, layer, order in build_seed_items():
+        if layer in existing:
+            continue
+        db.execute(conn,
+            '''INSERT INTO decoration_items
+               (name, category, gender, theme, image, layer_image, layer_order, is_active)
+               VALUES (?,?,?,?,?,?,?,?)''',
+            (name, cat, gender, theme, emoji, layer,
+             order, True if db.IS_PG else 1))
+        existing.add(layer)
 
 
 def items_by_layer_key(conn):
