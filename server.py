@@ -47,6 +47,9 @@ def fmt_product(row):
     }
 
 
+VALID_PRODUCT_COLORS = {'emerald', 'orange', 'violet', 'blue', 'sky', 'teal', 'red', 'amber'}
+
+
 def sign_token(uid):
     return jwt.encode({'userId': uid}, JWT_SECRET, algorithm='HS256')
 
@@ -498,6 +501,108 @@ def admin_transactions():
     return jsonify({'transactions': rows})
 
 
+@app.route('/api/admin/products', methods=['GET'])
+@admin_required
+def admin_products_list():
+    conn = db.get_conn()
+    rows = db.fetchall(conn, 'SELECT * FROM products ORDER BY id')
+    db.close(conn)
+    return jsonify({'products': [fmt_product(r) for r in rows]})
+
+
+@app.route('/api/admin/products', methods=['POST'])
+@admin_required
+def admin_product_create():
+    d = request.get_json() or {}
+    name = (d.get('name') or '').strip()
+    if not name:
+        return jsonify({'error': 'Tên sản phẩm không được để trống.'}), 400
+    try:
+        price = int(d.get('price', 0))
+        stock = int(d.get('stock', 99))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Giá hoặc tồn kho không hợp lệ.'}), 400
+    if price < 0:
+        return jsonify({'error': 'Giá không hợp lệ.'}), 400
+    desc = (d.get('desc') or d.get('description') or '').strip()
+    icon = (d.get('icon') or 'fa-box').strip() or 'fa-box'
+    color = (d.get('color') or 'blue').strip()
+    if color not in VALID_PRODUCT_COLORS:
+        color = 'blue'
+    if stock < 0:
+        stock = 0
+    conn = db.get_conn()
+    pid = db.insert_returning_id(conn,
+        'INSERT INTO products (name,description,price,image,color,stock) VALUES (?,?,?,?,?,?)',
+        (name, desc, price, icon, color, stock))
+    db.commit(conn)
+    row = db.fetchone(conn, 'SELECT * FROM products WHERE id = ?', (pid,))
+    db.close(conn)
+    return jsonify({'product': fmt_product(row)}), 201
+
+
+@app.route('/api/admin/products/<int:pid>', methods=['PATCH'])
+@admin_required
+def admin_product_patch(pid):
+    d = request.get_json() or {}
+    conn = db.get_conn()
+    product = db.fetchone(conn, 'SELECT * FROM products WHERE id = ?', (pid,))
+    if not product:
+        db.close(conn)
+        return jsonify({'error': 'Sản phẩm không tồn tại.'}), 404
+    name = (d.get('name', product['name']) or '').strip()
+    if not name:
+        db.close(conn)
+        return jsonify({'error': 'Tên sản phẩm không được để trống.'}), 400
+    try:
+        price = int(d.get('price', product['price']))
+        stock = int(d.get('stock', product['stock']))
+    except (TypeError, ValueError):
+        db.close(conn)
+        return jsonify({'error': 'Giá hoặc tồn kho không hợp lệ.'}), 400
+    if price < 0:
+        db.close(conn)
+        return jsonify({'error': 'Giá không hợp lệ.'}), 400
+    desc = (d.get('desc') or d.get('description') or product['description'] or '').strip()
+    icon = (d.get('icon') or product.get('image') or 'fa-box').strip() or 'fa-box'
+    color = (d.get('color') or product.get('color') or 'blue').strip()
+    if color not in VALID_PRODUCT_COLORS:
+        color = 'blue'
+    if stock < 0:
+        stock = 0
+    db.execute(conn,
+        'UPDATE products SET name=?, description=?, price=?, image=?, color=?, stock=? WHERE id=?',
+        (name, desc, price, icon, color, stock, pid))
+    db.commit(conn)
+    row = db.fetchone(conn, 'SELECT * FROM products WHERE id = ?', (pid,))
+    db.close(conn)
+    return jsonify({'product': fmt_product(row)})
+
+
+@app.route('/api/admin/products/<int:pid>', methods=['DELETE'])
+@admin_required
+def admin_product_delete(pid):
+    conn = db.get_conn()
+    product = db.fetchone(conn, 'SELECT id FROM products WHERE id = ?', (pid,))
+    if not product:
+        db.close(conn)
+        return jsonify({'error': 'Sản phẩm không tồn tại.'}), 404
+    db.execute(conn, 'DELETE FROM products WHERE id = ?', (pid,))
+    db.commit(conn)
+    db.close(conn)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/admin/products', methods=['DELETE'])
+@admin_required
+def admin_products_delete_all():
+    conn = db.get_conn()
+    db.execute(conn, 'DELETE FROM products')
+    db.commit(conn)
+    db.close(conn)
+    return jsonify({'ok': True, 'message': 'Đã xóa tất cả sản phẩm.'})
+
+
 @app.route('/api/admin/bank-transactions')
 @admin_required
 def admin_bank_tx():
@@ -517,9 +622,49 @@ def admin_bank_tx():
 def admin_topups():
     conn = db.get_conn()
     rows = db.fetchall(conn, '''
-        SELECT tr.*,u.email FROM topup_requests tr JOIN users u ON u.id=tr.user_id ORDER BY tr.id DESC''')
+        SELECT tr.id,tr.user_id AS "userId",tr.amount,tr.topup_code AS "topupCode",tr.status,
+               tr.created_at AS "createdAt",u.email,u.name AS "fullName"
+        FROM topup_requests tr JOIN users u ON u.id=tr.user_id ORDER BY tr.id DESC''')
     db.close(conn)
+    for r in rows:
+        r['createdAt'] = str(r['createdAt'])
     return jsonify({'topups': rows})
+
+
+@app.route('/api/admin/topups/<int:tid>/approve', methods=['POST'])
+@admin_required
+def admin_topup_approve(tid):
+    conn = db.get_conn()
+    topup = db.fetchone(conn, 'SELECT * FROM topup_requests WHERE id = ?', (tid,))
+    if not topup:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy yêu cầu nạp tiền.'}), 404
+    if topup['status'] != 'pending':
+        db.close(conn)
+        return jsonify({'error': 'Yêu cầu này đã được xử lý.'}), 400
+    user = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (topup['user_id'],))
+    if not user:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy người dùng.'}), 404
+    if user.get('is_blocked'):
+        db.close(conn)
+        return jsonify({'error': 'Tài khoản đã bị khóa.'}), 400
+
+    amount = int(topup['amount'])
+    tx_id = f'MANUAL_{int(time.time())}_{secrets.token_hex(3)}'
+    now = db.sql_now()
+    db.execute(conn, 'UPDATE users SET balance = balance + ? WHERE id = ?', (amount, user['id']))
+    db.execute(conn, f"UPDATE topup_requests SET status = 'success', completed_at = {now} WHERE id = ?", (tid,))
+    db.execute(conn,
+        "UPDATE transactions SET status = 'success', description = ?, bank_transaction_id = ? WHERE topup_request_id = ? AND status = 'pending'",
+        (f'Nạp tiền {amount:,}đ (admin duyệt)'.replace(',', '.'), tx_id, tid))
+    db.execute(conn,
+        'INSERT INTO processed_bank_transactions (bank_transaction_id, amount, description, user_id, bank_account) VALUES (?, ?, ?, ?, ?)',
+        (tx_id, amount, topup['topup_code'], user['id'], BANK['account']))
+    db.commit(conn)
+    bal = db.fetchone(conn, 'SELECT balance FROM users WHERE id = ?', (user['id'],))['balance']
+    db.close(conn)
+    return jsonify({'ok': True, 'amount': amount, 'balance': bal, 'email': user['email']})
 
 
 @app.route('/api/admin/simulate-bank-transfer', methods=['POST'])

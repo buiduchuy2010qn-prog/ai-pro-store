@@ -291,13 +291,58 @@
                     <h1 class="text-2xl font-bold">Bảng quản trị</h1>
                     <div class="flex gap-2 flex-wrap">
                         <button data-admin-tab="dashboard" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-brand-600 text-white">Dashboard</button>
+                        <button data-admin-tab="products" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Sản phẩm</button>
                         <button data-admin-tab="users" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Người dùng</button>
+                        <button data-admin-tab="topups" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Nạp tiền</button>
                         <button data-admin-tab="orders" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Đơn hàng</button>
                         <button data-admin-tab="transactions" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Giao dịch</button>
                         <button data-admin-tab="bank-transactions" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Bank TX</button>
                     </div>
                 </div>
                 <div id="admin-dashboard" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"></div>
+                <div id="admin-products" class="hidden">
+                    <div class="mb-4 flex flex-wrap gap-2 justify-between items-center">
+                        <button id="admin-product-add-btn" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium">
+                            <i class="fas fa-plus mr-1"></i>Thêm sản phẩm
+                        </button>
+                        <button id="admin-products-delete-all" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium">
+                            <i class="fas fa-trash mr-1"></i>Xóa tất cả
+                        </button>
+                    </div>
+                    <div id="admin-product-form" class="hidden mb-4 bg-white rounded-2xl border p-5 shadow-sm">
+                        <h3 class="font-semibold mb-3">Thêm sản phẩm mới</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <input id="new-product-name" type="text" placeholder="Tên sản phẩm *" class="border rounded-xl px-3 py-2 text-sm">
+                            <input id="new-product-price" type="number" placeholder="Giá (VNĐ) *" class="border rounded-xl px-3 py-2 text-sm">
+                            <input id="new-product-desc" type="text" placeholder="Mô tả" class="border rounded-xl px-3 py-2 text-sm sm:col-span-2">
+                            <input id="new-product-stock" type="number" placeholder="Tồn kho (mặc định 99)" value="99" class="border rounded-xl px-3 py-2 text-sm">
+                            <select id="new-product-color" class="border rounded-xl px-3 py-2 text-sm">
+                                <option value="emerald">Xanh lá</option>
+                                <option value="orange">Cam</option>
+                                <option value="violet">Tím</option>
+                                <option value="blue">Xanh dương</option>
+                                <option value="sky">Xanh nhạt</option>
+                                <option value="teal">Xanh ngọc</option>
+                                <option value="amber">Vàng</option>
+                                <option value="red">Đỏ</option>
+                            </select>
+                            <select id="new-product-icon" class="border rounded-xl px-3 py-2 text-sm sm:col-span-2">
+                                <option value="fa-robot">Robot (AI)</option>
+                                <option value="fa-brain">Brain</option>
+                                <option value="fa-image">Image</option>
+                                <option value="fa-gem">Gem</option>
+                                <option value="fa-code">Code</option>
+                                <option value="fa-search">Search</option>
+                                <option value="fa-box">Box</option>
+                            </select>
+                        </div>
+                        <div class="flex gap-2 mt-3">
+                            <button id="new-product-save" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-xl text-sm font-medium">Lưu</button>
+                            <button id="new-product-cancel" class="bg-slate-200 hover:bg-slate-300 px-4 py-2 rounded-xl text-sm font-medium">Hủy</button>
+                        </div>
+                    </div>
+                    <div id="admin-products-list" class="space-y-3"></div>
+                </div>
                 <div id="admin-users" class="hidden">
                     <div class="mb-4 flex gap-2">
                         <input id="admin-user-search" type="text" placeholder="Tìm theo email hoặc tên..."
@@ -307,6 +352,10 @@
                         </button>
                     </div>
                     <div id="admin-users-list" class="space-y-3"></div>
+                </div>
+                <div id="admin-topups" class="hidden">
+                    <p class="text-sm text-slate-500 mb-4">Khi user chuyển khoản thật, admin bấm <strong>Duyệt</strong> để cộng tiền vào ví.</p>
+                    <div id="admin-topups-list" class="space-y-3"></div>
                 </div>
                 <div id="admin-orders" class="hidden space-y-3"></div>
                 <div id="admin-transactions" class="hidden space-y-3"></div>
@@ -689,10 +738,11 @@ async function showAdminTab(tab) {
     document.querySelectorAll('.admin-tab-btn').forEach(btn => {
         btn.className = `admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium ${btn.dataset.adminTab === tab ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-700'}`;
     });
-    ['dashboard', 'users', 'orders', 'transactions', 'bank-transactions'].forEach(t => {
+    ['dashboard', 'products', 'users', 'topups', 'orders', 'transactions', 'bank-transactions'].forEach(t => {
         const el = document.getElementById('admin-' + t);
         if (el) el.classList.toggle('hidden', t !== tab);
     });
+    document.getElementById('admin-mock-panel').classList.toggle('hidden', tab !== 'dashboard');
 
     try {
         if (tab === 'dashboard') {
@@ -704,10 +754,147 @@ async function showAdminTab(tab) {
                 ${adminCard('Người dùng', d.totalUsers)}
                 ${adminCard('Giao dịch Bank', d.bankTransactions, 'text-brand-600')}`;
         }
+        if (tab === 'products') loadAdminProducts();
         if (tab === 'users') loadAdminUsers();
+        if (tab === 'topups') loadAdminTopups();
         if (tab === 'orders') loadAdminOrders();
         if (tab === 'transactions') loadAdminTransactions();
         if (tab === 'bank-transactions') loadAdminBankTransactions();
+    } catch (e) {
+        toast(e.message, true);
+    }
+}
+
+const COLOR_OPTIONS = ['emerald', 'orange', 'violet', 'blue', 'sky', 'teal', 'amber', 'red'];
+
+function productColorSelect(id, selected) {
+    return `<select data-field="color" data-product-id="${id}" class="border rounded-lg px-2 py-1.5 text-sm w-full">
+        ${COLOR_OPTIONS.map(c => `<option value="${c}" ${c === selected ? 'selected' : ''}>${c}</option>`).join('')}
+    </select>`;
+}
+
+async function loadAdminProducts() {
+    try {
+        const { products } = await api('/admin/products');
+        const el = document.getElementById('admin-products-list');
+        if (!products.length) {
+            el.innerHTML = emptyState('Chưa có sản phẩm. Bấm "Thêm sản phẩm" để tạo mới.');
+            return;
+        }
+        el.innerHTML = products.map(p => `
+            <div class="bg-white rounded-xl border p-4 shadow-sm" data-product-row="${p.id}">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-end">
+                    <div class="lg:col-span-3">
+                        <label class="text-xs text-slate-500">Tên</label>
+                        <input data-field="name" data-product-id="${p.id}" value="${escapeHtml(p.name)}"
+                               class="border rounded-lg px-3 py-2 text-sm w-full mt-1">
+                    </div>
+                    <div class="lg:col-span-3">
+                        <label class="text-xs text-slate-500">Mô tả</label>
+                        <input data-field="desc" data-product-id="${p.id}" value="${escapeHtml(p.desc)}"
+                               class="border rounded-lg px-3 py-2 text-sm w-full mt-1">
+                    </div>
+                    <div class="lg:col-span-2">
+                        <label class="text-xs text-slate-500">Giá (VNĐ)</label>
+                        <input data-field="price" data-product-id="${p.id}" type="number" value="${p.price}"
+                               class="border rounded-lg px-3 py-2 text-sm w-full mt-1">
+                    </div>
+                    <div class="lg:col-span-1">
+                        <label class="text-xs text-slate-500">Kho</label>
+                        <input data-field="stock" data-product-id="${p.id}" type="number" value="${p.stock}"
+                               class="border rounded-lg px-3 py-2 text-sm w-full mt-1">
+                    </div>
+                    <div class="lg:col-span-1">
+                        <label class="text-xs text-slate-500">Màu</label>
+                        <div class="mt-1">${productColorSelect(p.id, p.color)}</div>
+                    </div>
+                    <div class="lg:col-span-2 flex gap-2">
+                        <button data-save-product="${p.id}" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white px-3 py-2 rounded-lg text-sm font-medium">Lưu</button>
+                        <button data-delete-product="${p.id}" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>`).join('');
+    } catch (e) {
+        toast(e.message, true);
+    }
+}
+
+function readProductRow(id) {
+    const row = document.querySelector(`[data-product-row="${id}"]`);
+    if (!row) return null;
+    const get = field => row.querySelector(`[data-field="${field}"][data-product-id="${id}"]`)?.value;
+    return {
+        name: (get('name') || '').trim(),
+        desc: (get('desc') || '').trim(),
+        price: parseInt(get('price'), 10),
+        stock: parseInt(get('stock'), 10),
+        color: get('color') || 'blue',
+    };
+}
+
+async function saveAdminProduct(id) {
+    const body = readProductRow(id);
+    if (!body?.name) return toast('Tên sản phẩm không được để trống', true);
+    if (!body.price || body.price < 0) return toast('Giá không hợp lệ', true);
+    try {
+        await api(`/admin/products/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+        toast('Đã cập nhật sản phẩm!');
+        loadAdminProducts();
+        if (currentView === 'products') loadProducts();
+    } catch (e) {
+        toast(e.message, true);
+    }
+}
+
+async function deleteAdminProduct(id) {
+    if (!confirm('Xóa sản phẩm này?')) return;
+    try {
+        await api(`/admin/products/${id}`, { method: 'DELETE' });
+        toast('Đã xóa sản phẩm!');
+        loadAdminProducts();
+        if (currentView === 'products') loadProducts();
+    } catch (e) {
+        toast(e.message, true);
+    }
+}
+
+async function createAdminProduct() {
+    const name = document.getElementById('new-product-name').value.trim();
+    const price = parseInt(document.getElementById('new-product-price').value, 10);
+    const desc = document.getElementById('new-product-desc').value.trim();
+    const stock = parseInt(document.getElementById('new-product-stock').value, 10) || 99;
+    const color = document.getElementById('new-product-color').value;
+    const icon = document.getElementById('new-product-icon').value;
+    if (!name) return toast('Nhập tên sản phẩm', true);
+    if (!price || price < 0) return toast('Giá không hợp lệ', true);
+    try {
+        await api('/admin/products', {
+            method: 'POST',
+            body: JSON.stringify({ name, price, desc, stock, color, icon }),
+        });
+        toast('Đã thêm sản phẩm!');
+        document.getElementById('admin-product-form').classList.add('hidden');
+        document.getElementById('new-product-name').value = '';
+        document.getElementById('new-product-price').value = '';
+        document.getElementById('new-product-desc').value = '';
+        document.getElementById('new-product-stock').value = '99';
+        loadAdminProducts();
+        if (currentView === 'products') loadProducts();
+    } catch (e) {
+        toast(e.message, true);
+    }
+}
+
+async function deleteAllAdminProducts() {
+    if (!confirm('Xóa TẤT CẢ sản phẩm? Hành động này không thể hoàn tác.')) return;
+    if (!confirm('Chắc chắn xóa hết? Shop sẽ trống sản phẩm.')) return;
+    try {
+        await api('/admin/products', { method: 'DELETE' });
+        toast('Đã xóa tất cả sản phẩm!');
+        loadAdminProducts();
+        if (currentView === 'products') loadProducts();
     } catch (e) {
         toast(e.message, true);
     }
@@ -750,6 +937,44 @@ async function patchAdminUser(id, body) {
         await api(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
         toast('Cập nhật người dùng thành công!');
         loadAdminUsers(document.getElementById('admin-user-search').value.trim());
+    } catch (e) {
+        toast(e.message, true);
+    }
+}
+
+async function loadAdminTopups() {
+    try {
+        const { topups } = await api('/admin/topups');
+        const el = document.getElementById('admin-topups-list');
+        const pending = topups.filter(t => t.status === 'pending');
+        if (!pending.length) {
+            el.innerHTML = emptyState('Không có yêu cầu nạp tiền đang chờ.');
+            return;
+        }
+        el.innerHTML = pending.map(t => `
+            <div class="bg-white rounded-xl border p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    <div class="font-semibold">${escapeHtml(t.fullName || t.email)}</div>
+                    <div class="text-sm text-slate-500">${escapeHtml(t.email)}</div>
+                    <div class="text-sm mt-1">Số tiền: <span class="font-bold text-emerald-600">${formatMoney(t.amount)}</span></div>
+                    <div class="text-xs text-slate-400 mt-1">Mã CK: <code>${escapeHtml(t.topupCode)}</code> • ${escapeHtml(t.createdAt)}</div>
+                </div>
+                <button data-approve-topup="${t.id}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium shrink-0">
+                    <i class="fas fa-check mr-1"></i>Duyệt cộng tiền
+                </button>
+            </div>`).join('');
+    } catch (e) {
+        toast(e.message, true);
+    }
+}
+
+async function approveAdminTopup(id) {
+    if (!confirm('Xác nhận đã nhận tiền và cộng vào ví user?')) return;
+    try {
+        const r = await api(`/admin/topups/${id}/approve`, { method: 'POST' });
+        toast(`Đã cộng ${formatMoney(r.amount)} cho ${r.email}!`);
+        loadAdminTopups();
+        showAdminTab('dashboard');
     } catch (e) {
         toast(e.message, true);
     }
@@ -945,6 +1170,24 @@ document.getElementById('products-grid').onclick = e => {
     if (b) buyProduct(Number(b.dataset.buy));
 };
 document.querySelectorAll('.admin-tab-btn').forEach(b => b.onclick = () => showAdminTab(b.dataset.adminTab));
+document.getElementById('admin-product-add-btn').onclick = () => {
+    document.getElementById('admin-product-form').classList.toggle('hidden');
+};
+document.getElementById('new-product-cancel').onclick = () => {
+    document.getElementById('admin-product-form').classList.add('hidden');
+};
+document.getElementById('new-product-save').onclick = createAdminProduct;
+document.getElementById('admin-products-delete-all').onclick = deleteAllAdminProducts;
+document.getElementById('admin-topups-list').onclick = e => {
+    const btn = e.target.closest('[data-approve-topup]');
+    if (btn) approveAdminTopup(Number(btn.dataset.approveTopup));
+};
+document.getElementById('admin-products-list').onclick = e => {
+    const saveBtn = e.target.closest('[data-save-product]');
+    if (saveBtn) { saveAdminProduct(Number(saveBtn.dataset.saveProduct)); return; }
+    const delBtn = e.target.closest('[data-delete-product]');
+    if (delBtn) deleteAdminProduct(Number(delBtn.dataset.deleteProduct));
+};
 document.getElementById('admin-user-search-btn').onclick = () => loadAdminUsers(document.getElementById('admin-user-search').value.trim());
 document.getElementById('admin-user-search').onkeydown = e => {
     if (e.key === 'Enter') loadAdminUsers(document.getElementById('admin-user-search').value.trim());

@@ -62,11 +62,14 @@ def process_bank_tx(conn, bank_tx_id, amount, description, account):
     if pending:
         db.execute(conn, f"UPDATE topup_requests SET status = 'success', completed_at = {now} WHERE id = ?", (pending['id'],))
         topup_id = pending['id']
-
-    db.execute(conn,
-        'INSERT INTO transactions (user_id, type, amount, description, status, bank_transaction_id, topup_request_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        (user['id'], 'topup', amount,
-         f'Nạp tiền tự động {amount:,}đ'.replace(',', '.'), 'success', bank_tx_id, topup_id))
+        db.execute(conn,
+            "UPDATE transactions SET status = 'success', description = ?, bank_transaction_id = ? WHERE topup_request_id = ? AND status = 'pending'",
+            (f'Nạp tiền tự động {amount:,}đ'.replace(',', '.'), bank_tx_id, topup_id))
+    else:
+        db.execute(conn,
+            'INSERT INTO transactions (user_id, type, amount, description, status, bank_transaction_id, topup_request_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            (user['id'], 'topup', amount,
+             f'Nạp tiền tự động {amount:,}đ'.replace(',', '.'), 'success', bank_tx_id, topup_id))
 
     if BANK['mode'] == 'mock':
         db.execute(conn, 'UPDATE mock_bank_incoming SET processed = 1 WHERE bank_transaction_id = ?', (bank_tx_id,))
