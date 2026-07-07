@@ -108,13 +108,28 @@ def fetch_order_detail(conn, oid):
     return detail
 
 
+LEGACY_ADMIN_EMAIL = 'admin@gmail.com'
+
+
+def purge_user(conn, uid):
+    for sql, params in [
+        ('DELETE FROM password_otps WHERE user_id = ?', (uid,)),
+        ('DELETE FROM topup_requests WHERE user_id = ?', (uid,)),
+        ('DELETE FROM transactions WHERE user_id = ?', (uid,)),
+        ('DELETE FROM orders WHERE user_id = ?', (uid,)),
+        ('DELETE FROM processed_bank_transactions WHERE user_id = ?', (uid,)),
+        ('DELETE FROM users WHERE id = ?', (uid,)),
+    ]:
+        db.execute(conn, sql, params)
+
+
 def init_app_data():
     db.init_schema()
     conn = db.get_conn()
     admin_email = ADMIN_EMAIL.strip().lower()
     pw_hash = bcrypt.hashpw(ADMIN_PASSWORD.encode(), bcrypt.gensalt()).decode()
     target = db.fetchone(conn, 'SELECT * FROM users WHERE email = ?', (admin_email,))
-    legacy = db.fetchone(conn, "SELECT * FROM users WHERE email = 'admin@gmail.com'")
+    legacy = db.fetchone(conn, 'SELECT * FROM users WHERE LOWER(email) = ?', (LEGACY_ADMIN_EMAIL,))
 
     if target:
         db.execute(conn, 'UPDATE users SET password_hash = ?, role = ? WHERE id = ?',
@@ -133,6 +148,9 @@ def init_app_data():
 
     db.execute(conn, "UPDATE users SET role = 'user' WHERE role = 'admin' AND LOWER(email) != ?",
                (admin_email,))
+    if admin_email != LEGACY_ADMIN_EMAIL:
+        for row in db.fetchall(conn, 'SELECT id FROM users WHERE LOWER(email) = ?', (LEGACY_ADMIN_EMAIL,)):
+            purge_user(conn, row['id'])
     db.commit(conn)
     for row in db.fetchall(conn, "SELECT id,email FROM users WHERE topup_code IS NULL OR topup_code IN ('','TEMP')"):
         db.execute(conn, 'UPDATE users SET topup_code = ? WHERE id = ?', (gen_topup_code(row['email'], row['id']), row['id']))
@@ -619,15 +637,7 @@ def admin_user_delete(uid):
     if user['email'].lower() == ADMIN_EMAIL.lower():
         db.close(conn)
         return jsonify({'error': 'Không thể xóa tài khoản admin mặc định.'}), 400
-    for sql, params in [
-        ('DELETE FROM password_otps WHERE user_id = ?', (uid,)),
-        ('DELETE FROM topup_requests WHERE user_id = ?', (uid,)),
-        ('DELETE FROM transactions WHERE user_id = ?', (uid,)),
-        ('DELETE FROM orders WHERE user_id = ?', (uid,)),
-        ('DELETE FROM processed_bank_transactions WHERE user_id = ?', (uid,)),
-        ('DELETE FROM users WHERE id = ?', (uid,)),
-    ]:
-        db.execute(conn, sql, params)
+    purge_user(conn, uid)
     db.commit(conn)
     db.close(conn)
     return jsonify({'ok': True, 'message': f'Đã xóa tài khoản {user["email"]}.'})
