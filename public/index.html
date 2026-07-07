@@ -353,6 +353,15 @@
                     </div>
                     <div id="admin-users-list" class="space-y-3"></div>
                 </div>
+                <div id="admin-user-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+                    <div class="bg-white rounded-2xl shadow-xl border w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                        <div class="flex items-center justify-between px-5 py-4 border-b bg-slate-50">
+                            <h3 class="font-bold text-lg">Chi tiết người dùng</h3>
+                            <button id="admin-user-modal-close" class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+                        </div>
+                        <div id="admin-user-modal-body" class="p-5 overflow-y-auto space-y-5"></div>
+                    </div>
+                </div>
                 <div id="admin-topups" class="hidden">
                     <p class="text-sm text-slate-500 mb-4">Khi user chuyển khoản thật, admin bấm <strong>Duyệt</strong> để cộng tiền vào ví.</p>
                     <div id="admin-topups-list" class="space-y-3"></div>
@@ -913,9 +922,12 @@ async function loadAdminUsers(q = '') {
                         <div class="font-semibold">${escapeHtml(u.fullName)} ${u.isBlocked ? '<span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full ml-1">Đã khóa</span>' : ''}</div>
                         <div class="text-sm text-slate-500">${escapeHtml(u.email)}</div>
                         <div class="text-sm mt-1">Số dư: <span class="font-medium text-emerald-600">${formatMoney(u.balance)}</span></div>
-                        <div class="text-xs text-slate-400 mt-1">Mã CK: ${escapeHtml(u.topupCode)}</div>
+                        <div class="text-xs text-slate-400 mt-1">Mã CK: ${escapeHtml(u.topupCode)} • ${escapeHtml(u.createdAt || '')}</div>
                     </div>
                     <div class="flex flex-wrap gap-2 shrink-0">
+                        <button data-detail-user="${u.id}" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                            <i class="fas fa-user mr-1"></i>Chi tiết
+                        </button>
                         <select data-role="${u.id}" class="border rounded-lg px-3 py-2 text-sm">
                             <option value="user" ${u.role === 'user' ? 'selected' : ''}>User</option>
                             <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
@@ -937,6 +949,129 @@ async function patchAdminUser(id, body) {
         await api(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
         toast('Cập nhật người dùng thành công!');
         loadAdminUsers(document.getElementById('admin-user-search').value.trim());
+        if (document.getElementById('admin-user-modal').dataset.userId === String(id)) {
+            openAdminUserDetail(id);
+        }
+    } catch (e) {
+        toast(e.message, true);
+    }
+}
+
+function closeAdminUserModal() {
+    document.getElementById('admin-user-modal').classList.add('hidden');
+    document.getElementById('admin-user-modal').dataset.userId = '';
+}
+
+async function openAdminUserDetail(id) {
+    const modal = document.getElementById('admin-user-modal');
+    const body = document.getElementById('admin-user-modal-body');
+    modal.dataset.userId = String(id);
+    body.innerHTML = '<div class="text-center py-10 text-slate-400">Đang tải...</div>';
+    modal.classList.remove('hidden');
+    try {
+        const { user, orders, transactions } = await api(`/admin/users/${id}`);
+        body.innerHTML = `
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div><span class="text-slate-500">Họ tên:</span> <strong>${escapeHtml(user.fullName)}</strong></div>
+                <div><span class="text-slate-500">Email:</span> ${escapeHtml(user.email)}</div>
+                <div><span class="text-slate-500">Vai trò:</span> ${escapeHtml(user.role)}</div>
+                <div><span class="text-slate-500">Số dư:</span> <span class="font-bold text-emerald-600">${formatMoney(user.balance)}</span></div>
+                <div><span class="text-slate-500">Mã CK:</span> <code>${escapeHtml(user.topupCode)}</code></div>
+                <div><span class="text-slate-500">Ngày tạo:</span> ${escapeHtml(user.createdAt)}</div>
+                <div><span class="text-slate-500">Trạng thái:</span> ${user.isBlocked ? '<span class="text-red-600 font-medium">Đã khóa</span>' : '<span class="text-emerald-600 font-medium">Hoạt động</span>'}</div>
+            </div>
+
+            <div class="bg-slate-50 rounded-xl border p-4">
+                <h4 class="font-semibold mb-3"><i class="fas fa-wallet mr-1 text-brand-600"></i>Điều chỉnh số dư</h4>
+                <div class="flex flex-wrap gap-2">
+                    <input id="user-balance-amount" type="number" min="1000" step="1000" placeholder="Số tiền (VNĐ)"
+                           class="border rounded-xl px-3 py-2 text-sm flex-1 min-w-[120px]">
+                    <input id="user-balance-reason" type="text" placeholder="Lý do (tuỳ chọn)"
+                           class="border rounded-xl px-3 py-2 text-sm flex-1 min-w-[140px]">
+                    <button data-balance-add="${id}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-medium">+ Cộng</button>
+                    <button data-balance-sub="${id}" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl text-sm font-medium">− Trừ</button>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 rounded-xl border p-4">
+                <h4 class="font-semibold mb-3"><i class="fas fa-key mr-1 text-brand-600"></i>Đặt lại mật khẩu</h4>
+                <div class="flex flex-wrap gap-2">
+                    <input id="user-new-password" type="password" minlength="6" placeholder="Mật khẩu mới (tối thiểu 6 ký tự)"
+                           class="border rounded-xl px-3 py-2 text-sm flex-1 min-w-[180px]">
+                    <button data-reset-password="${id}" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-xl text-sm font-medium">Lưu mật khẩu</button>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="font-semibold mb-2"><i class="fas fa-shopping-bag mr-1 text-brand-600"></i>Đơn hàng (${orders.length})</h4>
+                ${orders.length ? `<div class="space-y-2 max-h-40 overflow-y-auto">${orders.map(o => `
+                    <div class="bg-white border rounded-lg p-3 text-sm flex justify-between">
+                        <div>
+                            <div class="font-medium">${escapeHtml(o.product)}</div>
+                            <div class="text-xs text-slate-400">${escapeHtml(o.date)}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold">${formatMoney(o.price)}</div>
+                            ${statusBadge(o.status)}
+                        </div>
+                    </div>`).join('')}</div>` : '<p class="text-sm text-slate-400">Chưa có đơn hàng.</p>'}
+            </div>
+
+            <div>
+                <h4 class="font-semibold mb-2"><i class="fas fa-history mr-1 text-brand-600"></i>Lịch sử giao dịch (${transactions.length})</h4>
+                ${transactions.length ? `<div class="space-y-2 max-h-48 overflow-y-auto">${transactions.map(tx => {
+                    const col = tx.type === 'purchase' ? 'text-red-500' : 'text-emerald-600';
+                    const sign = tx.type === 'purchase' ? '−' : '+';
+                    return `
+                    <div class="bg-white border rounded-lg p-3 text-sm flex justify-between">
+                        <div>
+                            <div class="font-medium">${escapeHtml(tx.description)}</div>
+                            <div class="text-xs text-slate-400">${escapeHtml(tx.date)} ${statusBadge(tx.status)}</div>
+                        </div>
+                        <div class="font-bold ${col}">${sign}${formatMoney(tx.amount)}</div>
+                    </div>`;
+                }).join('')}</div>` : '<p class="text-sm text-slate-400">Chưa có giao dịch.</p>'}
+            </div>
+
+            <div class="pt-2 border-t">
+                <button data-delete-user="${id}" data-user-email="${escapeHtml(user.email)}"
+                        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium w-full sm:w-auto">
+                    <i class="fas fa-trash mr-1"></i>Xóa tài khoản
+                </button>
+            </div>`;
+    } catch (e) {
+        body.innerHTML = `<div class="text-center py-10 text-red-500">${escapeHtml(e.message)}</div>`;
+    }
+}
+
+async function adjustUserBalance(id, add) {
+    const amount = parseInt(document.getElementById('user-balance-amount').value, 10);
+    const reason = document.getElementById('user-balance-reason').value.trim();
+    if (!amount || amount <= 0) return toast('Nhập số tiền hợp lệ', true);
+    const delta = add ? amount : -amount;
+    const action = add ? 'cộng' : 'trừ';
+    if (!confirm(`Xác nhận ${action} ${formatMoney(amount)} vào ví user?`)) return;
+    await patchAdminUser(id, { balanceDelta: delta, balanceReason: reason || undefined });
+}
+
+async function resetUserPassword(id) {
+    const pw = document.getElementById('user-new-password').value;
+    if (pw.length < 6) return toast('Mật khẩu tối thiểu 6 ký tự', true);
+    if (!confirm('Đặt lại mật khẩu cho user này?')) return;
+    await patchAdminUser(id, { newPassword: pw });
+    document.getElementById('user-new-password').value = '';
+}
+
+async function deleteAdminUser(id, email) {
+    if (!confirm(`XÓA VĨNH VIỄN tài khoản ${email}?\n\nToàn bộ đơn hàng và giao dịch của user cũng bị xóa.`)) return;
+    const typed = prompt(`Nhập email "${email}" để xác nhận xóa:`);
+    if (typed?.trim().toLowerCase() !== email.toLowerCase()) return toast('Email xác nhận không khớp', true);
+    try {
+        await api(`/admin/users/${id}`, { method: 'DELETE' });
+        toast('Đã xóa tài khoản!');
+        closeAdminUserModal();
+        loadAdminUsers(document.getElementById('admin-user-search').value.trim());
+        showAdminTab('dashboard');
     } catch (e) {
         toast(e.message, true);
     }
@@ -1193,6 +1328,8 @@ document.getElementById('admin-user-search').onkeydown = e => {
     if (e.key === 'Enter') loadAdminUsers(document.getElementById('admin-user-search').value.trim());
 };
 document.getElementById('admin-users-list').onclick = e => {
+    const detailBtn = e.target.closest('[data-detail-user]');
+    if (detailBtn) { openAdminUserDetail(Number(detailBtn.dataset.detailUser)); return; }
     const blockBtn = e.target.closest('[data-block]');
     if (blockBtn) {
         const id = Number(blockBtn.dataset.block);
@@ -1204,6 +1341,20 @@ document.getElementById('admin-users-list').onclick = e => {
 document.getElementById('admin-users-list').onchange = e => {
     const sel = e.target.closest('[data-role]');
     if (sel) patchAdminUser(Number(sel.dataset.role), { role: sel.value });
+};
+document.getElementById('admin-user-modal-close').onclick = closeAdminUserModal;
+document.getElementById('admin-user-modal').onclick = e => {
+    if (e.target.id === 'admin-user-modal') closeAdminUserModal();
+};
+document.getElementById('admin-user-modal-body').onclick = e => {
+    const addBtn = e.target.closest('[data-balance-add]');
+    if (addBtn) { adjustUserBalance(Number(addBtn.dataset.balanceAdd), true); return; }
+    const subBtn = e.target.closest('[data-balance-sub]');
+    if (subBtn) { adjustUserBalance(Number(subBtn.dataset.balanceSub), false); return; }
+    const resetBtn = e.target.closest('[data-reset-password]');
+    if (resetBtn) { resetUserPassword(Number(resetBtn.dataset.resetPassword)); return; }
+    const delBtn = e.target.closest('[data-delete-user]');
+    if (delBtn) deleteAdminUser(Number(delBtn.dataset.deleteUser), delBtn.dataset.userEmail);
 };
 document.getElementById('mock-transfer-btn').onclick = async () => {
     const topupCode = document.getElementById('mock-topup-code').value.trim();

@@ -468,10 +468,21 @@ def admin_users():
 def admin_user_detail(uid):
     conn = db.get_conn()
     r = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (uid,))
-    db.close(conn)
     if not r:
+        db.close(conn)
         return jsonify({'error': 'Không tìm thấy.'}), 404
-    return jsonify({'user': fmt_user(r)})
+    orders = db.fetchall(conn,
+        'SELECT id, product_name AS product, price, status, created_at AS date FROM orders WHERE user_id = ? ORDER BY id DESC',
+        (uid,))
+    transactions = db.fetchall(conn,
+        'SELECT id, type, amount, description, status, bank_transaction_id, created_at AS date FROM transactions WHERE user_id = ? ORDER BY id DESC',
+        (uid,))
+    db.close(conn)
+    for row in orders:
+        row['date'] = str(row['date'])
+    for row in transactions:
+        row['date'] = str(row['date'])
+    return jsonify({'user': fmt_user(r), 'orders': orders, 'transactions': transactions})
 
 
 @app.route('/api/admin/users/<int:uid>', methods=['PATCH'])
@@ -490,10 +501,56 @@ def admin_user_patch(uid):
         db.execute(conn, 'UPDATE users SET is_blocked = ? WHERE id = ?', (1 if d['isBlocked'] else 0, uid))
     if 'role' in d and d['role'] in ('user', 'admin'):
         db.execute(conn, 'UPDATE users SET role = ? WHERE id = ?', (d['role'], uid))
+    if 'newPassword' in d:
+        new_pw = d['newPassword']
+        if len(new_pw) < 6:
+            db.close(conn)
+            return jsonify({'error': 'Mật khẩu mới tối thiểu 6 ký tự.'}), 400
+        hash_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt()).decode()
+        db.execute(conn, 'UPDATE users SET password_hash = ? WHERE id = ?', (hash_pw, uid))
+    if 'balanceDelta' in d:
+        delta = int(d['balanceDelta'])
+        if delta == 0:
+            db.close(conn)
+            return jsonify({'error': 'Số tiền điều chỉnh phải khác 0.'}), 400
+        new_balance = int(user['balance']) + delta
+        if new_balance < 0:
+            db.close(conn)
+            return jsonify({'error': 'Số dư sau điều chỉnh không được âm.'}), 400
+        reason = (d.get('balanceReason') or '').strip() or ('Admin cộng tiền' if delta > 0 else 'Admin trừ tiền')
+        db.execute(conn, 'UPDATE users SET balance = ? WHERE id = ?', (new_balance, uid))
+        db.execute(conn,
+            'INSERT INTO transactions (user_id, type, amount, description, status) VALUES (?, ?, ?, ?, ?)',
+            (uid, 'adjustment', abs(delta), f'{reason} ({delta:+,}đ)'.replace(',', '.'), 'success'))
     db.commit(conn)
     updated = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (uid,))
     db.close(conn)
     return jsonify({'user': fmt_user(updated)})
+
+
+@app.route('/api/admin/users/<int:uid>', methods=['DELETE'])
+@admin_required
+def admin_user_delete(uid):
+    conn = db.get_conn()
+    user = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (uid,))
+    if not user:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy.'}), 404
+    if user['email'].lower() == ADMIN_EMAIL.lower():
+        db.close(conn)
+        return jsonify({'error': 'Không thể xóa tài khoản admin mặc định.'}), 400
+    for sql, params in [
+        ('DELETE FROM password_otps WHERE user_id = ?', (uid,)),
+        ('DELETE FROM topup_requests WHERE user_id = ?', (uid,)),
+        ('DELETE FROM transactions WHERE user_id = ?', (uid,)),
+        ('DELETE FROM orders WHERE user_id = ?', (uid,)),
+        ('DELETE FROM processed_bank_transactions WHERE user_id = ?', (uid,)),
+        ('DELETE FROM users WHERE id = ?', (uid,)),
+    ]:
+        db.execute(conn, sql, params)
+    db.commit(conn)
+    db.close(conn)
+    return jsonify({'ok': True, 'message': f'Đã xóa tài khoản {user["email"]}.'})
 
 
 @app.route('/api/admin/orders')
