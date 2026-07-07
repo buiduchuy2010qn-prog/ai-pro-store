@@ -3,53 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Pro Store</title>
+    <title>Shop của Đức Hi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script>
-        tailwind.config = { theme: { extend: { colors: { brand: { 50:'#f5f3ff',100:'#ede9fe',500:'#8b5cf6',600:'#7c3aed',700:'#6d28d9' } } } } };
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff', 100: '#e0f2fe', 200: '#bae6fd',
+                            500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1'
+                        }
+                    }
+                }
+            }
+        };
     </script>
+    <style>
+        .zalo-float { animation: pulse-soft 2.5s ease-in-out infinite; }
+        @keyframes pulse-soft {
+            0%, 100% { box-shadow: 0 4px 20px rgba(2, 132, 199, 0.35); }
+            50% { box-shadow: 0 4px 28px rgba(2, 132, 199, 0.55); }
+        }
+    </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen">
 
+<!-- ═══ AUTH SCREEN ═══ -->
 <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-brand-50 via-white to-slate-100">
     <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
         <div class="bg-brand-600 text-white text-center py-8 px-6">
-            <div class="text-3xl font-bold">AI<span class="text-brand-100">Pro</span> Store</div>
-            <p class="text-brand-100 text-sm mt-2">Nạp tiền tự động qua QR VietQR</p>
+            <div class="text-3xl font-bold tracking-tight">
+                <i class="fas fa-store mr-2"></i>Shop của Đức Hi
+            </div>
+            <p class="text-brand-100 text-sm mt-2">Chào mừng đến Web Shop của Đức Hi</p>
+            <p class="text-brand-200 text-xs mt-1">Nạp tiền tự động qua QR VietQR</p>
         </div>
-        <div class="flex border-b border-slate-200">
+
+        <!-- Auth tabs -->
+        <div id="auth-tabs" class="flex border-b border-slate-200">
             <button id="tab-login" class="flex-1 py-3 text-sm font-medium text-brand-600 border-b-2 border-brand-600">Đăng nhập</button>
             <button id="tab-register" class="flex-1 py-3 text-sm font-medium text-slate-500 border-b-2 border-transparent">Đăng ký</button>
         </div>
+
         <div class="p-6">
+            <!-- Login -->
             <form id="login-form" class="space-y-4">
-                <div><label class="text-sm font-medium text-slate-600 block mb-1">Email</label>
-                    <input id="login-email" type="email" required class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500"></div>
-                <div><label class="text-sm font-medium text-slate-600 block mb-1">Mật khẩu</label>
-                    <input id="login-password" type="password" required class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500"></div>
+                <div>
+                    <label class="text-sm font-medium text-slate-600 block mb-1">Email</label>
+                    <input id="login-email" type="email" required autocomplete="email"
+                           class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-slate-600 block mb-1">Mật khẩu</label>
+                    <input id="login-password" type="password" required autocomplete="current-password"
+                           class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div class="text-right">
+                    <button type="button" id="forgot-link" class="text-sm text-brand-600 hover:text-brand-700 hover:underline">Quên mật khẩu</button>
+                </div>
                 <p id="login-error" class="text-red-500 text-sm hidden"></p>
-                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-xl font-medium">Đăng nhập</button>
-            </form>
-            <form id="register-form" class="space-y-4 hidden">
-                <div><label class="text-sm font-medium text-slate-600 block mb-1">Họ tên</label>
-                    <input id="register-name" type="text" required class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500"></div>
-                <div><label class="text-sm font-medium text-slate-600 block mb-1">Email</label>
-                    <input id="register-email" type="email" required class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500"></div>
-                <div><label class="text-sm font-medium text-slate-600 block mb-1">Mật khẩu</label>
-                    <input id="register-password" type="password" required minlength="6" class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500"></div>
-                <p id="register-error" class="text-red-500 text-sm hidden"></p>
-                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-xl font-medium">Tạo tài khoản</button>
+                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-xl font-medium transition">
+                    <i class="fas fa-sign-in-alt mr-1"></i> Đăng nhập
+                </button>
             </form>
 
+            <!-- Register -->
+            <form id="register-form" class="space-y-4 hidden">
+                <div>
+                    <label class="text-sm font-medium text-slate-600 block mb-1">Họ tên</label>
+                    <input id="register-fullName" type="text" required autocomplete="name"
+                           class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-slate-600 block mb-1">Email</label>
+                    <input id="register-email" type="email" required autocomplete="email"
+                           class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-slate-600 block mb-1">Mật khẩu</label>
+                    <input id="register-password" type="password" required minlength="6" autocomplete="new-password"
+                           class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-slate-600 block mb-1">Nhập lại mật khẩu</label>
+                    <input id="register-confirmPassword" type="password" required minlength="6" autocomplete="new-password"
+                           class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+                <p id="register-error" class="text-red-500 text-sm hidden"></p>
+                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-xl font-medium transition">
+                    <i class="fas fa-user-plus mr-1"></i> Tạo tài khoản
+                </button>
+            </form>
+
+            <!-- Forgot password flow -->
+            <div id="forgot-panel" class="hidden">
+                <button type="button" id="forgot-back" class="text-sm text-slate-500 hover:text-brand-600 mb-4">
+                    <i class="fas fa-arrow-left mr-1"></i> Quay lại đăng nhập
+                </button>
+
+                <!-- Step 1: Email -->
+                <form id="forgot-step1" class="space-y-4">
+                    <div class="text-center mb-2">
+                        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-brand-100 text-brand-600 mb-2">
+                            <i class="fas fa-envelope text-xl"></i>
+                        </div>
+                        <h3 class="font-semibold text-lg">Quên mật khẩu</h3>
+                        <p class="text-sm text-slate-500">Nhập email để nhận mã OTP</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-600 block mb-1">Email</label>
+                        <input id="forgot-email" type="email" required
+                               class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <p id="forgot-step1-error" class="text-red-500 text-sm hidden"></p>
+                    <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-xl font-medium">Gửi mã OTP</button>
+                </form>
+
+                <!-- Step 2: OTP -->
+                <form id="forgot-step2" class="space-y-4 hidden">
+                    <div class="text-center mb-2">
+                        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-brand-100 text-brand-600 mb-2">
+                            <i class="fas fa-key text-xl"></i>
+                        </div>
+                        <h3 class="font-semibold text-lg">Xác nhận OTP</h3>
+                        <p class="text-sm text-slate-500">Nhập mã 6 số đã gửi đến email</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-600 block mb-1">Mã OTP</label>
+                        <input id="forgot-otp" type="text" required maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
+                               class="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-center text-2xl tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <p id="forgot-step2-error" class="text-red-500 text-sm hidden"></p>
+                    <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-xl font-medium">Xác nhận OTP</button>
+                </form>
+
+                <!-- Step 3: New password -->
+                <form id="forgot-step3" class="space-y-4 hidden">
+                    <div class="text-center mb-2">
+                        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-brand-100 text-brand-600 mb-2">
+                            <i class="fas fa-lock text-xl"></i>
+                        </div>
+                        <h3 class="font-semibold text-lg">Đặt mật khẩu mới</h3>
+                        <p class="text-sm text-slate-500">Nhập mật khẩu mới cho tài khoản</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-600 block mb-1">Mật khẩu mới</label>
+                        <input id="forgot-newPassword" type="password" required minlength="6"
+                               class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <p id="forgot-step3-error" class="text-red-500 text-sm hidden"></p>
+                    <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-xl font-medium">Đổi mật khẩu</button>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
+<!-- ═══ MAIN APP ═══ -->
 <div id="app" class="hidden min-h-screen flex flex-col">
     <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
         <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-            <button id="brand-btn" class="text-xl font-bold text-brand-600">AI<span class="text-slate-800">Pro</span></button>
+            <button id="brand-btn" class="text-left">
+                <div class="text-xl font-bold text-brand-600">
+                    <i class="fas fa-store mr-1"></i>Shop của Đức Hi
+                </div>
+                <div class="text-xs text-slate-500 hidden sm:block">Chào mừng đến Web Shop của Đức Hi</div>
+            </button>
             <div class="hidden md:flex items-center gap-1 bg-slate-100 rounded-xl p-1">
                 <button data-view="products" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium">Sản phẩm</button>
                 <button data-view="wallet" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium">Ví tiền</button>
@@ -57,7 +178,6 @@
                 <button data-view="transactions" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium">Lịch sử</button>
                 <button data-view="admin" id="admin-nav-btn" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium hidden text-red-600">
                     <i class="fas fa-shield-alt mr-1"></i>Quản trị
-                    <span id="pending-badge" class="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full hidden">0</span>
                 </button>
             </div>
             <div class="flex items-center gap-3">
@@ -65,8 +185,12 @@
                     <div id="user-name" class="text-sm font-medium"></div>
                     <div id="header-balance" class="text-xs text-emerald-600 font-semibold"></div>
                 </div>
-                <button id="logout-btn" class="text-slate-500 hover:text-red-500 p-2"><i class="fas fa-sign-out-alt"></i></button>
-                <button id="mobile-menu-btn" class="md:hidden text-slate-600 p-2"><i class="fas fa-bars"></i></button>
+                <button id="logout-btn" class="text-slate-500 hover:text-red-500 p-2" title="Đăng xuất">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+                <button id="mobile-menu-btn" class="md:hidden text-slate-600 p-2">
+                    <i class="fas fa-bars"></i>
+                </button>
             </div>
         </div>
         <div id="mobile-menu" class="hidden md:hidden border-t px-4 py-3 space-y-1 bg-white">
@@ -79,11 +203,16 @@
     </header>
 
     <main class="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
+        <!-- Products -->
         <section id="view-products">
-            <h1 class="text-2xl font-bold mb-6">Sản phẩm</h1>
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold">Sản phẩm</h1>
+                <p class="text-slate-500 text-sm mt-1">Chào mừng đến Web Shop của Đức Hi</p>
+            </div>
             <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
         </section>
 
+        <!-- Wallet -->
         <section id="view-wallet" class="hidden">
             <h1 class="text-2xl font-bold mb-6">Ví tiền</h1>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -96,29 +225,33 @@
                         <h2 class="font-semibold mb-1">Nạp tiền tự động</h2>
                         <p class="text-xs text-slate-500 mb-3">Mã nội dung CK cố định của bạn:</p>
                         <div class="flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-xl px-4 py-3 mb-4">
-                            <code id="user-topup-code" class="text-brand-700 font-bold text-sm flex-1"></code>
-                            <button id="copy-topup-code" class="text-brand-600"><i class="fas fa-copy"></i></button>
+                            <code id="user-topup-code" class="text-brand-700 font-bold text-sm flex-1 break-all"></code>
+                            <button id="copy-topup-code" class="text-brand-600 hover:text-brand-700 shrink-0" title="Sao chép">
+                                <i class="fas fa-copy"></i>
+                            </button>
                         </div>
                         <div class="space-y-3">
                             <input id="topup-amount" type="number" min="10000" step="10000" placeholder="100000"
-                                   class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-brand-500">
-                            <button id="create-topup-btn" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-xl font-medium">
-                                Tạo QR & yêu cầu nạp tiền
+                                   class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            <button id="create-topup-btn" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-xl font-medium transition">
+                                <i class="fas fa-qrcode mr-1"></i> Tạo QR & yêu cầu nạp tiền
                             </button>
                         </div>
-                        <p class="text-xs text-slate-500 mt-3">Chuyển khoản theo QR → hệ thống tự kiểm tra và cộng tiền (không cần admin duyệt).</p>
+                        <p class="text-xs text-slate-500 mt-3">Chuyển khoản theo QR → hệ thống tự kiểm tra và cộng tiền.</p>
                     </div>
                 </div>
                 <div>
                     <div id="qr-panel" class="hidden bg-white rounded-2xl border p-6 shadow-sm">
                         <div id="topup-status-banner" class="mb-4 p-3 rounded-xl text-sm font-medium text-center"></div>
                         <h2 class="font-semibold mb-4 text-center">Quét mã QR chuyển khoản</h2>
-                        <div class="flex justify-center mb-4"><img id="qr-image" class="rounded-xl border max-w-[260px] w-full" alt="QR"></div>
+                        <div class="flex justify-center mb-4">
+                            <img id="qr-image" class="rounded-xl border max-w-[260px] w-full" alt="QR VietQR">
+                        </div>
                         <div class="space-y-2 text-sm bg-slate-50 rounded-xl p-4 border">
-                            <div class="flex justify-between"><span class="text-slate-500">Ngân hàng</span><span id="qr-bank-name" class="font-medium"></span></div>
-                            <div class="flex justify-between"><span class="text-slate-500">STK</span><span id="qr-bank-account" class="font-mono font-medium"></span></div>
-                            <div class="flex justify-between"><span class="text-slate-500">Số tiền</span><span id="qr-amount" class="font-bold text-emerald-600"></span></div>
-                            <div class="flex justify-between"><span class="text-slate-500">Nội dung CK</span><span id="qr-add-info" class="font-bold text-brand-600 break-all text-right"></span></div>
+                            <div class="flex justify-between gap-2"><span class="text-slate-500">Ngân hàng</span><span id="qr-bank-name" class="font-medium text-right"></span></div>
+                            <div class="flex justify-between gap-2"><span class="text-slate-500">STK</span><span id="qr-bank-account" class="font-mono font-medium"></span></div>
+                            <div class="flex justify-between gap-2"><span class="text-slate-500">Số tiền</span><span id="qr-amount" class="font-bold text-emerald-600"></span></div>
+                            <div class="flex justify-between gap-2"><span class="text-slate-500">Nội dung CK</span><span id="qr-add-info" class="font-bold text-brand-600 break-all text-right"></span></div>
                         </div>
                         <p id="polling-hint" class="text-xs text-slate-500 text-center mt-4 hidden">
                             <i class="fas fa-sync fa-spin mr-1"></i>Đang tự động kiểm tra giao dịch ngân hàng...
@@ -134,36 +267,51 @@
             </div>
         </section>
 
+        <!-- Orders -->
         <section id="view-orders" class="hidden">
             <h1 class="text-2xl font-bold mb-6">Đơn hàng của tôi</h1>
             <div id="my-orders-list" class="space-y-3"></div>
         </section>
 
+        <!-- Transactions -->
         <section id="view-transactions" class="hidden">
             <h1 class="text-2xl font-bold mb-6">Lịch sử giao dịch</h1>
             <div id="my-transactions-list" class="space-y-3"></div>
         </section>
 
+        <!-- Admin -->
         <section id="view-admin" class="hidden">
             <div id="admin-denied" class="hidden text-center py-20">
-                <i class="fas fa-lock text-4xl text-red-400 mb-4"></i>
-                <h2 class="text-xl font-bold text-red-600">Bạn không có quyền truy cập</h2>
+                <i class="fas fa-lock text-5xl text-red-400 mb-4"></i>
+                <h2 class="text-xl font-bold text-red-600 mb-2">Bạn không có quyền truy cập</h2>
+                <p class="text-slate-500 text-sm">Chỉ tài khoản quản trị viên mới có thể xem trang này.</p>
             </div>
             <div id="admin-content" class="hidden">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                    <h1 class="text-2xl font-bold">Admin Panel</h1>
+                    <h1 class="text-2xl font-bold">Bảng quản trị</h1>
                     <div class="flex gap-2 flex-wrap">
                         <button data-admin-tab="dashboard" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-brand-600 text-white">Dashboard</button>
-                        <button data-admin-tab="pending" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Chờ duyệt</button>
-                        <button data-admin-tab="all-orders" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Đơn hàng</button>
-                        <button data-admin-tab="all-transactions" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Giao dịch</button>
+                        <button data-admin-tab="users" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Người dùng</button>
+                        <button data-admin-tab="orders" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Đơn hàng</button>
+                        <button data-admin-tab="transactions" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Giao dịch</button>
+                        <button data-admin-tab="bank-transactions" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium bg-slate-200">Bank TX</button>
                     </div>
                 </div>
-                <div id="admin-dashboard" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
-                <div id="admin-pending" class="hidden space-y-3"></div>
-                <div id="admin-all-orders" class="hidden space-y-3"></div>
-                <div id="admin-all-transactions" class="hidden space-y-3"></div>
-                <div id="admin-mock-panel" class="hidden mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-5">
+                <div id="admin-dashboard" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"></div>
+                <div id="admin-users" class="hidden">
+                    <div class="mb-4 flex gap-2">
+                        <input id="admin-user-search" type="text" placeholder="Tìm theo email hoặc tên..."
+                               class="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        <button id="admin-user-search-btn" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <div id="admin-users-list" class="space-y-3"></div>
+                </div>
+                <div id="admin-orders" class="hidden space-y-3"></div>
+                <div id="admin-transactions" class="hidden space-y-3"></div>
+                <div id="admin-bank-transactions" class="hidden space-y-3"></div>
+                <div id="admin-mock-panel" class="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-5">
                     <h3 class="font-semibold text-amber-800 mb-2"><i class="fas fa-flask mr-1"></i>Mock Bank (dev/test)</h3>
                     <p class="text-sm text-amber-700 mb-3">Mô phỏng giao dịch ngân hàng để test tự động cộng tiền.</p>
                     <div class="flex flex-wrap gap-2">
@@ -177,7 +325,18 @@
     </main>
 </div>
 
-<div id="toast" class="fixed bottom-6 right-6 z-50 hidden"><div id="toast-inner" class="px-5 py-3 rounded-xl shadow-lg text-sm text-white max-w-xs"></div></div>
+<!-- Toast -->
+<div id="toast" class="fixed top-6 right-6 z-50 hidden">
+    <div id="toast-inner" class="px-5 py-3 rounded-xl shadow-lg text-sm text-white max-w-xs"></div>
+</div>
+
+<!-- Zalo floating button -->
+<a href="https://zalo.me/0944255413" target="_blank" rel="noopener noreferrer"
+   class="zalo-float fixed bottom-6 right-6 z-50 bg-brand-600 hover:bg-brand-700 text-white px-4 py-3 rounded-2xl shadow-lg text-sm font-medium flex items-center gap-2 transition max-w-[calc(100vw-3rem)]">
+    <i class="fas fa-comment-dots text-lg"></i>
+    <span class="hidden sm:inline">Cần hỗ trợ? Liên hệ Zalo: 0944255413</span>
+    <span class="sm:hidden">Zalo: 0944255413</span>
+</a>
 
 <script>
 const API = '/api';
@@ -186,6 +345,19 @@ let currentView = 'products';
 let currentAdminTab = 'dashboard';
 let activeTopupId = null;
 let pollTimer = null;
+let forgotEmail = '';
+let forgotOtp = '';
+
+const PRODUCT_COLORS = {
+    emerald: { bg: 'bg-emerald-50', ic: 'text-emerald-600' },
+    orange:  { bg: 'bg-orange-50',  ic: 'text-orange-600' },
+    violet:  { bg: 'bg-violet-50',   ic: 'text-violet-600' },
+    blue:    { bg: 'bg-blue-50',     ic: 'text-blue-600' },
+    sky:     { bg: 'bg-sky-50',      ic: 'text-sky-600' },
+    teal:    { bg: 'bg-teal-50',     ic: 'text-teal-600' },
+    red:     { bg: 'bg-red-50',      ic: 'text-red-600' },
+    amber:   { bg: 'bg-amber-50',    ic: 'text-amber-600' },
+};
 
 function getToken() { return localStorage.getItem('auth_token'); }
 function setToken(t) { localStorage.setItem('auth_token', t); }
@@ -197,49 +369,93 @@ async function api(path, opts = {}) {
     if (token) headers.Authorization = `Bearer ${token}`;
     const res = await fetch(API + path, { ...opts, headers });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || 'Lỗi hệ thống');
+    if (!res.ok) throw new Error(data.error || data.message || 'Lỗi hệ thống');
     return data;
 }
 
 function escapeHtml(s) {
-    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
-function formatMoney(n) { return Number(n||0).toLocaleString('vi-VN') + 'đ'; }
+
+function formatMoney(n) {
+    return Number(n || 0).toLocaleString('vi-VN') + 'đ';
+}
+
 function toast(msg, err = false) {
-    const el = document.getElementById('toast'), inner = document.getElementById('toast-inner');
+    const el = document.getElementById('toast');
+    const inner = document.getElementById('toast-inner');
     inner.textContent = msg;
     inner.className = `px-5 py-3 rounded-xl shadow-lg text-sm max-w-xs text-white ${err ? 'bg-red-600' : 'bg-slate-800'}`;
     el.classList.remove('hidden');
     clearTimeout(toast._t);
     toast._t = setTimeout(() => el.classList.add('hidden'), 3500);
 }
+
 function emptyState(msg) {
     return `<div class="text-center py-16 text-slate-400 bg-white rounded-2xl border">${escapeHtml(msg)}</div>`;
 }
+
 function statusBadge(s) {
-    const m = { success:'bg-emerald-100 text-emerald-700', pending:'bg-amber-100 text-amber-700', rejected:'bg-red-100 text-red-700', completed:'bg-emerald-100 text-emerald-700' };
-    return `<span class="text-xs px-2.5 py-1 rounded-full font-medium ${m[s]||'bg-slate-100 text-slate-600'}">${escapeHtml(s)}</span>`;
+    const m = {
+        success: 'bg-emerald-100 text-emerald-700',
+        pending: 'bg-amber-100 text-amber-700',
+        rejected: 'bg-red-100 text-red-700',
+        completed: 'bg-emerald-100 text-emerald-700',
+    };
+    return `<span class="text-xs px-2.5 py-1 rounded-full font-medium ${m[s] || 'bg-slate-100 text-slate-600'}">${escapeHtml(s)}</span>`;
+}
+
+function productStyle(color) {
+    return PRODUCT_COLORS[color] || PRODUCT_COLORS.sky;
+}
+
+/* ─── Auth UI ─── */
+function showAuthTab(tab) {
+    const isLogin = tab === 'login';
+    document.getElementById('tab-login').className = `flex-1 py-3 text-sm font-medium border-b-2 ${isLogin ? 'text-brand-600 border-brand-600' : 'text-slate-500 border-transparent'}`;
+    document.getElementById('tab-register').className = `flex-1 py-3 text-sm font-medium border-b-2 ${!isLogin ? 'text-brand-600 border-brand-600' : 'text-slate-500 border-transparent'}`;
+    document.getElementById('login-form').classList.toggle('hidden', !isLogin);
+    document.getElementById('register-form').classList.toggle('hidden', isLogin);
+    document.getElementById('forgot-panel').classList.add('hidden');
+    document.getElementById('auth-tabs').classList.remove('hidden');
+}
+
+function showForgotPanel(step = 1) {
+    document.getElementById('auth-tabs').classList.add('hidden');
+    document.getElementById('login-form').classList.add('hidden');
+    document.getElementById('register-form').classList.add('hidden');
+    document.getElementById('forgot-panel').classList.remove('hidden');
+    document.getElementById('forgot-step1').classList.toggle('hidden', step !== 1);
+    document.getElementById('forgot-step2').classList.toggle('hidden', step !== 2);
+    document.getElementById('forgot-step3').classList.toggle('hidden', step !== 3);
+    ['forgot-step1-error', 'forgot-step2-error', 'forgot-step3-error'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+    });
 }
 
 function showAuth() {
     stopPolling();
     currentUser = null;
+    forgotEmail = '';
+    forgotOtp = '';
     document.getElementById('auth-screen').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
+    showAuthTab('login');
 }
 
 async function refreshUser() {
-    const { user } = await api('/me');
+    const { user } = await api('/auth/me');
     currentUser = user;
     updateHeader();
 }
 
 function updateHeader() {
     if (!currentUser) return;
-    document.getElementById('user-name').textContent = currentUser.name || currentUser.email;
+    const name = currentUser.fullName || currentUser.name || currentUser.email;
+    document.getElementById('user-name').textContent = name;
     document.getElementById('header-balance').textContent = formatMoney(currentUser.balance);
     document.getElementById('wallet-balance').textContent = formatMoney(currentUser.balance);
-    document.getElementById('user-topup-code').textContent = currentUser.topupCode;
+    document.getElementById('user-topup-code').textContent = currentUser.topupCode || '';
     const isAdmin = currentUser.role === 'admin';
     document.getElementById('admin-nav-btn').classList.toggle('hidden', !isAdmin);
     document.getElementById('admin-mobile-nav-btn').classList.toggle('hidden', !isAdmin);
@@ -254,10 +470,14 @@ async function showApp() {
 
 function navigateTo(view) {
     if (view === 'admin' && currentUser?.role !== 'admin') {
+        currentView = view;
         document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
         document.getElementById('view-admin').classList.remove('hidden');
         document.getElementById('admin-denied').classList.remove('hidden');
         document.getElementById('admin-content').classList.add('hidden');
+        document.getElementById('mobile-menu').classList.add('hidden');
+        highlightNav(view);
+        if (location.hash !== '#' + view) location.hash = view;
         return;
     }
     currentView = view;
@@ -269,41 +489,67 @@ function navigateTo(view) {
     if (view === 'orders') loadMyOrders();
     if (view === 'transactions') loadMyTransactions();
     if (view === 'admin') loadAdmin();
-    document.querySelectorAll('.nav-btn,.mobile-nav-btn').forEach(btn => {
-        const a = btn.dataset.view === view;
-        btn.classList.toggle('bg-white', btn.classList.contains('nav-btn') && a);
-        btn.classList.toggle('text-brand-600', a);
-        btn.classList.toggle('bg-brand-50', btn.classList.contains('mobile-nav-btn') && a);
-    });
+    highlightNav(view);
     if (location.hash !== '#' + view) location.hash = view;
 }
 
+function highlightNav(view) {
+    document.querySelectorAll('.nav-btn, .mobile-nav-btn').forEach(btn => {
+        const active = btn.dataset.view === view;
+        btn.classList.toggle('bg-white', btn.classList.contains('nav-btn') && active);
+        btn.classList.toggle('text-brand-600', active);
+        btn.classList.toggle('bg-brand-50', btn.classList.contains('mobile-nav-btn') && active);
+    });
+}
+
+/* ─── Products ─── */
 async function loadProducts() {
-    const { products } = await api('/products');
-    document.getElementById('products-grid').innerHTML = products.map(p => `
-        <div class="bg-white rounded-2xl border shadow-sm overflow-hidden hover:shadow-md transition">
-            <div class="${p.bg} p-6 flex justify-center"><i class="fas ${p.icon} text-4xl ${p.ic}"></i></div>
-            <div class="p-5">
-                <h3 class="font-bold text-lg">${escapeHtml(p.name)}</h3>
-                <p class="text-slate-500 text-sm mt-1">${escapeHtml(p.desc)}</p>
-                <div class="flex justify-between items-center mt-4">
-                    <span class="text-xl font-bold text-brand-600">${formatMoney(p.price)}</span>
-                    <button data-buy="${p.id}" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-xl text-sm font-medium">Mua ngay</button>
+    try {
+        const { products } = await api('/products');
+        const grid = document.getElementById('products-grid');
+        if (!products.length) {
+            grid.innerHTML = emptyState('Hiện chưa có sản phẩm.');
+            return;
+        }
+        grid.innerHTML = products.map(p => {
+            const st = productStyle(p.color);
+            const icon = p.icon || 'fa-box';
+            return `
+            <div class="bg-white rounded-2xl border shadow-sm overflow-hidden hover:shadow-md transition">
+                <div class="${st.bg} p-6 flex justify-center">
+                    <i class="fas ${escapeHtml(icon)} text-4xl ${st.ic}"></i>
                 </div>
-            </div>
-        </div>`).join('');
+                <div class="p-5">
+                    <h3 class="font-bold text-lg">${escapeHtml(p.name)}</h3>
+                    <p class="text-slate-500 text-sm mt-1 line-clamp-2">${escapeHtml(p.desc)}</p>
+                    <div class="flex justify-between items-center mt-4">
+                        <span class="text-xl font-bold text-brand-600">${formatMoney(p.price)}</span>
+                        <button data-buy="${p.id}" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition">
+                            Mua ngay
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (e) {
+        toast(e.message, true);
+    }
 }
 
 async function buyProduct(id) {
     if (!confirm('Xác nhận mua sản phẩm này?')) return;
     try {
-        const r = await api('/orders/create', { method:'POST', body: JSON.stringify({ productId: id }) });
+        const r = await api('/orders/create', { method: 'POST', body: JSON.stringify({ productId: id }) });
         currentUser.balance = r.balance;
         updateHeader();
         toast('Mua hàng thành công!');
-    } catch (e) { toast(e.message, true); }
+        loadProducts();
+    } catch (e) {
+        toast(e.message, true);
+    }
 }
 
+/* ─── Wallet ─── */
 function renderWallet() {
     updateHeader();
 }
@@ -312,20 +558,22 @@ async function createTopup() {
     const amount = parseInt(document.getElementById('topup-amount').value, 10);
     if (!amount || amount < 10000) return toast('Số tiền tối thiểu 10.000đ', true);
     try {
-        const r = await api('/topup/create', { method:'POST', body: JSON.stringify({ amount }) });
+        const r = await api('/topup/create', { method: 'POST', body: JSON.stringify({ amount }) });
         activeTopupId = r.id;
         showQrPanel(r);
         startPolling(r.id);
         toast('Đã tạo yêu cầu. Chuyển khoản theo QR — hệ thống tự cộng tiền.');
-    } catch (e) { toast(e.message, true); }
+    } catch (e) {
+        toast(e.message, true);
+    }
 }
 
 function showQrPanel(data) {
     document.getElementById('qr-panel').classList.remove('hidden');
     document.getElementById('qr-placeholder').classList.add('hidden');
     document.getElementById('qr-image').src = data.qrUrl;
-    document.getElementById('qr-bank-name').textContent = data.bank.name;
-    document.getElementById('qr-bank-account').textContent = data.bank.account;
+    document.getElementById('qr-bank-name').textContent = data.bank?.name || '';
+    document.getElementById('qr-bank-account').textContent = data.bank?.account || '';
     document.getElementById('qr-amount').textContent = formatMoney(data.amount);
     document.getElementById('qr-add-info').textContent = data.topupCode;
     setTopupBanner(data.status, data.amount);
@@ -373,31 +621,51 @@ function stopPolling() {
     document.getElementById('polling-hint')?.classList.add('hidden');
 }
 
+/* ─── User orders & transactions ─── */
 async function loadMyOrders() {
-    const { orders } = await api('/orders/my');
-    const el = document.getElementById('my-orders-list');
-    if (!orders.length) { el.innerHTML = emptyState('Chưa có đơn hàng.'); return; }
-    el.innerHTML = orders.map(o => `
-        <div class="bg-white rounded-xl border p-4 flex justify-between shadow-sm">
-            <div><div class="font-semibold">${escapeHtml(o.product)}</div><div class="text-sm text-slate-500">${escapeHtml(o.date)}</div></div>
-            <div class="text-right"><div class="font-bold text-brand-600">${formatMoney(o.price)}</div>${statusBadge(o.status)}</div>
-        </div>`).join('');
+    try {
+        const { orders } = await api('/user/orders');
+        const el = document.getElementById('my-orders-list');
+        if (!orders.length) { el.innerHTML = emptyState('Chưa có đơn hàng.'); return; }
+        el.innerHTML = orders.map(o => `
+            <div class="bg-white rounded-xl border p-4 flex justify-between shadow-sm">
+                <div>
+                    <div class="font-semibold">${escapeHtml(o.product)}</div>
+                    <div class="text-sm text-slate-500">${escapeHtml(o.date)}</div>
+                </div>
+                <div class="text-right">
+                    <div class="font-bold text-brand-600">${formatMoney(o.price)}</div>
+                    ${statusBadge(o.status)}
+                </div>
+            </div>`).join('');
+    } catch (e) {
+        toast(e.message, true);
+    }
 }
 
 async function loadMyTransactions() {
-    const { transactions } = await api('/transactions/my');
-    const el = document.getElementById('my-transactions-list');
-    if (!transactions.length) { el.innerHTML = emptyState('Chưa có giao dịch.'); return; }
-    el.innerHTML = transactions.map(tx => {
-        const topup = tx.type === 'topup';
-        const col = tx.status === 'rejected' ? 'text-slate-400 line-through' : topup ? 'text-emerald-600' : 'text-red-500';
-        return `<div class="bg-white rounded-xl border p-4 flex justify-between shadow-sm text-sm">
-            <div><span class="font-medium">${escapeHtml(tx.description)}</span> ${statusBadge(tx.status)}
-            <div class="text-slate-400 text-xs mt-1">${escapeHtml(tx.date)}</div></div>
-            <div class="${col} font-bold">${topup?'+':'-'}${formatMoney(tx.amount)}</div></div>`;
-    }).join('');
+    try {
+        const { transactions } = await api('/user/transactions');
+        const el = document.getElementById('my-transactions-list');
+        if (!transactions.length) { el.innerHTML = emptyState('Chưa có giao dịch.'); return; }
+        el.innerHTML = transactions.map(tx => {
+            const topup = tx.type === 'topup';
+            const col = tx.status === 'rejected' ? 'text-slate-400 line-through' : topup ? 'text-emerald-600' : 'text-red-500';
+            return `
+            <div class="bg-white rounded-xl border p-4 flex justify-between shadow-sm text-sm">
+                <div>
+                    <span class="font-medium">${escapeHtml(tx.description)}</span> ${statusBadge(tx.status)}
+                    <div class="text-slate-400 text-xs mt-1">${escapeHtml(tx.date)}</div>
+                </div>
+                <div class="${col} font-bold shrink-0 ml-3">${topup ? '+' : '-'}${formatMoney(tx.amount)}</div>
+            </div>`;
+        }).join('');
+    } catch (e) {
+        toast(e.message, true);
+    }
 }
 
+/* ─── Admin ─── */
 async function loadAdmin() {
     document.getElementById('admin-denied').classList.add('hidden');
     if (currentUser?.role !== 'admin') {
@@ -406,8 +674,14 @@ async function loadAdmin() {
         return;
     }
     document.getElementById('admin-content').classList.remove('hidden');
-    document.getElementById('admin-mock-panel').classList.remove('hidden');
     showAdminTab(currentAdminTab);
+}
+
+function adminCard(label, value, color = '') {
+    return `<div class="bg-white rounded-2xl border p-5 shadow-sm">
+        <div class="text-slate-500 text-sm">${escapeHtml(label)}</div>
+        <div class="text-2xl font-bold mt-1 ${color}">${value}</div>
+    </div>`;
 }
 
 async function showAdminTab(tab) {
@@ -415,163 +689,307 @@ async function showAdminTab(tab) {
     document.querySelectorAll('.admin-tab-btn').forEach(btn => {
         btn.className = `admin-tab-btn px-4 py-2 rounded-xl text-sm font-medium ${btn.dataset.adminTab === tab ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-700'}`;
     });
-    ['dashboard','pending','all-orders','all-transactions'].forEach(t => {
+    ['dashboard', 'users', 'orders', 'transactions', 'bank-transactions'].forEach(t => {
         const el = document.getElementById('admin-' + t);
         if (el) el.classList.toggle('hidden', t !== tab);
     });
-    if (tab === 'dashboard') {
-        const d = await api('/admin/dashboard');
-        document.getElementById('admin-dashboard').innerHTML = `
-            ${card('Tổng doanh thu', formatMoney(d.revenue), 'text-emerald-600')}
-            ${card('Tổng đơn hàng', d.totalOrders)}
-            ${card('Nạp chờ duyệt', d.pendingTopups, 'text-amber-500')}
-            ${card('Người dùng', d.totalUsers)}`;
-        const badge = document.getElementById('pending-badge');
-        badge.textContent = d.pendingTopups;
-        badge.classList.toggle('hidden', !d.pendingTopups);
+
+    try {
+        if (tab === 'dashboard') {
+            const d = await api('/admin/dashboard');
+            document.getElementById('admin-dashboard').innerHTML = `
+                ${adminCard('Tổng doanh thu', formatMoney(d.revenue), 'text-emerald-600')}
+                ${adminCard('Tổng đơn hàng', d.totalOrders)}
+                ${adminCard('Nạp chờ xử lý', d.pendingTopups, 'text-amber-500')}
+                ${adminCard('Người dùng', d.totalUsers)}
+                ${adminCard('Giao dịch Bank', d.bankTransactions, 'text-brand-600')}`;
+        }
+        if (tab === 'users') loadAdminUsers();
+        if (tab === 'orders') loadAdminOrders();
+        if (tab === 'transactions') loadAdminTransactions();
+        if (tab === 'bank-transactions') loadAdminBankTransactions();
+    } catch (e) {
+        toast(e.message, true);
     }
-    if (tab === 'pending') {
-        const { topups } = await api('/admin/topups');
-        const pending = topups.filter(t => t.status === 'pending');
-        const el = document.getElementById('admin-pending');
-        if (!pending.length) { el.innerHTML = emptyState('Không có yêu cầu pending.'); return; }
-        el.innerHTML = pending.map(t => `
-            <div class="bg-white rounded-xl border border-amber-200 p-4 shadow-sm">
-                <div class="flex flex-col lg:flex-row lg:justify-between gap-3">
-                    <div class="space-y-1">
-                        <div class="font-bold text-lg">+${formatMoney(t.amount)}</div>
-                        <div class="text-sm">${escapeHtml(t.email)}</div>
-                        <div class="text-sm">Nội dung CK: <code class="bg-amber-50 px-2 py-0.5 rounded font-bold">${escapeHtml(t.topupCode)}</code></div>
-                        <div class="text-sm text-slate-500">${escapeHtml(t.createdAt)} ${statusBadge(t.status)}</div>
+}
+
+async function loadAdminUsers(q = '') {
+    try {
+        const path = q ? `/admin/users?q=${encodeURIComponent(q)}` : '/admin/users';
+        const { users } = await api(path);
+        const el = document.getElementById('admin-users-list');
+        if (!users.length) { el.innerHTML = emptyState('Không tìm thấy người dùng.'); return; }
+        el.innerHTML = users.map(u => `
+            <div class="bg-white rounded-xl border p-4 shadow-sm" data-user-id="${u.id}">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                    <div>
+                        <div class="font-semibold">${escapeHtml(u.fullName)} ${u.isBlocked ? '<span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full ml-1">Đã khóa</span>' : ''}</div>
+                        <div class="text-sm text-slate-500">${escapeHtml(u.email)}</div>
+                        <div class="text-sm mt-1">Số dư: <span class="font-medium text-emerald-600">${formatMoney(u.balance)}</span></div>
+                        <div class="text-xs text-slate-400 mt-1">Mã CK: ${escapeHtml(u.topupCode)}</div>
                     </div>
-                    <div class="flex gap-2 shrink-0">
-                        <button data-approve="${t.id}" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm">Xác nhận</button>
-                        <button data-reject="${t.id}" class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm">Từ chối</button>
+                    <div class="flex flex-wrap gap-2 shrink-0">
+                        <select data-role="${u.id}" class="border rounded-lg px-3 py-2 text-sm">
+                            <option value="user" ${u.role === 'user' ? 'selected' : ''}>User</option>
+                            <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+                        </select>
+                        <button data-block="${u.id}" data-blocked="${u.isBlocked ? '1' : '0'}"
+                                class="px-4 py-2 rounded-lg text-sm font-medium ${u.isBlocked ? 'bg-emerald-600 text-white' : 'bg-red-500 text-white'}">
+                            ${u.isBlocked ? 'Mở khóa' : 'Khóa'}
+                        </button>
                     </div>
                 </div>
             </div>`).join('');
+    } catch (e) {
+        toast(e.message, true);
     }
-    if (tab === 'all-orders') {
+}
+
+async function patchAdminUser(id, body) {
+    try {
+        await api(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+        toast('Cập nhật người dùng thành công!');
+        loadAdminUsers(document.getElementById('admin-user-search').value.trim());
+    } catch (e) {
+        toast(e.message, true);
+    }
+}
+
+async function loadAdminOrders() {
+    try {
         const { orders } = await api('/admin/orders');
-        const el = document.getElementById('admin-all-orders');
+        const el = document.getElementById('admin-orders');
         if (!orders.length) { el.innerHTML = emptyState('Chưa có đơn hàng.'); return; }
         el.innerHTML = orders.map(o => `
             <div class="bg-white rounded-xl border p-4 flex justify-between shadow-sm">
-                <div><div class="font-semibold">${escapeHtml(o.product)}</div><div class="text-sm text-slate-500">${escapeHtml(o.date)} • ${escapeHtml(o.email)}</div></div>
-                <div class="text-right"><div class="font-bold">${formatMoney(o.price)}</div>${statusBadge(o.status)}</div>
+                <div>
+                    <div class="font-semibold">${escapeHtml(o.product)}</div>
+                    <div class="text-sm text-slate-500">${escapeHtml(o.date)} • ${escapeHtml(o.email)}</div>
+                </div>
+                <div class="text-right">
+                    <div class="font-bold">${formatMoney(o.price)}</div>
+                    ${statusBadge(o.status)}
+                </div>
             </div>`).join('');
+    } catch (e) {
+        toast(e.message, true);
     }
-    if (tab === 'all-transactions') {
+}
+
+async function loadAdminTransactions() {
+    try {
         const { transactions } = await api('/admin/transactions');
-        const el = document.getElementById('admin-all-transactions');
+        const el = document.getElementById('admin-transactions');
         if (!transactions.length) { el.innerHTML = emptyState('Chưa có giao dịch.'); return; }
         el.innerHTML = transactions.map(tx => {
             const topup = tx.type === 'topup';
             const col = topup ? 'text-emerald-600' : 'text-red-500';
-            return `<div class="bg-white rounded-xl border p-4 flex justify-between shadow-sm text-sm">
-                <div><span class="font-medium">${escapeHtml(tx.description)}</span> <span class="text-slate-400">(${escapeHtml(tx.email)})</span> ${statusBadge(tx.status)}
-                ${tx.bankTransactionId ? `<div class="text-xs text-slate-400">Bank TX: ${escapeHtml(tx.bankTransactionId)}</div>` : ''}</div>
-                <div class="${col} font-bold">${topup?'+':'-'}${formatMoney(tx.amount)}</div></div>`;
+            return `
+            <div class="bg-white rounded-xl border p-4 flex justify-between shadow-sm text-sm">
+                <div>
+                    <span class="font-medium">${escapeHtml(tx.description)}</span>
+                    <span class="text-slate-400"> (${escapeHtml(tx.email)})</span>
+                    ${statusBadge(tx.status)}
+                    ${tx.bankTransactionId ? `<div class="text-xs text-slate-400 mt-1">Bank TX: ${escapeHtml(tx.bankTransactionId)}</div>` : ''}
+                    <div class="text-xs text-slate-400">${escapeHtml(tx.date)}</div>
+                </div>
+                <div class="${col} font-bold shrink-0 ml-3">${topup ? '+' : '-'}${formatMoney(tx.amount)}</div>
+            </div>`;
         }).join('');
+    } catch (e) {
+        toast(e.message, true);
     }
 }
 
-function card(label, value, color = '') {
-    return `<div class="bg-white rounded-2xl border p-5 shadow-sm"><div class="text-slate-500 text-sm">${label}</div><div class="text-3xl font-bold mt-1 ${color}">${value}</div></div>`;
+async function loadAdminBankTransactions() {
+    try {
+        const { bankTransactions } = await api('/admin/bank-transactions');
+        const el = document.getElementById('admin-bank-transactions');
+        if (!bankTransactions.length) { el.innerHTML = emptyState('Chưa có giao dịch ngân hàng.'); return; }
+        el.innerHTML = bankTransactions.map(tx => `
+            <div class="bg-white rounded-xl border p-4 shadow-sm text-sm">
+                <div class="flex justify-between items-start gap-3">
+                    <div>
+                        <div class="font-mono font-semibold text-brand-700">${escapeHtml(tx.bankTransactionId)}</div>
+                        <div class="text-slate-500 mt-1">${escapeHtml(tx.description || '')}</div>
+                        <div class="text-xs text-slate-400 mt-1">${escapeHtml(tx.processedAt)} • ${escapeHtml(tx.email || 'N/A')}</div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <div class="font-bold text-emerald-600">+${formatMoney(tx.amount)}</div>
+                        <div class="text-xs text-slate-400">${escapeHtml(tx.bankAccount || '')}</div>
+                    </div>
+                </div>
+            </div>`).join('');
+    } catch (e) {
+        toast(e.message, true);
+    }
 }
 
-document.getElementById('tab-login').onclick = () => {
-    document.getElementById('tab-login').className = 'flex-1 py-3 text-sm font-medium text-brand-600 border-b-2 border-brand-600';
-    document.getElementById('tab-register').className = 'flex-1 py-3 text-sm font-medium text-slate-500 border-b-2 border-transparent';
-    document.getElementById('login-form').classList.remove('hidden');
-    document.getElementById('register-form').classList.add('hidden');
-};
-document.getElementById('tab-register').onclick = () => {
-    document.getElementById('tab-register').className = 'flex-1 py-3 text-sm font-medium text-brand-600 border-b-2 border-brand-600';
-    document.getElementById('tab-login').className = 'flex-1 py-3 text-sm font-medium text-slate-500 border-b-2 border-transparent';
-    document.getElementById('register-form').classList.remove('hidden');
-    document.getElementById('login-form').classList.add('hidden');
-};
+/* ─── Event listeners ─── */
+document.getElementById('tab-login').onclick = () => showAuthTab('login');
+document.getElementById('tab-register').onclick = () => showAuthTab('register');
+document.getElementById('forgot-link').onclick = () => showForgotPanel(1);
+document.getElementById('forgot-back').onclick = () => showAuthTab('login');
 
 document.getElementById('login-form').onsubmit = async e => {
     e.preventDefault();
+    const errEl = document.getElementById('login-error');
     try {
-        const r = await api('/login', { method:'POST', body: JSON.stringify({
-            email: document.getElementById('login-email').value,
-            password: document.getElementById('login-password').value
-        })});
+        const r = await api('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({
+                email: document.getElementById('login-email').value,
+                password: document.getElementById('login-password').value,
+            }),
+        });
         setToken(r.token);
         currentUser = r.user;
-        document.getElementById('login-error').classList.add('hidden');
+        errEl.classList.add('hidden');
         await showApp();
         toast('Đăng nhập thành công!');
     } catch (err) {
-        const el = document.getElementById('login-error');
-        el.textContent = err.message;
-        el.classList.remove('hidden');
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
     }
 };
 
 document.getElementById('register-form').onsubmit = async e => {
     e.preventDefault();
+    const errEl = document.getElementById('register-error');
+    const pw = document.getElementById('register-password').value;
+    const pw2 = document.getElementById('register-confirmPassword').value;
+    if (pw !== pw2) {
+        errEl.textContent = 'Mật khẩu nhập lại không khớp.';
+        errEl.classList.remove('hidden');
+        return;
+    }
     try {
-        const r = await api('/register', { method:'POST', body: JSON.stringify({
-            name: document.getElementById('register-name').value,
-            email: document.getElementById('register-email').value,
-            password: document.getElementById('register-password').value
-        })});
+        const r = await api('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify({
+                fullName: document.getElementById('register-fullName').value,
+                email: document.getElementById('register-email').value,
+                password: pw,
+                confirmPassword: pw2,
+            }),
+        });
         setToken(r.token);
         currentUser = r.user;
-        document.getElementById('register-error').classList.add('hidden');
+        errEl.classList.add('hidden');
         await showApp();
         toast('Đăng ký thành công!');
     } catch (err) {
-        const el = document.getElementById('register-error');
-        el.textContent = err.message;
-        el.classList.remove('hidden');
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
     }
 };
 
-document.getElementById('logout-btn').onclick = () => { clearToken(); stopPolling(); showAuth(); };
+document.getElementById('forgot-step1').onsubmit = async e => {
+    e.preventDefault();
+    const errEl = document.getElementById('forgot-step1-error');
+    try {
+        forgotEmail = document.getElementById('forgot-email').value.trim().toLowerCase();
+        const r = await api('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email: forgotEmail }) });
+        errEl.classList.add('hidden');
+        toast(r.message || 'Mã OTP đã được gửi!');
+        showForgotPanel(2);
+    } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+    }
+};
+
+document.getElementById('forgot-step2').onsubmit = async e => {
+    e.preventDefault();
+    const errEl = document.getElementById('forgot-step2-error');
+    try {
+        forgotOtp = document.getElementById('forgot-otp').value.trim();
+        const r = await api('/auth/verify-otp', { method: 'POST', body: JSON.stringify({ email: forgotEmail, otp: forgotOtp }) });
+        errEl.classList.add('hidden');
+        toast(r.message || 'OTP hợp lệ!');
+        showForgotPanel(3);
+    } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+    }
+};
+
+document.getElementById('forgot-step3').onsubmit = async e => {
+    e.preventDefault();
+    const errEl = document.getElementById('forgot-step3-error');
+    try {
+        const newPassword = document.getElementById('forgot-newPassword').value;
+        const r = await api('/auth/reset-password', {
+            method: 'POST',
+            body: JSON.stringify({ email: forgotEmail, otp: forgotOtp, newPassword }),
+        });
+        errEl.classList.add('hidden');
+        toast(r.message || 'Đổi mật khẩu thành công!');
+        showAuthTab('login');
+    } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+    }
+};
+
+document.getElementById('logout-btn').onclick = () => { clearToken(); stopPolling(); showAuth(); toast('Đã đăng xuất.'); };
 document.getElementById('brand-btn').onclick = () => navigateTo('products');
-document.querySelectorAll('.nav-btn,.mobile-nav-btn').forEach(b => b.onclick = () => navigateTo(b.dataset.view));
+document.querySelectorAll('.nav-btn, .mobile-nav-btn').forEach(b => b.onclick = () => navigateTo(b.dataset.view));
 document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('mobile-menu').classList.toggle('hidden');
 document.getElementById('create-topup-btn').onclick = createTopup;
 document.getElementById('copy-topup-code').onclick = () => {
-    navigator.clipboard.writeText(currentUser?.topupCode || '').then(() => toast('Đã sao chép!'));
+    navigator.clipboard.writeText(currentUser?.topupCode || '').then(() => toast('Đã sao chép mã CK!'));
 };
 document.getElementById('products-grid').onclick = e => {
     const b = e.target.closest('[data-buy]');
     if (b) buyProduct(Number(b.dataset.buy));
 };
 document.querySelectorAll('.admin-tab-btn').forEach(b => b.onclick = () => showAdminTab(b.dataset.adminTab));
-document.getElementById('admin-pending').onclick = async e => {
-    const approve = e.target.closest('[data-approve]');
-    const reject = e.target.closest('[data-reject]');
-    try {
-        if (approve) { await api(`/admin/topups/${approve.dataset.approve}/approve`, { method:'POST' }); toast('Đã xác nhận thủ công.'); }
-        if (reject) { await api(`/admin/topups/${reject.dataset.reject}/reject`, { method:'POST' }); toast('Đã từ chối.'); }
-        if (approve || reject) showAdminTab('pending');
-    } catch (err) { toast(err.message, true); }
+document.getElementById('admin-user-search-btn').onclick = () => loadAdminUsers(document.getElementById('admin-user-search').value.trim());
+document.getElementById('admin-user-search').onkeydown = e => {
+    if (e.key === 'Enter') loadAdminUsers(document.getElementById('admin-user-search').value.trim());
+};
+document.getElementById('admin-users-list').onclick = e => {
+    const blockBtn = e.target.closest('[data-block]');
+    if (blockBtn) {
+        const id = Number(blockBtn.dataset.block);
+        const isBlocked = blockBtn.dataset.blocked !== '1';
+        patchAdminUser(id, { isBlocked });
+        return;
+    }
+};
+document.getElementById('admin-users-list').onchange = e => {
+    const sel = e.target.closest('[data-role]');
+    if (sel) patchAdminUser(Number(sel.dataset.role), { role: sel.value });
 };
 document.getElementById('mock-transfer-btn').onclick = async () => {
     const topupCode = document.getElementById('mock-topup-code').value.trim();
     const amount = parseInt(document.getElementById('mock-amount').value, 10);
     if (!topupCode || !amount) return toast('Nhập topupCode và số tiền', true);
     try {
-        const r = await api('/admin/simulate-bank-transfer', { method:'POST', body: JSON.stringify({ topupCode, amount }) });
+        const r = await api('/admin/simulate-bank-transfer', { method: 'POST', body: JSON.stringify({ topupCode, amount }) });
         toast(r.result?.ok ? 'Giả lập CK thành công — tiền đã cộng!' : 'CK chưa khớp yêu cầu pending.');
         showAdminTab('dashboard');
-    } catch (err) { toast(err.message, true); }
+    } catch (err) {
+        toast(err.message, true);
+    }
 };
 
+/* ─── Init ─── */
 (async () => {
     if (getToken()) {
-        try { await refreshUser(); await showApp();
-            const h = location.hash.replace('#','');
-            if (['products','wallet','orders','transactions','admin'].includes(h)) navigateTo(h);
-        } catch { clearToken(); showAuth(); }
-    } else showAuth();
+        try {
+            await refreshUser();
+            await showApp();
+            const h = location.hash.replace('#', '');
+            if (['products', 'wallet', 'orders', 'transactions', 'admin'].includes(h)) navigateTo(h);
+        } catch {
+            clearToken();
+            showAuth();
+        }
+    } else {
+        showAuth();
+    }
 })();
 </script>
 </body>
