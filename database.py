@@ -170,6 +170,23 @@ def init_schema():
                 id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
                 name TEXT NOT NULL, gender TEXT NOT NULL, items TEXT NOT NULL,
                 created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS decoration_items (
+                id SERIAL PRIMARY KEY, name TEXT NOT NULL, category TEXT NOT NULL,
+                gender TEXT NOT NULL DEFAULT 'all', theme TEXT DEFAULT 'japanese_cute',
+                image TEXT, layer_image TEXT, layer_order INTEGER DEFAULT 99,
+                is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS decoration_submissions (
+                id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
+                title TEXT NOT NULL, description TEXT, gender TEXT NOT NULL,
+                theme TEXT DEFAULT 'japanese_cute', items_used TEXT, preview_image TEXT,
+                status TEXT DEFAULT 'pending_review', score INTEGER,
+                reward_amount INTEGER DEFAULT 0, admin_note TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(), reviewed_at TIMESTAMP)''',
+            '''CREATE TABLE IF NOT EXISTS decoration_drafts (
+                id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL UNIQUE REFERENCES users(id),
+                gender TEXT NOT NULL DEFAULT 'female', theme TEXT DEFAULT 'japanese_cute',
+                items_used TEXT, preview_image TEXT,
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW())''',
         ):
             execute(conn, stmt)
     else:
@@ -245,11 +262,35 @@ def init_schema():
                 created_at TEXT DEFAULT ({n}),
                 FOREIGN KEY (user_id) REFERENCES users(id)
             );
+            CREATE TABLE IF NOT EXISTS decoration_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, category TEXT NOT NULL,
+                gender TEXT NOT NULL DEFAULT 'all', theme TEXT DEFAULT 'japanese_cute',
+                image TEXT, layer_image TEXT, layer_order INTEGER DEFAULT 99,
+                is_active INTEGER DEFAULT 1, created_at TEXT DEFAULT ({n})
+            );
+            CREATE TABLE IF NOT EXISTS decoration_submissions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+                title TEXT NOT NULL, description TEXT, gender TEXT NOT NULL,
+                theme TEXT DEFAULT 'japanese_cute', items_used TEXT, preview_image TEXT,
+                status TEXT DEFAULT 'pending_review', score INTEGER,
+                reward_amount INTEGER DEFAULT 0, admin_note TEXT,
+                created_at TEXT DEFAULT ({n}), reviewed_at TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+            CREATE TABLE IF NOT EXISTS decoration_drafts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL UNIQUE,
+                gender TEXT NOT NULL DEFAULT 'female', theme TEXT DEFAULT 'japanese_cute',
+                items_used TEXT, preview_image TEXT,
+                updated_at TEXT DEFAULT ({n}),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
         ''')
 
     migrate(conn)
     from services.avatar_service import seed_avatar_items
+    from services.decoration_service import seed_decoration_items
     seed_avatar_items(conn)
+    seed_decoration_items(conn)
     count = fetchone(conn, 'SELECT COUNT(*) AS c FROM products')['c']
     if count == 0:
         for name, desc, price, icon, color, stock in SEED_PRODUCTS:

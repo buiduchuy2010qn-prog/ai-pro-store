@@ -24,6 +24,7 @@ from services.bank_service import (
     process_bank_tx, check_bank
 )
 from services import avatar_service as av
+from services import decoration_service as deco
 BASE = Path(__file__).parent
 PUBLIC = BASE / 'public'
 app = Flask(__name__, static_folder=str(PUBLIC), static_url_path='')
@@ -166,6 +167,8 @@ def purge_user(conn, uid):
     for sql, params in [
         ('DELETE FROM password_otps WHERE user_id = ?', (uid,)),
         ('DELETE FROM saved_outfits WHERE user_id = ?', (uid,)),
+        ('DELETE FROM decoration_submissions WHERE user_id = ?', (uid,)),
+        ('DELETE FROM decoration_drafts WHERE user_id = ?', (uid,)),
         ('DELETE FROM user_avatar_items WHERE user_id = ?', (uid,)),
         ('DELETE FROM user_avatars WHERE user_id = ?', (uid,)),
         ('DELETE FROM topup_requests WHERE user_id = ?', (uid,)),
@@ -938,6 +941,363 @@ def avatar_outfit_apply(oid):
     return jsonify({'ok': True, **state})
 
 
+# ─── Cuộc Thi Trang Trí ───
+@app.route('/api/decoration/items')
+@auth_required
+def decoration_items_list():
+    gender = request.args.get('gender', '').strip().lower()
+    category = request.args.get('category', '').strip().lower()
+    theme = request.args.get('theme', '').strip().lower()
+    conn = db.get_conn()
+    sql = 'SELECT * FROM decoration_items WHERE is_active = ?'
+    params = [True if db.IS_PG else 1]
+    if gender in ('male', 'female'):
+        sql += ' AND (gender = ? OR gender = ?)'
+        params.extend([gender, 'all'])
+    if category in deco.VALID_CATEGORIES:
+        sql += ' AND category = ?'
+        params.append(category)
+    if theme in deco.VALID_THEMES:
+        sql += ' AND theme = ?'
+        params.append(theme)
+    sql += ' ORDER BY layer_order, category, id'
+    rows = db.fetchall(conn, sql, tuple(params))
+    db.close(conn)
+    return jsonify({'items': [deco.fmt_item(r) for r in rows], 'themes': deco.THEME_LABELS})
+
+
+@app.route('/api/decoration/save-draft', methods=['POST'])
+@auth_required
+def decoration_save_draft():
+    d = request.get_json() or {}
+    gender = d.get('gender', 'female').strip().lower()
+    if gender not in ('male', 'female'):
+        gender = 'female'
+    theme = deco.norm_theme(d.get('theme'))
+    items_map = d.get('items') or d.get('itemsUsed') or {}
+    preview = (d.get('previewImage') or '')[:500000]
+    conn = db.get_conn()
+    item_ids = deco.resolve_items(conn, gender, items_map)
+    uid = request.user['id']
+    existing = db.fetchone(conn, 'SELECT id FROM decoration_drafts WHERE user_id = ?', (uid,))
+    now = db.sql_now()
+    if existing:
+        db.execute(conn,
+            f'UPDATE decoration_drafts SET gender=?, theme=?, items_used=?, preview_image=?, updated_at={now} WHERE user_id=?',
+            (gender, theme, deco.to_json(item_ids), preview or None, uid))
+    else:
+        db.insert_returning_id(conn,
+            'INSERT INTO decoration_drafts (user_id,gender,theme,items_used,preview_image) VALUES (?,?,?,?,?)',
+            (uid, gender, theme, deco.to_json(item_ids), preview or None))
+    db.commit(conn)
+    draft = db.fetchone(conn, 'SELECT * FROM decoration_drafts WHERE user_id = ?', (uid,))
+    db.close(conn)
+    return jsonify({
+        'ok': True,
+        'draft': {
+            'gender': draft['gender'], 'theme': draft['theme'],
+            'items': deco.parse_json(draft.get('items_used')),
+            'previewImage': draft.get('preview_image') or '',
+        },
+    })
+
+
+@app.route('/api/decoration/draft')
+@auth_required
+def decoration_get_draft():
+    conn = db.get_conn()
+    draft = db.fetchone(conn, 'SELECT * FROM decoration_drafts WHERE user_id = ?', (request.user['id'],))
+    db.close(conn)
+    if not draft:
+        return jsonify({'draft': None})
+    item_ids = deco.parse_json(draft.get('items_used'))
+    return jsonify({
+        'draft': {
+            'gender': draft['gender'], 'theme': draft['theme'],
+            'items': item_ids,
+            'equipped': [],  # filled by client from items + catalog
+            'previewImage': draft.get('preview_image') or '',
+        },
+    })
+
+
+@app.route('/api/decoration/submit', methods=['POST'])
+@auth_required
+def decoration_submit():
+    d = request.get_json() or {}
+    title = (d.get('title') or '').strip()
+    if not title or len(title) < 2:
+        return jsonify({'error': 'Vui lòng nhập tên bài dự thi (ít nhất 2 ký tự).'}), 400
+    if len(title) > 100:
+        return jsonify({'error': 'Tên bài quá dài.'}), 400
+    description = (d.get('description') or '').strip()[:500]
+    gender = d.get('gender', 'female').strip().lower()
+    if gender not in ('male', 'female'):
+        gender = 'female'
+    theme = deco.norm_theme(d.get('theme'))
+    preview = (d.get('previewImage') or '')[:500000]
+    if not preview:
+        return jsonify({'error': 'Vui lòng tạo preview nhân vật trước khi gửi.'}), 400
+    conn = db.get_conn()
+    uid = request.user['id']
+    if deco.submissions_today(conn, uid) >= deco.MAX_SUBMISSIONS_PER_DAY:
+        db.close(conn)
+        return jsonify({'error': f'Bạn đã gửi tối đa {deco.MAX_SUBMISSIONS_PER_DAY} bài hôm nay. Thử lại ngày mai.'}), 429
+    items_map = d.get('items') or d.get('itemsUsed') or {}
+    item_ids = deco.resolve_items(conn, gender, items_map)
+    if len(item_ids) < 3:
+        db.close(conn)
+        return jsonify({'error': 'Hãy trang trí ít nhất 3 vật phẩm trước khi gửi.'}), 400
+    sid = db.insert_returning_id(conn,
+        '''INSERT INTO decoration_submissions
+           (user_id,title,description,gender,theme,items_used,preview_image,status)
+           VALUES (?,?,?,?,?,?,?,?)''',
+        (uid, title, description, gender, theme, deco.to_json(item_ids), preview, 'pending_review'))
+    db.commit(conn)
+    row = db.fetchone(conn, 'SELECT * FROM decoration_submissions WHERE id = ?', (sid,))
+    db.close(conn)
+    return jsonify({'ok': True, 'submission': deco.fmt_submission(row)}, 201)
+
+
+@app.route('/api/decoration/my-submissions')
+@auth_required
+def decoration_my_submissions():
+    conn = db.get_conn()
+    rows = db.fetchall(conn,
+        'SELECT * FROM decoration_submissions WHERE user_id = ? ORDER BY id DESC',
+        (request.user['id'],))
+    db.close(conn)
+    return jsonify({'submissions': [deco.fmt_submission(r) for r in rows]})
+
+
+@app.route('/api/decoration/leaderboard')
+@auth_required
+def decoration_leaderboard():
+    conn = db.get_conn()
+    top_scores = db.fetchall(conn, '''
+        SELECT s.*, u.name, u.email FROM decoration_submissions s
+        JOIN users u ON u.id = s.user_id
+        WHERE s.status = 'approved' AND s.score IS NOT NULL
+        ORDER BY s.score DESC, s.reviewed_at DESC LIMIT 10''')
+    top_rewards = db.fetchall(conn, '''
+        SELECT u.id, u.name, u.email, COALESCE(SUM(s.reward_amount),0) AS total_reward,
+               COUNT(s.id) AS wins
+        FROM decoration_submissions s JOIN users u ON u.id = s.user_id
+        WHERE s.status = 'approved' AND s.reward_amount > 0
+        GROUP BY u.id, u.name, u.email ORDER BY total_reward DESC LIMIT 10''')
+    latest = db.fetchall(conn, '''
+        SELECT s.*, u.name, u.email FROM decoration_submissions s
+        JOIN users u ON u.id = s.user_id
+        WHERE s.status IN ('approved','pending_review')
+        ORDER BY s.created_at DESC LIMIT 10''')
+    featured = db.fetchall(conn, '''
+        SELECT s.*, u.name, u.email FROM decoration_submissions s
+        JOIN users u ON u.id = s.user_id
+        WHERE s.status = 'approved' AND s.score >= 80
+        ORDER BY s.score DESC LIMIT 10''')
+    db.close(conn)
+    def with_user(rows):
+        return [deco.fmt_submission(r, {'name': r.get('name'), 'email': r.get('email')}) for r in rows]
+    return jsonify({
+        'topScores': with_user(top_scores),
+        'topRewards': [{
+            'userId': r['id'], 'userName': r['name'], 'userEmail': r['email'],
+            'totalReward': int(r['total_reward'] or 0), 'wins': int(r['wins'] or 0),
+        } for r in top_rewards],
+        'latest': with_user(latest),
+        'featured': with_user(featured),
+    })
+
+
+@app.route('/api/admin/decoration/submissions')
+@admin_required
+def admin_decoration_submissions():
+    status = request.args.get('status', '').strip()
+    conn = db.get_conn()
+    sql = '''
+        SELECT s.*, u.name, u.email FROM decoration_submissions s
+        JOIN users u ON u.id = s.user_id WHERE 1=1'''
+    params = []
+    if status in deco.VALID_STATUSES:
+        sql += ' AND s.status = ?'
+        params.append(status)
+    sql += ' ORDER BY CASE s.status WHEN \'pending_review\' THEN 0 ELSE 1 END, s.id DESC'
+    rows = db.fetchall(conn, sql, tuple(params))
+    db.close(conn)
+    return jsonify({'submissions': [
+        deco.fmt_submission(r, {'name': r.get('name'), 'email': r.get('email')}) for r in rows
+    ]})
+
+
+@app.route('/api/admin/decoration/submissions/<int:sid>')
+@admin_required
+def admin_decoration_submission_detail(sid):
+    conn = db.get_conn()
+    row = db.fetchone(conn, '''
+        SELECT s.*, u.name, u.email FROM decoration_submissions s
+        JOIN users u ON u.id = s.user_id WHERE s.id = ?''', (sid,))
+    if not row:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy bài dự thi.'}), 404
+    item_ids = deco.parse_json(row.get('items_used'))
+    items_detail = []
+    for cat, iid in item_ids.items():
+        item = db.fetchone(conn, 'SELECT * FROM decoration_items WHERE id = ?', (iid,))
+        if item:
+            items_detail.append({**deco.fmt_item(item), 'slot': cat})
+    db.close(conn)
+    sub = deco.fmt_submission(row, {'name': row.get('name'), 'email': row.get('email')})
+    sub['itemsDetail'] = items_detail
+    return jsonify({'submission': sub})
+
+
+@app.route('/api/admin/decoration/submissions/<int:sid>/review', methods=['POST'])
+@admin_required
+def admin_decoration_review(sid):
+    d = request.get_json() or {}
+    try:
+        score = int(d.get('score', 0))
+        reward = int(d.get('rewardAmount', d.get('reward', 0)))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Điểm hoặc tiền thưởng không hợp lệ.'}), 400
+    if score < 1 or score > 100:
+        return jsonify({'error': 'Điểm phải từ 1 đến 100.'}), 400
+    if reward < 0:
+        return jsonify({'error': 'Tiền thưởng không hợp lệ.'}), 400
+    note = (d.get('adminNote') or d.get('note') or '').strip()[:500]
+    conn = db.get_conn()
+    row = db.fetchone(conn, 'SELECT * FROM decoration_submissions WHERE id = ?', (sid,))
+    if not row:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy bài dự thi.'}), 404
+    if row['status'] != 'pending_review':
+        db.close(conn)
+        return jsonify({'error': 'Bài này đã được xử lý.'}), 400
+    uid = row['user_id']
+    now = db.sql_now()
+    db.execute(conn,
+        f'''UPDATE decoration_submissions SET status='approved', score=?, reward_amount=?,
+            admin_note=?, reviewed_at={now} WHERE id=?''',
+        (score, reward, note or None, sid))
+    if reward > 0:
+        db.execute(conn, 'UPDATE users SET balance = balance + ? WHERE id = ?', (reward, uid))
+        db.execute(conn,
+            'INSERT INTO transactions (user_id, type, amount, description, status) VALUES (?,?,?,?,?)',
+            (uid, 'decoration_reward', reward,
+             f'Thưởng trang trí #{sid}: {row["title"]} ({score}điểm)', 'success'))
+    db.commit(conn)
+    bal = db.fetchone(conn, 'SELECT balance FROM users WHERE id = ?', (uid,))['balance']
+    updated = db.fetchone(conn, 'SELECT * FROM decoration_submissions WHERE id = ?', (sid,))
+    user = db.fetchone(conn, 'SELECT name, email FROM users WHERE id = ?', (uid,))
+    db.close(conn)
+    return jsonify({
+        'ok': True, 'balance': bal,
+        'submission': deco.fmt_submission(updated, user),
+    })
+
+
+@app.route('/api/admin/decoration/submissions/<int:sid>/reject', methods=['POST'])
+@admin_required
+def admin_decoration_reject(sid):
+    d = request.get_json() or {}
+    note = (d.get('adminNote') or d.get('note') or 'Bài dự thi không phù hợp.').strip()[:500]
+    conn = db.get_conn()
+    row = db.fetchone(conn, 'SELECT * FROM decoration_submissions WHERE id = ?', (sid,))
+    if not row:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy bài dự thi.'}), 404
+    if row['status'] != 'pending_review':
+        db.close(conn)
+        return jsonify({'error': 'Bài này đã được xử lý.'}), 400
+    now = db.sql_now()
+    db.execute(conn,
+        f"UPDATE decoration_submissions SET status='rejected', admin_note=?, reviewed_at={now} WHERE id=?",
+        (note, sid))
+    db.commit(conn)
+    updated = db.fetchone(conn, 'SELECT * FROM decoration_submissions WHERE id = ?', (sid,))
+    db.close(conn)
+    return jsonify({'ok': True, 'submission': deco.fmt_submission(updated)})
+
+
+@app.route('/api/admin/decoration/items')
+@admin_required
+def admin_decoration_items():
+    conn = db.get_conn()
+    rows = db.fetchall(conn, 'SELECT * FROM decoration_items ORDER BY category, layer_order, id')
+    db.close(conn)
+    return jsonify({'items': [deco.fmt_item(r) for r in rows]})
+
+
+@app.route('/api/admin/decoration/items', methods=['POST'])
+@admin_required
+def admin_decoration_item_create():
+    d = request.get_json() or {}
+    name = (d.get('name') or '').strip()
+    if not name:
+        return jsonify({'error': 'Tên vật phẩm không được để trống.'}), 400
+    category = deco.norm_category(d.get('category'))
+    gender = deco.norm_gender(d.get('gender'))
+    theme = deco.norm_theme(d.get('theme'))
+    image = (d.get('image') or d.get('previewImage') or '👘').strip()
+    layer = (d.get('layerImage') or d.get('layer') or f'dec-custom-{secrets.token_hex(3)}').strip()
+    layer_order = int(d.get('layerOrder') or deco.CATEGORY_ORDER.get(category, 99))
+    is_active = d.get('isActive', True)
+    conn = db.get_conn()
+    iid = db.insert_returning_id(conn,
+        '''INSERT INTO decoration_items
+           (name,category,gender,theme,image,layer_image,layer_order,is_active)
+           VALUES (?,?,?,?,?,?,?,?)''',
+        (name, category, gender, theme, image, layer, layer_order,
+         is_active if db.IS_PG else (1 if is_active else 0)))
+    db.commit(conn)
+    row = db.fetchone(conn, 'SELECT * FROM decoration_items WHERE id = ?', (iid,))
+    db.close(conn)
+    return jsonify({'item': deco.fmt_item(row)}), 201
+
+
+@app.route('/api/admin/decoration/items/<int:iid>', methods=['PATCH'])
+@admin_required
+def admin_decoration_item_patch(iid):
+    d = request.get_json() or {}
+    conn = db.get_conn()
+    item = db.fetchone(conn, 'SELECT * FROM decoration_items WHERE id = ?', (iid,))
+    if not item:
+        db.close(conn)
+        return jsonify({'error': 'Vật phẩm không tồn tại.'}), 404
+    name = (d.get('name', item['name']) or '').strip()
+    category = deco.norm_category(d.get('category', item['category']))
+    gender = deco.norm_gender(d.get('gender', item['gender']))
+    theme = deco.norm_theme(d.get('theme', item.get('theme')))
+    image = (d.get('image') or item.get('image') or '👘').strip()
+    layer = (d.get('layerImage') or item.get('layer_image') or '').strip()
+    layer_order = int(d.get('layerOrder', item.get('layer_order') or 99))
+    is_active = d.get('isActive', item.get('is_active', True))
+    db.execute(conn,
+        '''UPDATE decoration_items SET name=?,category=?,gender=?,theme=?,image=?,
+           layer_image=?,layer_order=?,is_active=? WHERE id=?''',
+        (name, category, gender, theme, image, layer, layer_order,
+         is_active if db.IS_PG else (1 if is_active else 0), iid))
+    db.commit(conn)
+    row = db.fetchone(conn, 'SELECT * FROM decoration_items WHERE id = ?', (iid,))
+    db.close(conn)
+    return jsonify({'item': deco.fmt_item(row)})
+
+
+@app.route('/api/admin/decoration/items/<int:iid>', methods=['DELETE'])
+@admin_required
+def admin_decoration_item_delete(iid):
+    conn = db.get_conn()
+    item = db.fetchone(conn, 'SELECT id FROM decoration_items WHERE id = ?', (iid,))
+    if not item:
+        db.close(conn)
+        return jsonify({'error': 'Vật phẩm không tồn tại.'}), 404
+    db.execute(conn, 'UPDATE decoration_items SET is_active = ? WHERE id = ?',
+               (False if db.IS_PG else 0, iid))
+    db.commit(conn)
+    db.close(conn)
+    return jsonify({'ok': True})
+
+
 # ─── Admin ───
 @app.route('/api/admin/dashboard')
 @admin_required
@@ -947,6 +1307,8 @@ def admin_dashboard():
         "SELECT COALESCE(SUM(amount),0) AS t FROM transactions WHERE type='purchase' AND status='success'")['t']
     avatar_rev = db.fetchone(conn,
         "SELECT COALESCE(SUM(amount),0) AS t FROM transactions WHERE type='avatar_item_purchase' AND status='success'")['t']
+    deco_reward = db.fetchone(conn,
+        "SELECT COALESCE(SUM(amount),0) AS t FROM transactions WHERE type='decoration_reward' AND status='success'")['t']
     avatar_sold = db.fetchone(conn,
         "SELECT COUNT(*) AS c FROM transactions WHERE type='avatar_item_purchase' AND status='success'")['c']
     avatar_users = db.fetchone(conn, 'SELECT COUNT(*) AS c FROM user_avatars')['c']
@@ -958,13 +1320,23 @@ def admin_dashboard():
         SELECT description, COUNT(*) AS cnt, SUM(amount) AS revenue
         FROM transactions WHERE type='avatar_item_purchase' AND status='success'
         GROUP BY description ORDER BY cnt DESC LIMIT 5''')
+    deco_pending = db.fetchone(conn,
+        "SELECT COUNT(*) AS c FROM decoration_submissions WHERE status='pending_review'")['c']
+    deco_approved = db.fetchone(conn,
+        "SELECT COUNT(*) AS c FROM decoration_submissions WHERE status='approved'")['c']
+    deco_items = db.fetchone(conn, 'SELECT COUNT(*) AS c FROM decoration_items WHERE is_active = ?',
+                             (True if db.IS_PG else 1,))['c']
     db.close(conn)
     return jsonify({
         'revenue': int(product_rev),
         'avatarRevenue': int(avatar_rev),
-        'totalRevenue': int(product_rev) + int(avatar_rev),
+        'decorationRewards': int(deco_reward),
+        'totalRevenue': int(product_rev) + int(avatar_rev) + int(deco_reward),
         'avatarItemsSold': int(avatar_sold),
         'avatarUsers': int(avatar_users),
+        'decorationPending': int(deco_pending),
+        'decorationApproved': int(deco_approved),
+        'decorationItems': int(deco_items),
         'topAvatarItems': [{
             'description': r['description'], 'count': int(r['cnt']), 'revenue': int(r['revenue'] or 0),
         } for r in top_items],
