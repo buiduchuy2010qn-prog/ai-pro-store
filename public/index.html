@@ -27,15 +27,12 @@
 
 <!-- ═══ AUTH SCREEN ═══ -->
 <div id="auth-screen" class="auth-bg">
-    <div class="floating-orb orb-1"></div>
-    <div class="floating-orb orb-2"></div>
-    <div class="floating-orb orb-3"></div>
     <div class="auth-card">
         <div class="auth-hero">
             <div class="auth-hero-icon"><i class="fas fa-store"></i></div>
-            <div class="text-2xl font-bold tracking-tight">Shop của Đức Hi</div>
-            <p class="text-white/90 text-sm mt-2">Chào mừng đến Web Shop của Đức Hi</p>
-            <p class="text-white/70 text-xs mt-1">Nạp tiền tự động qua QR VietQR</p>
+            <h1>Shop<span style="color:#0ea5e9">.</span> Đức Hi</h1>
+            <p class="text-sm mt-2" style="color:#64748b">Chào mừng đến Web Shop của Đức Hi</p>
+            <p class="text-xs mt-1" style="color:#94a3b8">Nạp tiền tự động qua QR VietQR</p>
         </div>
 
         <div id="auth-tabs" class="auth-tabs">
@@ -172,7 +169,7 @@
     <header class="site-header">
         <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
             <button id="brand-btn" class="text-left shrink-0">
-                <div class="brand-logo"><i class="fas fa-store mr-1"></i>Shop của Đức Hi</div>
+                <div class="brand-logo"><span class="brand-dot"></span>Shop<span style="color:#0ea5e9">.</span> Đức Hi</div>
                 <div class="brand-tagline hidden sm:block">Chào mừng đến Web Shop của Đức Hi</div>
             </button>
             <div class="hidden md:flex items-center nav-pill-wrap">
@@ -206,26 +203,36 @@
         </div>
     </header>
 
-    <main class="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
+    <main class="flex-1 app-main">
         <!-- Products -->
-        <section id="view-products">
-            <div class="mb-6">
-                <h1 class="page-title"><i class="fas fa-box-open text-brand-500 mr-2"></i>Sản phẩm</h1>
-                <p class="page-subtitle">Chào mừng đến Web Shop của Đức Hi</p>
+        <section id="view-products" class="app-section">
+            <div class="shop-hero">
+                <div class="shop-wordmark">Shop<span class="wm-accent">.</span> Đức Hi</div>
+                <p class="shop-hero-sub">Chào mừng đến Web Shop của Đức Hi — Khám phá & mua sản phẩm AI</p>
+                <div class="category-row">
+                    <button type="button" data-view="products" class="category-pill"><span class="pill-icon"><i class="fas fa-box-open"></i></span>Sản phẩm</button>
+                    <button type="button" data-view="wallet" class="category-pill"><span class="pill-icon"><i class="fas fa-wallet"></i></span>Ví tiền</button>
+                    <button type="button" data-view="dressroom" class="category-pill"><span class="pill-icon"><i class="fas fa-shirt"></i></span>Phòng Thay Đồ</button>
+                    <button type="button" data-view="orders" class="category-pill"><span class="pill-icon"><i class="fas fa-shopping-bag"></i></span>Đơn hàng</button>
+                </div>
             </div>
-            <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+            <div class="section-header">
+                <h2 class="page-title">Sản phẩm</h2>
+                <i class="fas fa-chevron-right text-sm" style="color:#64748b"></i>
+            </div>
+            <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
         </section>
 
         <!-- Wallet -->
-        <section id="view-wallet" class="hidden">
-            <h1 class="page-title mb-6"><i class="fas fa-wallet text-brand-500 mr-2"></i>Ví tiền</h1>
+        <section id="view-wallet" class="hidden app-section">
+            <div class="section-header"><h1 class="page-title">Ví tiền</h1></div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="space-y-6">
-                    <div class="glass-card hover-lift p-6">
+                    <div class="glass-card padded hover-lift">
                         <div class="text-slate-500 text-sm">Số dư hiện tại</div>
                         <div id="wallet-balance" class="text-4xl font-bold gradient-text mt-2">0đ</div>
                     </div>
-                    <div class="glass-card p-6">
+                    <div class="glass-card padded">
                         <h2 class="font-semibold mb-1">Nạp tiền tự động</h2>
                         <p class="text-xs text-slate-500 mb-3">Mã nội dung CK cố định của bạn:</p>
                         <div class="flex items-center gap-2 bg-sky-50 border border-sky-200 rounded-xl px-4 py-3 mb-4">
@@ -272,8 +279,8 @@
         </section>
 
         <!-- Orders -->
-        <section id="view-orders" class="hidden">
-            <h1 class="page-title mb-6"><i class="fas fa-shopping-bag text-brand-500 mr-2"></i>Đơn hàng của tôi</h1>
+        <section id="view-orders" class="hidden app-section">
+            <div class="section-header"><h1 class="page-title">Đơn hàng của tôi</h1></div>
             <div id="my-orders-list" class="space-y-3"></div>
         </section>
         <div id="order-detail-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay">
@@ -313,18 +320,12 @@
         </div>
 
         <!-- Phòng Thay Đồ Nhân Vật -->
-        <section id="view-dressroom" class="hidden dress-room-bg relative">
-            <div class="sparkle-layer" aria-hidden="true">
-                <span style="top:12%;left:8%;animation-delay:0s"></span>
-                <span style="top:25%;right:15%;animation-delay:1s"></span>
-                <span style="bottom:30%;left:20%;animation-delay:2s"></span>
-                <span style="top:60%;right:10%;animation-delay:0.5s"></span>
-            </div>
-            <div class="sakura-float absolute top-4 right-8 text-2xl">🌸</div>
-            <div class="sakura-float absolute top-20 left-6 text-xl" style="animation-delay:2s">❀</div>
-            <div class="mb-5 relative z-10">
-                <h1 class="page-title"><i class="fas fa-shirt text-brand-500 mr-2"></i>Phòng Thay Đồ Nhân Vật</h1>
-                <p class="page-subtitle">Tạo phong cách anime Nhật Bản của riêng bạn</p>
+        <section id="view-dressroom" class="hidden dress-room-bg app-section">
+            <div class="section-header mb-5">
+                <div>
+                    <h1 class="page-title">Phòng Thay Đồ Nhân Vật</h1>
+                    <p class="page-subtitle">Tạo phong cách anime Nhật Bản của riêng bạn</p>
+                </div>
             </div>
             <div class="flex flex-wrap gap-2 mb-4 items-center relative z-10">
                 <button type="button" data-gender="female" class="dr-gender-btn dr-gender-active px-4 py-2 rounded-xl text-sm font-medium">Nữ</button>
@@ -376,8 +377,8 @@
         </section>
 
         <!-- Transactions -->
-        <section id="view-transactions" class="hidden">
-            <h1 class="page-title mb-6"><i class="fas fa-clock-rotate-left text-brand-500 mr-2"></i>Lịch sử giao dịch</h1>
+        <section id="view-transactions" class="hidden app-section">
+            <div class="section-header"><h1 class="page-title">Lịch sử giao dịch</h1></div>
             <div id="my-transactions-list" class="space-y-3"></div>
         </section>
 
@@ -771,19 +772,19 @@ async function loadProducts() {
             const icon = p.icon || 'fa-box';
             const mode = p.contactMode || 'none';
             return `
-            <div class="product-card hover-lift">
-                <div class="${st.bg} p-6 flex justify-center">
-                    <i class="fas ${escapeHtml(icon)} text-4xl ${st.ic}"></i>
+            <div class="product-card">
+                <div class="product-card-visual ${st.bg}">
+                    <i class="fas ${escapeHtml(icon)} ${st.ic}"></i>
                 </div>
-                <div class="p-5">
-                    <h3 class="font-bold text-lg">${escapeHtml(p.name)}</h3>
-                    <p class="text-slate-500 text-sm mt-1 line-clamp-2">${escapeHtml(p.desc)}</p>
+                <div class="product-card-body">
+                    <div class="product-card-name">${escapeHtml(p.name)}</div>
+                    <div class="product-card-desc">${escapeHtml(p.desc)}</div>
                     ${contactModeBadge(mode)}
-                    <div class="flex justify-between items-center mt-4 gap-2">
-                        <span class="text-xl font-bold gradient-text">${formatMoney(p.price)}</span>
+                    <div class="product-card-footer">
+                        <span class="product-card-price">${formatMoney(p.price)}</span>
                         <button data-buy="${p.id}" data-contact-mode="${escapeHtml(mode)}"
-                                class="btn-primary px-4 py-2 text-sm shrink-0">
-                            <i class="fas fa-cart-plus mr-1"></i>Mua
+                                class="product-card-buy" title="Mua ngay">
+                            <i class="fas fa-arrow-right"></i>
                         </button>
                     </div>
                 </div>
@@ -1023,7 +1024,7 @@ async function loadMyOrders() {
         const el = document.getElementById('my-orders-list');
         if (!orders.length) { el.innerHTML = emptyState('Chưa có đơn hàng.'); return; }
         el.innerHTML = orders.map(o => `
-            <div class="glass-card hover-lift p-4 flex justify-between cursor-pointer" data-view-order="${o.id}">
+            <div class="glass-card padded hover-lift flex justify-between cursor-pointer" data-view-order="${o.id}">
                 <div>
                     <div class="font-semibold">${escapeHtml(o.product)}</div>
                     <div class="text-sm mt-1">${orderCodeBtn(o)}</div>
@@ -1666,7 +1667,9 @@ document.getElementById('forgot-step3').onsubmit = async e => {
 
 document.getElementById('logout-btn').onclick = () => { clearToken(); stopPolling(); showAuth(); toast('Đã đăng xuất.'); };
 document.getElementById('brand-btn').onclick = () => navigateTo('products');
-document.querySelectorAll('.nav-btn, .mobile-nav-btn').forEach(b => b.onclick = () => navigateTo(b.dataset.view));
+document.querySelectorAll('.nav-btn, .mobile-nav-btn, .category-pill[data-view]').forEach(b => {
+    b.onclick = () => navigateTo(b.dataset.view);
+});
 document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('mobile-menu').classList.toggle('hidden');
 document.getElementById('create-topup-btn').onclick = createTopup;
 document.getElementById('copy-topup-code').onclick = () => {
