@@ -223,7 +223,11 @@ def forgot_password():
     db.commit(conn)
     db.close(conn)
     try:
-        send_otp_email(email, otp)
+        mail = send_otp_email(email, otp)
+        if mail.get('dev') and db.IS_PG:
+            return jsonify({
+                'error': 'Chưa cấu hình gửi email OTP trên server. Liên hệ admin qua Zalo 0944255413.'
+            }), 503
     except Exception as e:
         return jsonify({'error': f'Không gửi được email: {e}'}), 500
     return jsonify({'ok': True, 'message': 'Mã OTP đã được gửi đến email của bạn.'})
