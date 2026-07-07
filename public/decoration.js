@@ -133,7 +133,7 @@ async function loadDressRoom() {
         const themeEl = document.getElementById('dr-theme-select');
         if (themeEl) themeEl.value = drState.theme;
         document.querySelectorAll('.dr-gender-btn').forEach(btn => {
-            btn.className = `dr-gender-btn px-4 py-2 rounded-xl text-sm font-medium transition ${btn.dataset.gender === drState.gender ? 'bg-pink-500 text-white shadow-md' : 'bg-white/80 text-pink-700 border border-pink-200'}`;
+            btn.className = `dr-gender-btn px-4 py-2 rounded-xl text-sm font-medium transition ${btn.dataset.gender === drState.gender ? 'dr-gender-active' : 'dr-gender-inactive'}`;
         });
         drRenderPreview();
         drRenderItems();
@@ -149,20 +149,20 @@ function drRenderItems() {
     const tabs = document.getElementById('dr-category-tabs');
     if (!grid || !tabs) return;
     tabs.innerHTML = DR_CATEGORIES.map(c =>
-        `<button type="button" data-dr-cat="${c.id}" class="dr-cat-btn shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition ${c.id === drCategory ? 'bg-pink-500 text-white shadow' : 'bg-white/90 text-pink-600 border border-pink-200 hover:bg-pink-50'}"><i class="fas ${c.icon} mr-1"></i>${c.label}</button>`
+        `<button type="button" data-dr-cat="${c.id}" class="dr-cat-btn ${c.id === drCategory ? 'active' : ''}"><i class="fas ${c.icon} mr-1"></i>${c.label}</button>`
     ).join('');
     let items = drCatalog.filter(i => i.category === drCategory);
     if (drState.theme && !['body', 'background', 'head', 'torso', 'arms', 'legs'].includes(drCategory)) {
         items = items.filter(i => i.theme === drState.theme || i.theme === 'japanese_cute');
     }
-    if (!items.length) { grid.innerHTML = '<div class="col-span-full text-center py-10 text-pink-300 text-sm">Chưa có vật phẩm.</div>'; return; }
+    if (!items.length) { grid.innerHTML = '<div class="col-span-full text-center py-10 text-slate-400 text-sm">Chưa có vật phẩm.</div>'; return; }
     grid.innerHTML = items.map(item => {
         const on = drState.equipped.some(e => e.id === item.id);
         const thumb = drItemThumb(item.layerImage, item.category);
-        return `<button type="button" data-dr-equip="${item.id}" class="dr-item-card group bg-white/95 border-2 rounded-2xl p-2 text-center shadow-sm hover:shadow-lg hover:scale-[1.03] transition-all duration-200 ${on ? 'border-pink-400 ring-2 ring-pink-200' : 'border-pink-100'}">
-            <div class="w-14 h-14 mx-auto mb-1 rounded-xl bg-gradient-to-br from-pink-50 to-violet-50 flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform">${thumb}</div>
-            <div class="text-[10px] font-medium text-pink-800 line-clamp-2 min-h-[2rem] leading-tight">${escapeHtml(item.name)}</div>
-            ${on ? '<div class="text-[9px] text-pink-500 mt-0.5 font-semibold">✓ Đang mặc</div>' : ''}
+        return `<button type="button" data-dr-equip="${item.id}" class="dr-item-card group ${on ? 'equipped' : ''}">
+            <div class="dr-item-thumb group-hover:scale-105 transition-transform">${thumb}</div>
+            <div class="text-[10px] font-medium text-slate-700 line-clamp-2 min-h-[2rem] leading-tight">${escapeHtml(item.name)}</div>
+            ${on ? '<div class="text-[9px] text-brand-500 mt-0.5 font-semibold">✓ Đang dùng</div>' : ''}
         </button>`;
     }).join('');
 }
@@ -195,7 +195,7 @@ async function drSetGender(gender) {
     drRenderPreview();
     drRenderItems();
     document.querySelectorAll('.dr-gender-btn').forEach(btn => {
-        btn.className = `dr-gender-btn px-4 py-2 rounded-xl text-sm font-medium transition ${btn.dataset.gender === gender ? 'bg-pink-500 text-white shadow-md' : 'bg-white/80 text-pink-700 border border-pink-200'}`;
+        btn.className = `dr-gender-btn px-4 py-2 rounded-xl text-sm font-medium transition ${btn.dataset.gender === gender ? 'dr-gender-active' : 'dr-gender-inactive'}`;
     });
 }
 
@@ -233,15 +233,15 @@ async function drSaveOutfit() {
 function drRenderOutfits() {
     const el = document.getElementById('dr-outfits-list');
     if (!el) return;
-    if (!drOutfits.length) { el.innerHTML = '<p class="text-xs text-pink-400">Chưa có outfit đã lưu.</p>'; return; }
+    if (!drOutfits.length) { el.innerHTML = '<p class="text-xs text-slate-400">Chưa có outfit đã lưu.</p>'; return; }
     el.innerHTML = drOutfits.map(o => `
-        <div class="flex items-center gap-2 bg-white/90 border border-pink-100 rounded-xl p-2 text-sm">
-            ${o.previewImage ? `<img src="${o.previewImage}" class="w-10 h-12 object-cover rounded-lg border shrink-0" alt="">` : '<div class="w-10 h-12 bg-pink-50 rounded-lg shrink-0"></div>'}
+        <div class="flex items-center gap-2 glass-card p-2 text-sm">
+            ${o.previewImage ? `<img src="${o.previewImage}" class="w-10 h-12 object-cover rounded-lg border border-sky-100 shrink-0" alt="">` : '<div class="w-10 h-12 bg-sky-50 rounded-lg shrink-0"></div>'}
             <div class="flex-1 min-w-0">
                 <div class="font-medium truncate text-xs">${escapeHtml(o.name)}</div>
-                <div class="text-[10px] text-pink-400">${o.gender === 'male' ? 'Nam' : 'Nữ'}</div>
+                <div class="text-[10px] text-slate-400">${o.gender === 'male' ? 'Nam' : 'Nữ'}</div>
             </div>
-            <button type="button" data-dr-apply="${o.id}" class="text-[10px] bg-pink-500 text-white px-2 py-1 rounded-lg shrink-0">Mặc</button>
+            <button type="button" data-dr-apply="${o.id}" class="text-[10px] btn-primary px-2 py-1 shrink-0">Mặc</button>
             <button type="button" data-dr-del-outfit="${o.id}" class="text-[10px] text-red-500 px-1 shrink-0">×</button>
         </div>`).join('');
 }
@@ -333,15 +333,15 @@ async function loadAdminDressRoom() {
         if (stats) {
             stats.innerHTML = `
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                    <div class="bg-white border rounded-xl p-4"><div class="text-xs text-slate-500">Vật phẩm</div><div class="text-xl font-bold text-pink-600">${items.length}</div></div>
-                    <div class="bg-white border rounded-xl p-4"><div class="text-xs text-slate-500">Outfit đã lưu</div><div class="text-xl font-bold">${d.savedOutfits || 0}</div></div>
+                    <div class="admin-stat-card"><div class="text-xs text-slate-500">Vật phẩm</div><div class="text-xl font-bold gradient-text">${items.length}</div></div>
+                    <div class="admin-stat-card"><div class="text-xs text-slate-500">Outfit đã lưu</div><div class="text-xl font-bold text-violet-600">${d.savedOutfits || 0}</div></div>
                 </div>`;
         }
         const el = document.getElementById('admin-dr-items-list');
         if (!el) return;
         el.innerHTML = items.map(i => `
-            <div class="flex items-center gap-3 bg-slate-50 border rounded-lg px-3 py-2 text-sm" data-admin-dr-row="${i.id}">
-                <div class="w-10 h-10 rounded-lg bg-pink-50 flex items-center justify-center overflow-hidden shrink-0">${drItemThumb(i.layerImage, i.category)}</div>
+            <div class="flex items-center gap-3 glass-card px-3 py-2 text-sm" data-admin-dr-row="${i.id}">
+                <div class="dr-item-thumb shrink-0" style="width:2.5rem;height:2.5rem">${drItemThumb(i.layerImage, i.category)}</div>
                 <input data-dr-field="name" data-dr-id="${i.id}" value="${escapeHtml(i.name)}" class="flex-1 border rounded-lg px-2 py-1 text-sm min-w-0">
                 <select data-dr-field="category" data-dr-id="${i.id}" class="border rounded-lg px-2 py-1 text-xs hidden sm:block">
                     ${DR_CATEGORIES.map(c => `<option value="${c.id}" ${c.id === i.category ? 'selected' : ''}>${c.label}</option>`).join('')}
@@ -350,7 +350,7 @@ async function loadAdminDressRoom() {
                     <option value="1" ${i.isActive ? 'selected' : ''}>Bật</option>
                     <option value="0" ${!i.isActive ? 'selected' : ''}>Tắt</option>
                 </select>
-                <button data-dr-save="${i.id}" class="bg-brand-600 text-white text-xs px-2 py-1 rounded-lg shrink-0">Lưu</button>
+                <button data-dr-save="${i.id}" class="btn-primary text-xs px-2 py-1 shrink-0">Lưu</button>
             </div>`).join('');
     } catch (e) { toast(e.message, true); }
 }
