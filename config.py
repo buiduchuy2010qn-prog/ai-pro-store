@@ -37,3 +37,15 @@ SMTP = {
 OTP_EXPIRE_MINUTES = 5
 OTP_MAX_ATTEMPTS = 5
 OTP_RATE_LIMIT_PER_HOUR = 3
+
+_ai_key = os.getenv('XAI_API_KEY') or os.getenv('OPENAI_API_KEY') or os.getenv('AI_API_KEY', '')
+_ai_url = os.getenv('AI_API_URL', '')
+if not _ai_url:
+    _ai_url = 'https://api.x.ai/v1/chat/completions' if os.getenv('XAI_API_KEY') else 'https://api.openai.com/v1/chat/completions'
+
+AI = {
+    'api_key': _ai_key,
+    'api_url': _ai_url,
+    'model': os.getenv('AI_MODEL', 'grok-3-mini' if os.getenv('XAI_API_KEY') else 'gpt-4o-mini'),
+    'rate_limit': int(os.getenv('AI_RATE_LIMIT_PER_HOUR', '30')),
+}

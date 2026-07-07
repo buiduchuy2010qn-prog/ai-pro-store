@@ -22,6 +22,7 @@ from services.email_service import send_otp_email
 from services.bank_service import (
     gen_topup_code, build_qr, bank_loop, ingest_webhook, process_bank_tx, check_bank
 )
+from services.ai_support import chat as ai_chat, status as ai_status
 
 BASE = Path(__file__).parent
 PUBLIC = BASE / 'public'
@@ -191,6 +192,25 @@ def admin_required(f):
     return deco
 
 
+def optional_auth(f):
+    @wraps(f)
+    def deco(*args, **kwargs):
+        request.user = None
+        h = request.headers.get('Authorization', '')
+        if h.startswith('Bearer '):
+            try:
+                payload = jwt.decode(h[7:], JWT_SECRET, algorithms=['HS256'])
+                conn = db.get_conn()
+                user = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (payload['userId'],))
+                db.close(conn)
+                if user and not user.get('is_blocked'):
+                    request.user = fmt_user(user)
+            except Exception:
+                pass
+        return f(*args, **kwargs)
+    return deco
+
+
 def start_bg():
     global _checker_started
     if _checker_started:
@@ -210,6 +230,32 @@ def health():
 @app.route('/api/site-info')
 def site_info():
     return jsonify({'name': SITE_NAME, 'welcome': WELCOME_MSG, 'zalo': ZALO_PHONE})
+
+
+@app.route('/api/support/status')
+def support_status():
+    return jsonify(ai_status())
+
+
+@app.route('/api/support/chat', methods=['POST'])
+@optional_auth
+def support_chat():
+    d = request.get_json() or {}
+    message = d.get('message', '')
+    history = d.get('history') or []
+    user_ctx = request.user if getattr(request, 'user', None) else None
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+    try:
+        result = ai_chat(message, history=history, user_ctx=user_ctx, client_ip=ip)
+        return jsonify({'ok': True, **result, 'zalo': ZALO_PHONE})
+    except PermissionError as e:
+        return jsonify({'error': str(e)}), 429
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except RuntimeError as e:
+        return jsonify({'error': str(e), 'fallback': True, 'reply': (
+            f'AI tạm lỗi. Liên hệ Zalo **{ZALO_PHONE}** để được hỗ trợ nhanh.'
+        ), 'mode': 'error'}), 200
 
 
 # ─── Auth ───
