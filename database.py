@@ -213,6 +213,20 @@ def init_schema():
             '''CREATE TABLE IF NOT EXISTS ai_chat_logs (
                 id SERIAL PRIMARY KEY, user_id INTEGER, intent TEXT, message TEXT NOT NULL,
                 created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS support_notifications (
+                id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
+                order_id INTEGER NOT NULL REFERENCES orders(id),
+                product_id INTEGER NOT NULL,
+                customer_name TEXT NOT NULL, customer_email TEXT NOT NULL,
+                product_name TEXT NOT NULL, product_price INTEGER NOT NULL,
+                message TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
+                admin_note TEXT, created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW(), completed_at TIMESTAMP)''',
+            '''CREATE TABLE IF NOT EXISTS support_notification_logs (
+                id SERIAL PRIMARY KEY, notification_id INTEGER NOT NULL REFERENCES support_notifications(id),
+                admin_id INTEGER NOT NULL REFERENCES users(id),
+                action TEXT NOT NULL, note TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
         ):
             execute(conn, stmt)
     else:
@@ -335,6 +349,24 @@ def init_schema():
                 id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER,
                 intent TEXT, message TEXT NOT NULL,
                 created_at TEXT DEFAULT ({n})
+            );
+            CREATE TABLE IF NOT EXISTS support_notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+                order_id INTEGER NOT NULL, product_id INTEGER NOT NULL,
+                customer_name TEXT NOT NULL, customer_email TEXT NOT NULL,
+                product_name TEXT NOT NULL, product_price INTEGER NOT NULL,
+                message TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
+                admin_note TEXT, created_at TEXT DEFAULT ({n}),
+                updated_at TEXT DEFAULT ({n}), completed_at TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                FOREIGN KEY (order_id) REFERENCES orders(id)
+            );
+            CREATE TABLE IF NOT EXISTS support_notification_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, notification_id INTEGER NOT NULL,
+                admin_id INTEGER NOT NULL, action TEXT NOT NULL, note TEXT,
+                created_at TEXT DEFAULT ({n}),
+                FOREIGN KEY (notification_id) REFERENCES support_notifications(id),
+                FOREIGN KEY (admin_id) REFERENCES users(id)
             );
         ''')
 

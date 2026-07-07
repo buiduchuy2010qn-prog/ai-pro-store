@@ -649,12 +649,15 @@ def order_create():
     txid = db.insert_returning_id(conn,
         'INSERT INTO transactions (user_id,type,amount,description,status,order_id) VALUES (?,?,?,?,?,?)',
         (user['id'], 'purchase', product['price'], f"Mua {product['name']}", 'success', oid))
+    from services.support_notification_service import create_for_order
+    support_nid = create_for_order(conn, user, oid, product, contact_email, contact_phone)
     db.commit(conn)
     bal = db.fetchone(conn, 'SELECT balance FROM users WHERE id = ?', (user['id'],))['balance']
     db.close(conn)
     return jsonify({
         'orderId': oid, 'orderCode': order_code, 'transactionCode': gen_tx_code(txid),
-        'product': product['name'], 'price': product['price'], 'balance': bal
+        'product': product['name'], 'price': product['price'], 'balance': bal,
+        'supportNotificationId': support_nid,
     }), 201
 
 
@@ -1514,6 +1517,8 @@ def admin_dashboard():
     deco_items = db.fetchone(conn, 'SELECT COUNT(*) AS c FROM decoration_items WHERE is_active = ?',
                              (True if db.IS_PG else 1,))['c']
     deco_outfits = db.fetchone(conn, 'SELECT COUNT(*) AS c FROM decoration_saved_outfits')['c']
+    from services.support_notification_service import pending_count
+    pending_support = pending_count(conn)
     db.close(conn)
     return jsonify({
         'revenue': int(product_rev),
@@ -1530,8 +1535,77 @@ def admin_dashboard():
             'description': r['description'], 'count': int(r['cnt']), 'revenue': int(r['revenue'] or 0),
         } for r in top_items],
         'totalOrders': int(orders), 'pendingTopups': int(pending),
+        'pendingSupportNotifications': int(pending_support),
         'totalUsers': int(users), 'bankTransactions': int(bank_tx),
     })
+
+
+@app.route('/api/admin/support-notifications/unread-count')
+@admin_required
+def admin_support_unread_count():
+    from services.support_notification_service import pending_count
+    conn = db.get_conn()
+    count = pending_count(conn)
+    db.close(conn)
+    return jsonify({'count': count})
+
+
+@app.route('/api/admin/support-notifications')
+@admin_required
+def admin_support_list():
+    from services.support_notification_service import list_notifications
+    status = request.args.get('status', '').strip()
+    q = request.args.get('q', '').strip()
+    conn = db.get_conn()
+    items = list_notifications(conn, status=status or None, q=q or None)
+    db.close(conn)
+    return jsonify({'notifications': items})
+
+
+@app.route('/api/admin/support-notifications/<int:nid>')
+@admin_required
+def admin_support_detail(nid):
+    from services.support_notification_service import get_notification
+    conn = db.get_conn()
+    item = get_notification(conn, nid)
+    db.close(conn)
+    if not item:
+        return jsonify({'error': 'Không tìm thấy thông báo.'}), 404
+    return jsonify({'notification': item})
+
+
+@app.route('/api/admin/support-notifications/<int:nid>/status', methods=['PATCH'])
+@admin_required
+def admin_support_status(nid):
+    from services.support_notification_service import update_status, VALID_STATUSES
+    d = request.get_json() or {}
+    status = (d.get('status') or '').strip()
+    if status not in VALID_STATUSES:
+        return jsonify({'error': 'Trạng thái không hợp lệ.'}), 400
+    conn = db.get_conn()
+    item, err = update_status(conn, nid, status, request.user['id'])
+    if err:
+        db.close(conn)
+        return jsonify({'error': err}), 404 if err == 'Không tìm thấy thông báo.' else 400
+    db.commit(conn)
+    db.close(conn)
+    return jsonify({'notification': item})
+
+
+@app.route('/api/admin/support-notifications/<int:nid>/note', methods=['PATCH'])
+@admin_required
+def admin_support_note(nid):
+    from services.support_notification_service import update_note
+    d = request.get_json() or {}
+    note = (d.get('note') or '').strip()
+    conn = db.get_conn()
+    item, err = update_note(conn, nid, note, request.user['id'])
+    if err:
+        db.close(conn)
+        return jsonify({'error': err}), 404
+    db.commit(conn)
+    db.close(conn)
+    return jsonify({'notification': item})
 
 
 @app.route('/api/admin/users')

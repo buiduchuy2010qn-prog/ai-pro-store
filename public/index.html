@@ -403,6 +403,10 @@
                         <button data-admin-tab="users" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Người dùng</button>
                         <button data-admin-tab="topups" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Nạp tiền</button>
                         <button data-admin-tab="orders" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Đơn hàng</button>
+                        <button data-admin-tab="support" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600 relative">
+                            Thông Báo Hỗ Trợ
+                            <span id="admin-support-badge" class="hidden ml-1 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-xs font-bold text-white bg-amber-500 rounded-full">0</span>
+                        </button>
                         <button data-admin-tab="transactions" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Giao dịch</button>
                         <button data-admin-tab="bank-transactions" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Bank TX</button>
                         <button data-admin-tab="dressroom" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Phòng Thay Đồ</button>
@@ -485,6 +489,29 @@
                     <div id="admin-topups-list" class="space-y-3"></div>
                 </div>
                 <div id="admin-orders" class="hidden space-y-3"></div>
+                <div id="admin-support" class="hidden space-y-4">
+                    <div class="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
+                        <div>
+                            <h2 class="text-lg font-bold gradient-text"><i class="fas fa-headset mr-1"></i>Thông Báo Hỗ Trợ</h2>
+                            <p class="text-sm text-slate-500">Yêu cầu hỗ trợ nâng cấp/kích hoạt tài khoản sau khi khách mua hàng.</p>
+                        </div>
+                        <button id="admin-support-refresh" class="btn-ghost px-4 py-2 text-sm shrink-0">
+                            <i class="fas fa-sync-alt mr-1"></i>Làm mới
+                        </button>
+                    </div>
+                    <div class="flex flex-wrap gap-2" id="admin-support-filters">
+                        <button data-support-filter="" class="support-filter-btn active px-3 py-1.5 text-sm rounded-full">Tất cả</button>
+                        <button data-support-filter="pending" class="support-filter-btn px-3 py-1.5 text-sm rounded-full bg-slate-100">Chờ xử lý</button>
+                        <button data-support-filter="in_progress" class="support-filter-btn px-3 py-1.5 text-sm rounded-full bg-slate-100">Đang hỗ trợ</button>
+                        <button data-support-filter="completed" class="support-filter-btn px-3 py-1.5 text-sm rounded-full bg-slate-100">Hoàn thành</button>
+                        <button data-support-filter="cancelled" class="support-filter-btn px-3 py-1.5 text-sm rounded-full bg-slate-100">Đã hủy</button>
+                    </div>
+                    <div class="input-wrap max-w-md">
+                        <i class="fas fa-search input-icon"></i>
+                        <input id="admin-support-search" type="text" placeholder="Tìm theo email, tên khách hoặc sản phẩm..." class="input-modern text-sm" style="padding-left:2.75rem">
+                    </div>
+                    <div id="admin-support-list" class="space-y-3"></div>
+                </div>
                 <div id="admin-transactions" class="hidden space-y-3"></div>
                 <div id="admin-bank-transactions" class="hidden space-y-3"></div>
                 <div id="admin-dressroom" class="hidden space-y-4">
@@ -565,6 +592,9 @@ let currentView = 'products';
 let currentAdminTab = 'dashboard';
 let activeTopupId = null;
 let pollTimer = null;
+let supportPollTimer = null;
+let lastSupportPendingCount = 0;
+let supportFilterStatus = '';
 let forgotEmail = '';
 let forgotOtp = '';
 let productsCache = {};
@@ -609,14 +639,14 @@ function formatMoney(n) {
     return Number(n || 0).toLocaleString('vi-VN') + 'đ';
 }
 
-function toast(msg, err = false) {
+function toast(msg, err = false, duration = 3500) {
     const el = document.getElementById('toast');
     const inner = document.getElementById('toast-inner');
     inner.textContent = msg;
     inner.className = `toast-inner ${err ? 'error' : 'success'}`;
     el.classList.remove('hidden');
     clearTimeout(toast._t);
-    toast._t = setTimeout(() => el.classList.add('hidden'), 3500);
+    toast._t = setTimeout(() => el.classList.add('hidden'), duration);
 }
 
 function emptyState(msg) {
@@ -629,9 +659,17 @@ function statusBadge(s) {
         pending: 'badge-pending',
         rejected: 'badge-rejected',
         completed: 'badge-success',
+        in_progress: 'badge-in-progress',
+        cancelled: 'badge-cancelled',
         blocked: 'badge-danger',
     };
-    return `<span class="status-badge ${m[s] || 'badge-muted'}">${escapeHtml(s)}</span>`;
+    const labels = {
+        pending: 'Chờ xử lý',
+        in_progress: 'Đang hỗ trợ',
+        completed: 'Hoàn thành',
+        cancelled: 'Đã hủy',
+    };
+    return `<span class="status-badge ${m[s] || 'badge-muted'}">${escapeHtml(labels[s] || s)}</span>`;
 }
 
 function productStyle(color) {
@@ -695,6 +733,7 @@ function showForgotPanel(step = 1) {
 
 function showAuth() {
     stopPolling();
+    stopSupportPolling();
     currentUser = null;
     forgotEmail = '';
     forgotOtp = '';
@@ -719,6 +758,12 @@ function updateHeader() {
     const isAdmin = currentUser.role === 'admin';
     document.getElementById('admin-nav-btn').classList.toggle('hidden', !isAdmin);
     document.getElementById('admin-mobile-nav-btn').classList.toggle('hidden', !isAdmin);
+    if (isAdmin) {
+        startSupportPolling();
+        refreshSupportBadge();
+    } else {
+        stopSupportPolling();
+    }
 }
 
 async function showApp() {
@@ -848,7 +893,12 @@ async function submitPurchase(id, contact = {}) {
     currentUser.balance = r.balance;
     updateHeader();
     closePurchaseModal();
-    toast(r.orderCode ? `Mua thành công! Mã đơn: ${r.orderCode}` : 'Mua hàng thành công!');
+    const code = r.orderCode ? ` Mã đơn: ${r.orderCode}.` : '';
+    toast(
+        `Đặt hàng thành công!${code} Admin đã nhận được yêu cầu hỗ trợ và sẽ hỗ trợ nâng cấp tài khoản cho bạn. Cần gấp? Liên hệ Zalo: 0944255413`,
+        false,
+        7000
+    );
     loadProducts();
 }
 
@@ -1109,7 +1159,7 @@ async function showAdminTab(tab) {
     document.querySelectorAll('.admin-tab-btn').forEach(btn => {
         btn.className = `admin-tab-btn px-4 py-2 ${btn.dataset.adminTab === tab ? 'active' : 'bg-slate-100 text-slate-600'}`;
     });
-    ['dashboard', 'products', 'users', 'topups', 'orders', 'transactions', 'bank-transactions', 'dressroom', 'ai'].forEach(t => {
+    ['dashboard', 'products', 'users', 'topups', 'orders', 'support', 'transactions', 'bank-transactions', 'dressroom', 'ai'].forEach(t => {
         const el = document.getElementById('admin-' + t);
         if (el) el.classList.toggle('hidden', t !== tab);
     });
@@ -1125,6 +1175,7 @@ async function showAdminTab(tab) {
                 ${adminCard('Outfit đã lưu', d.savedOutfits || 0, 'text-violet-600')}
                 ${adminCard('Tổng đơn hàng', d.totalOrders)}
                 ${adminCard('Nạp chờ xử lý', d.pendingTopups, 'text-amber-500')}
+                ${adminCard('Hỗ trợ chờ xử lý', d.pendingSupportNotifications || 0, 'text-orange-500')}
                 ${adminCard('Người dùng', d.totalUsers)}
                 ${adminCard('Giao dịch Bank', d.bankTransactions, 'text-brand-600')}
                 ${(d.topAvatarItems || []).length ? `<div class="sm:col-span-2 lg:col-span-3 xl:col-span-5 glass-card p-5">
@@ -1136,6 +1187,7 @@ async function showAdminTab(tab) {
         if (tab === 'users') loadAdminUsers();
         if (tab === 'topups') loadAdminTopups();
         if (tab === 'orders') loadAdminOrders();
+        if (tab === 'support') loadAdminSupport();
         if (tab === 'transactions') loadAdminTransactions();
         if (tab === 'bank-transactions') loadAdminBankTransactions();
         if (tab === 'dressroom') loadAdminDressRoom();
@@ -1493,6 +1545,169 @@ async function approveAdminTopup(id) {
     }
 }
 
+function playSupportChime() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g);
+        g.connect(ctx.destination);
+        o.frequency.value = 880;
+        g.gain.setValueAtTime(0.07, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        o.start();
+        o.stop(ctx.currentTime + 0.35);
+    } catch (_) {}
+}
+
+function updateSupportBadge(count) {
+    const badge = document.getElementById('admin-support-badge');
+    if (!badge) return;
+    if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : String(count);
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+}
+
+async function refreshSupportBadge(notify = false) {
+    if (currentUser?.role !== 'admin') return 0;
+    try {
+        const { count } = await api('/admin/support-notifications/unread-count');
+        if (notify && count > lastSupportPendingCount && lastSupportPendingCount >= 0) {
+            toast('Có khách vừa mua hàng cần hỗ trợ!', false, 5000);
+            playSupportChime();
+            if (currentAdminTab === 'support') loadAdminSupport();
+        }
+        lastSupportPendingCount = count;
+        updateSupportBadge(count);
+        return count;
+    } catch (_) {
+        return 0;
+    }
+}
+
+function startSupportPolling() {
+    stopSupportPolling();
+    if (currentUser?.role !== 'admin') return;
+    refreshSupportBadge(false).then(c => { lastSupportPendingCount = c; });
+    supportPollTimer = setInterval(() => refreshSupportBadge(true), 20000);
+}
+
+function stopSupportPolling() {
+    if (supportPollTimer) {
+        clearInterval(supportPollTimer);
+        supportPollTimer = null;
+    }
+    lastSupportPendingCount = 0;
+    updateSupportBadge(0);
+}
+
+function supportCardActions(n) {
+    const phone = (n.customerPhone || '').replace(/\D/g, '');
+    const zaloBtn = phone
+        ? `<a href="https://zalo.me/${phone}" target="_blank" rel="noopener" class="btn-ghost px-3 py-1.5 text-xs"><i class="fas fa-comment-dots mr-1"></i>Zalo</a>`
+        : '';
+    const startBtn = n.status === 'pending'
+        ? `<button data-support-action="in_progress" data-support-id="${n.id}" class="btn-primary px-3 py-1.5 text-xs">Bắt đầu hỗ trợ</button>` : '';
+    const doneBtn = n.status === 'in_progress'
+        ? `<button data-support-action="completed" data-support-id="${n.id}" class="btn-primary px-3 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700">Đã hỗ trợ xong</button>` : '';
+    const cancelBtn = n.status !== 'completed' && n.status !== 'cancelled'
+        ? `<button data-support-action="cancelled" data-support-id="${n.id}" class="btn-danger px-3 py-1.5 text-xs">Hủy yêu cầu</button>` : '';
+    return `
+        <div class="flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-100">
+            ${startBtn}${doneBtn}${cancelBtn}${zaloBtn}
+            <button data-support-view-user="${n.userId}" class="btn-ghost px-3 py-1.5 text-xs"><i class="fas fa-user mr-1"></i>Xem user</button>
+            <button data-view-order="${n.orderId}" class="btn-ghost px-3 py-1.5 text-xs"><i class="fas fa-receipt mr-1"></i>Xem đơn</button>
+        </div>`;
+}
+
+async function loadAdminSupport() {
+    try {
+        const q = document.getElementById('admin-support-search')?.value.trim() || '';
+        const params = new URLSearchParams();
+        if (supportFilterStatus) params.set('status', supportFilterStatus);
+        if (q) params.set('q', q);
+        const qs = params.toString();
+        const { notifications } = await api('/admin/support-notifications' + (qs ? '?' + qs : ''));
+        const el = document.getElementById('admin-support-list');
+        if (!notifications.length) {
+            el.innerHTML = emptyState('Chưa có thông báo hỗ trợ.');
+            refreshSupportBadge(false);
+            return;
+        }
+        el.innerHTML = notifications.map(n => {
+            const pendingCls = n.status === 'pending' ? 'support-card-pending' : 'glass-card';
+            const phoneLine = n.customerPhone ? `<div class="text-sm text-slate-600"><i class="fas fa-phone mr-1 text-brand-500"></i>${escapeHtml(n.customerPhone)}</div>` : '';
+            return `
+            <div class="${pendingCls} p-4 rounded-2xl" data-support-card="${n.id}">
+                <div class="flex flex-col sm:flex-row sm:justify-between gap-3">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex flex-wrap items-center gap-2 mb-2">
+                            <span class="font-bold text-slate-800">${escapeHtml(n.customerName)}</span>
+                            ${statusBadge(n.status)}
+                        </div>
+                        <div class="text-sm text-slate-600"><i class="fas fa-envelope mr-1 text-brand-500"></i>${escapeHtml(n.customerEmail)}</div>
+                        ${phoneLine}
+                        <div class="font-semibold text-brand-700 mt-2">${escapeHtml(n.productName)}</div>
+                        <div class="text-sm text-slate-500 mt-1">
+                            ${formatMoney(n.productPrice)} • ${orderCodeBtn({ id: n.orderId, orderCode: n.orderCode })}
+                            • ${escapeHtml(n.createdAt)}
+                        </div>
+                        <div class="text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mt-2">
+                            <i class="fas fa-info-circle mr-1"></i>${escapeHtml(n.message)}
+                        </div>
+                    </div>
+                </div>
+                ${supportCardActions(n)}
+                <div class="mt-3">
+                    <label class="text-xs text-slate-500 block mb-1">Ghi chú admin</label>
+                    <div class="flex gap-2">
+                        <input data-support-note="${n.id}" type="text" value="${escapeHtml(n.adminNote)}"
+                               placeholder="VD: Đã nâng cấp tài khoản lúc 20:30..."
+                               class="border rounded-xl px-3 py-2 text-sm flex-1">
+                        <button data-support-save-note="${n.id}" class="btn-ghost px-3 py-2 text-sm shrink-0">Lưu</button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+        refreshSupportBadge(false);
+    } catch (e) {
+        toast(e.message, true);
+    }
+}
+
+async function patchSupportStatus(id, status) {
+    const labels = { in_progress: 'bắt đầu hỗ trợ', completed: 'hoàn thành hỗ trợ', cancelled: 'hủy yêu cầu' };
+    if (status === 'cancelled' && !confirm('Hủy yêu cầu hỗ trợ này?')) return;
+    try {
+        await api(`/admin/support-notifications/${id}/status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status }),
+        });
+        toast(`Đã ${labels[status] || 'cập nhật'}!`);
+        loadAdminSupport();
+        refreshSupportBadge(false);
+    } catch (e) {
+        toast(e.message, true);
+    }
+}
+
+async function saveSupportNote(id) {
+    const input = document.querySelector(`[data-support-note="${id}"]`);
+    const note = input?.value.trim() || '';
+    try {
+        await api(`/admin/support-notifications/${id}/note`, {
+            method: 'PATCH',
+            body: JSON.stringify({ note }),
+        });
+        toast('Đã lưu ghi chú!');
+    } catch (e) {
+        toast(e.message, true);
+    }
+}
+
 async function loadAdminOrders() {
     try {
         const { orders } = await api('/admin/orders');
@@ -1679,7 +1894,7 @@ document.getElementById('forgot-step3').onsubmit = async e => {
     }
 };
 
-document.getElementById('logout-btn').onclick = () => { clearToken(); stopPolling(); showAuth(); toast('Đã đăng xuất.'); };
+document.getElementById('logout-btn').onclick = () => { clearToken(); stopPolling(); stopSupportPolling(); showAuth(); toast('Đã đăng xuất.'); };
 document.getElementById('brand-btn').onclick = () => navigateTo('products');
 document.querySelectorAll('.nav-btn, .mobile-nav-btn, .category-pill[data-view]').forEach(b => {
     b.onclick = () => navigateTo(b.dataset.view);
@@ -1699,6 +1914,33 @@ document.getElementById('purchase-modal').onclick = e => {
     if (e.target.id === 'purchase-modal') closePurchaseModal();
 };
 document.querySelectorAll('.admin-tab-btn').forEach(b => b.onclick = () => showAdminTab(b.dataset.adminTab));
+document.getElementById('admin-support-refresh').onclick = () => loadAdminSupport();
+document.getElementById('admin-support-filters').onclick = e => {
+    const btn = e.target.closest('[data-support-filter]');
+    if (!btn) return;
+    supportFilterStatus = btn.dataset.supportFilter || '';
+    document.querySelectorAll('.support-filter-btn').forEach(b => {
+        b.className = `support-filter-btn px-3 py-1.5 text-sm rounded-full ${b === btn ? 'active' : 'bg-slate-100'}`;
+    });
+    loadAdminSupport();
+};
+document.getElementById('admin-support-search').onkeydown = e => {
+    if (e.key === 'Enter') loadAdminSupport();
+};
+document.getElementById('admin-support-list').onclick = e => {
+    const actionBtn = e.target.closest('[data-support-action]');
+    if (actionBtn) {
+        patchSupportStatus(Number(actionBtn.dataset.supportId), actionBtn.dataset.supportAction);
+        return;
+    }
+    const noteBtn = e.target.closest('[data-support-save-note]');
+    if (noteBtn) {
+        saveSupportNote(Number(noteBtn.dataset.supportSaveNote));
+        return;
+    }
+    const userBtn = e.target.closest('[data-support-view-user]');
+    if (userBtn) openAdminUserDetail(Number(userBtn.dataset.supportViewUser));
+};
 document.getElementById('admin-product-add-btn').onclick = () => {
     document.getElementById('admin-product-form').classList.toggle('hidden');
 };
