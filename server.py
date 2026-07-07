@@ -61,12 +61,29 @@ def valid_email(email):
 def init_app_data():
     db.init_schema()
     conn = db.get_conn()
-    admin = db.fetchone(conn, 'SELECT id FROM users WHERE email = ?', (ADMIN_EMAIL,))
-    if not admin:
-        pw = bcrypt.hashpw(ADMIN_PASSWORD.encode(), bcrypt.gensalt()).decode()
-        db.execute(conn, 'INSERT INTO users (email,password_hash,role,name,balance,topup_code) VALUES (?,?,?,?,0,?)',
-                   (ADMIN_EMAIL, pw, 'admin', 'Administrator', 'NAP admin'))
-        db.commit(conn)
+    admin_email = ADMIN_EMAIL.strip().lower()
+    pw_hash = bcrypt.hashpw(ADMIN_PASSWORD.encode(), bcrypt.gensalt()).decode()
+    target = db.fetchone(conn, 'SELECT * FROM users WHERE email = ?', (admin_email,))
+    legacy = db.fetchone(conn, "SELECT * FROM users WHERE email = 'admin@gmail.com'")
+
+    if target:
+        db.execute(conn, 'UPDATE users SET password_hash = ?, role = ? WHERE id = ?',
+                   (pw_hash, 'admin', target['id']))
+    elif legacy:
+        code = gen_topup_code(admin_email, legacy['id'])
+        db.execute(conn,
+            'UPDATE users SET email = ?, password_hash = ?, role = ?, name = ?, topup_code = ? WHERE id = ?',
+            (admin_email, pw_hash, 'admin', 'Đức Hi', code, legacy['id']))
+    else:
+        uid = db.insert_returning_id(conn,
+            'INSERT INTO users (email,password_hash,role,name,balance,topup_code) VALUES (?,?,?,?,0,?)',
+            (admin_email, pw_hash, 'admin', 'Đức Hi', 'TEMP'))
+        db.execute(conn, 'UPDATE users SET topup_code = ? WHERE id = ?',
+                   (gen_topup_code(admin_email, uid), uid))
+
+    db.execute(conn, "UPDATE users SET role = 'user' WHERE role = 'admin' AND LOWER(email) != ?",
+               (admin_email,))
+    db.commit(conn)
     for row in db.fetchall(conn, "SELECT id,email FROM users WHERE topup_code IS NULL OR topup_code IN ('','TEMP')"):
         db.execute(conn, 'UPDATE users SET topup_code = ? WHERE id = ?', (gen_topup_code(row['email'], row['id']), row['id']))
     db.commit(conn)
@@ -462,7 +479,7 @@ def admin_user_patch(uid):
     if not user:
         db.close(conn)
         return jsonify({'error': 'Không tìm thấy.'}), 404
-    if user['email'] == ADMIN_EMAIL and d.get('role') == 'user':
+    if user['email'].lower() == ADMIN_EMAIL.lower() and d.get('role') == 'user':
         db.close(conn)
         return jsonify({'error': 'Không thể hạ quyền admin mặc định.'}), 400
     if 'isBlocked' in d:

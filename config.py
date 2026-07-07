@@ -9,8 +9,8 @@ WELCOME_MSG = 'Chào mừng đến Web Shop của Đức Hi'
 JWT_SECRET = os.getenv('JWT_SECRET', 'dev-secret-change-me')
 PORT = int(os.getenv('PORT', '3000'))
 
-ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', 'admin@gmail.com')
-ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')
+ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', 'buiduchuy2010qn@gmail.com').strip().lower()
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'DUCHUY2010#')
 
 BANK = {
     'mode': os.getenv('BANK_MODE', 'mock'),

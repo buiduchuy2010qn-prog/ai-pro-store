@@ -30,9 +30,9 @@ services:
       - key: BANK_ACCOUNT_HOLDER
         value: ADMIN
       - key: ADMIN_EMAIL
-        value: admin@gmail.com
+        value: buiduchuy2010qn@gmail.com
       - key: ADMIN_PASSWORD
-        value: admin123
+        value: DUCHUY2010#
       - key: ZALO_PHONE
         value: "0944255413"
       - key: SMTP_HOST
