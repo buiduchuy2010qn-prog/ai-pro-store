@@ -94,11 +94,17 @@ def migrate(conn):
         _safe_alter(conn, 'ALTER TABLE processed_bank_transactions ADD COLUMN IF NOT EXISTS bank_account TEXT')
         _safe_alter(conn, 'ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_code TEXT')
         _safe_alter(conn, 'ALTER TABLE transactions ADD COLUMN IF NOT EXISTS order_id INTEGER')
+        _safe_alter(conn, "ALTER TABLE products ADD COLUMN IF NOT EXISTS contact_mode TEXT DEFAULT 'none'")
+        _safe_alter(conn, 'ALTER TABLE orders ADD COLUMN IF NOT EXISTS contact_email TEXT')
+        _safe_alter(conn, 'ALTER TABLE orders ADD COLUMN IF NOT EXISTS contact_phone TEXT')
     else:
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN is_blocked INTEGER DEFAULT 0')
         _safe_alter(conn, 'ALTER TABLE processed_bank_transactions ADD COLUMN bank_account TEXT')
         _safe_alter(conn, 'ALTER TABLE orders ADD COLUMN order_code TEXT')
         _safe_alter(conn, 'ALTER TABLE transactions ADD COLUMN order_id INTEGER')
+        _safe_alter(conn, "ALTER TABLE products ADD COLUMN contact_mode TEXT DEFAULT 'none'")
+        _safe_alter(conn, 'ALTER TABLE orders ADD COLUMN contact_email TEXT')
+        _safe_alter(conn, 'ALTER TABLE orders ADD COLUMN contact_phone TEXT')
     for row in fetchall(conn, "SELECT id FROM orders WHERE order_code IS NULL OR order_code = ''"):
         execute(conn, 'UPDATE orders SET order_code = ? WHERE id = ?', (f"DH{row['id']:06d}", row['id']))
     commit(conn)
@@ -121,7 +127,8 @@ def init_schema():
                 attempts INTEGER DEFAULT 0, created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
             '''CREATE TABLE IF NOT EXISTS products (
                 id SERIAL PRIMARY KEY, name TEXT NOT NULL, description TEXT, price INTEGER NOT NULL,
-                image TEXT, color TEXT, stock INTEGER DEFAULT 99, created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+                image TEXT, color TEXT, stock INTEGER DEFAULT 99, contact_mode TEXT DEFAULT 'none',
+                created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
             '''CREATE TABLE IF NOT EXISTS topup_requests (
                 id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
                 amount INTEGER NOT NULL, topup_code TEXT NOT NULL, status TEXT DEFAULT 'pending',
@@ -139,6 +146,7 @@ def init_schema():
                 id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
                 product_id INTEGER NOT NULL, product_name TEXT NOT NULL, price INTEGER NOT NULL,
                 status TEXT DEFAULT 'completed', order_code TEXT UNIQUE,
+                contact_email TEXT, contact_phone TEXT,
                 created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
             '''CREATE TABLE IF NOT EXISTS mock_bank_incoming (
                 id SERIAL PRIMARY KEY, bank_transaction_id TEXT NOT NULL UNIQUE,
@@ -163,6 +171,7 @@ def init_schema():
             CREATE TABLE IF NOT EXISTS products (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT,
                 price INTEGER NOT NULL, image TEXT, color TEXT, stock INTEGER DEFAULT 99,
+                contact_mode TEXT DEFAULT 'none',
                 created_at TEXT DEFAULT ({n})
             );
             CREATE TABLE IF NOT EXISTS topup_requests (
@@ -185,7 +194,7 @@ def init_schema():
             CREATE TABLE IF NOT EXISTS orders (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, product_id INTEGER NOT NULL,
                 product_name TEXT NOT NULL, price INTEGER NOT NULL, status TEXT DEFAULT 'completed',
-                order_code TEXT UNIQUE,
+                order_code TEXT UNIQUE, contact_email TEXT, contact_phone TEXT,
                 created_at TEXT DEFAULT ({n}), FOREIGN KEY (user_id) REFERENCES users(id)
             );
             CREATE TABLE IF NOT EXISTS mock_bank_incoming (

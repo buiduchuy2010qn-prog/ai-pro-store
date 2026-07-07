@@ -43,11 +43,59 @@ def fmt_product(row):
     return {
         'id': row['id'], 'name': row['name'], 'desc': row['description'],
         'price': row['price'], 'icon': row.get('image', 'fa-box'),
-        'color': row.get('color', 'blue'), 'stock': row.get('stock', 0)
+        'color': row.get('color', 'blue'), 'stock': row.get('stock', 0),
+        'contactMode': norm_contact_mode(row.get('contact_mode')),
     }
 
 
 VALID_PRODUCT_COLORS = {'emerald', 'orange', 'violet', 'blue', 'sky', 'teal', 'red', 'amber'}
+VALID_CONTACT_MODES = {'none', 'email', 'zalo', 'both'}
+CONTACT_MODE_LABELS = {
+    'none': 'Không yêu cầu',
+    'email': 'Yêu cầu email',
+    'zalo': 'Yêu cầu SĐT/Zalo',
+    'both': 'Email + SĐT/Zalo',
+}
+
+
+def norm_contact_mode(val):
+    mode = (val or 'none').strip().lower()
+    return mode if mode in VALID_CONTACT_MODES else 'none'
+
+
+def valid_phone(phone):
+    digits = re.sub(r'[\s\-.]', '', str(phone or ''))
+    return bool(re.match(r'^(\+?84|0)[0-9]{8,10}$', digits))
+
+
+def order_contact_fields(order):
+    return {
+        'contactEmail': order.get('contact_email') or '',
+        'contactPhone': order.get('contact_phone') or '',
+    }
+
+
+def validate_order_contact(product, body):
+    mode = norm_contact_mode(product.get('contact_mode'))
+    email = (body.get('contactEmail') or body.get('contact_email') or '').strip()
+    phone = (body.get('contactPhone') or body.get('contact_phone') or '').strip()
+    if mode == 'none':
+        return '', ''
+    if mode in ('email', 'both'):
+        if not email:
+            return None, 'Vui lòng nhập email để nâng gói.'
+        if not valid_email(email):
+            return None, 'Email không hợp lệ.'
+    if mode in ('zalo', 'both'):
+        if not phone:
+            return None, 'Vui lòng nhập SĐT/Zalo để nâng gói.'
+        if not valid_phone(phone):
+            return None, 'Số điện thoại/Zalo không hợp lệ.'
+    if mode == 'email':
+        return email, ''
+    if mode == 'zalo':
+        return '', phone
+    return email, phone
 
 
 def sign_token(uid):
@@ -94,6 +142,8 @@ def fetch_order_detail(conn, oid):
             (order['user_id'], f"%{order['product_name']}%"))
     detail = fmt_order_row(order)
     detail['productDesc'] = (product or {}).get('description', '')
+    detail['contactMode'] = norm_contact_mode((product or {}).get('contact_mode'))
+    detail.update(order_contact_fields(order))
     detail['customer'] = {'fullName': user['name'], 'email': user['email']} if user else None
     if tx:
         detail['transaction'] = {
@@ -489,20 +539,27 @@ def products_list():
 @app.route('/api/orders/create', methods=['POST'])
 @auth_required
 def order_create():
-    pid = int((request.get_json() or {}).get('productId', 0))
+    body = request.get_json() or {}
+    pid = int(body.get('productId', 0))
     conn = db.get_conn()
     product = db.fetchone(conn, 'SELECT * FROM products WHERE id = ? AND stock > 0', (pid,))
     if not product:
         db.close(conn)
         return jsonify({'error': 'Sản phẩm không tồn tại hoặc hết hàng.'}), 404
+    contact = validate_order_contact(product, body)
+    if contact[0] is None:
+        db.close(conn)
+        return jsonify({'error': contact[1]}), 400
+    contact_email, contact_phone = contact
     user = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (request.user['id'],))
     if user['balance'] < product['price']:
         db.close(conn)
         return jsonify({'error': 'Số dư không đủ. Vui lòng nạp thêm tiền.'}), 400
     db.execute(conn, 'UPDATE users SET balance = balance - ? WHERE id = ?', (product['price'], user['id']))
     db.execute(conn, 'UPDATE products SET stock = stock - 1 WHERE id = ?', (pid,))
-    oid = db.insert_returning_id(conn, 'INSERT INTO orders (user_id,product_id,product_name,price,status) VALUES (?,?,?,?,?)',
-                                 (user['id'], pid, product['name'], product['price'], 'completed'))
+    oid = db.insert_returning_id(conn,
+        'INSERT INTO orders (user_id,product_id,product_name,price,status,contact_email,contact_phone) VALUES (?,?,?,?,?,?,?)',
+        (user['id'], pid, product['name'], product['price'], 'completed', contact_email or None, contact_phone or None))
     order_code = gen_order_code(oid)
     db.execute(conn, 'UPDATE orders SET order_code = ? WHERE id = ?', (order_code, oid))
     txid = db.insert_returning_id(conn,
@@ -733,11 +790,13 @@ def admin_orders():
     conn = db.get_conn()
     rows = db.fetchall(conn, '''
         SELECT o.id,o.product_id,o.product_name AS product,o.price,o.status,o.order_code,o.created_at AS date,
-               u.email,u.name AS customer_name
+               o.contact_email,o.contact_phone,u.email,u.name AS customer_name
         FROM orders o JOIN users u ON u.id=o.user_id ORDER BY o.id DESC''')
     db.close(conn)
     return jsonify({'orders': [fmt_order_row(r, {
-        'email': r['email'], 'customerName': r['customer_name']
+        'email': r['email'], 'customerName': r['customer_name'],
+        'contactEmail': r.get('contact_email') or '',
+        'contactPhone': r.get('contact_phone') or '',
     }) for r in rows]})
 
 
@@ -792,10 +851,11 @@ def admin_product_create():
         color = 'blue'
     if stock < 0:
         stock = 0
+    contact_mode = norm_contact_mode(d.get('contactMode') or d.get('contact_mode'))
     conn = db.get_conn()
     pid = db.insert_returning_id(conn,
-        'INSERT INTO products (name,description,price,image,color,stock) VALUES (?,?,?,?,?,?)',
-        (name, desc, price, icon, color, stock))
+        'INSERT INTO products (name,description,price,image,color,stock,contact_mode) VALUES (?,?,?,?,?,?,?)',
+        (name, desc, price, icon, color, stock, contact_mode))
     db.commit(conn)
     row = db.fetchone(conn, 'SELECT * FROM products WHERE id = ?', (pid,))
     db.close(conn)
@@ -831,9 +891,10 @@ def admin_product_patch(pid):
         color = 'blue'
     if stock < 0:
         stock = 0
+    contact_mode = norm_contact_mode(d.get('contactMode', d.get('contact_mode', product.get('contact_mode'))))
     db.execute(conn,
-        'UPDATE products SET name=?, description=?, price=?, image=?, color=?, stock=? WHERE id=?',
-        (name, desc, price, icon, color, stock, pid))
+        'UPDATE products SET name=?, description=?, price=?, image=?, color=?, stock=?, contact_mode=? WHERE id=?',
+        (name, desc, price, icon, color, stock, contact_mode, pid))
     db.commit(conn)
     row = db.fetchone(conn, 'SELECT * FROM products WHERE id = ?', (pid,))
     db.close(conn)
