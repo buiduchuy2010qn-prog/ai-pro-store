@@ -14,13 +14,14 @@ from flask import Flask, request, jsonify, send_from_directory
 
 import database as db
 from config import (
-    JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD, BANK, WEBHOOK_SECRET,
+    JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD, BANK, WEBHOOK_SECRET, CASSO,
     ZALO_PHONE, SITE_NAME, WELCOME_MSG, OTP_EXPIRE_MINUTES,
     OTP_MAX_ATTEMPTS, OTP_RATE_LIMIT_PER_HOUR, PORT
 )
 from services.email_service import send_otp_email
 from services.bank_service import (
-    gen_topup_code, build_qr, bank_loop, ingest_webhook, process_bank_tx, check_bank
+    gen_topup_code, build_qr, bank_loop, ingest_webhook, ingest_casso_webhook,
+    process_bank_tx, check_bank
 )
 BASE = Path(__file__).parent
 PUBLIC = BASE / 'public'
@@ -234,8 +235,11 @@ def start_bg():
 # ─── Meta ───
 @app.route('/api/health')
 def health():
-    return jsonify({'ok': True, 'site': SITE_NAME, 'bankMode': BANK['mode'],
-                    'database': 'postgresql' if db.IS_PG else 'sqlite'})
+    return jsonify({
+        'ok': True, 'site': SITE_NAME, 'bankMode': BANK['mode'],
+        'casso': bool(CASSO['secure_token'] or CASSO['checksum_key']),
+        'database': 'postgresql' if db.IS_PG else 'sqlite',
+    })
 
 
 @app.route('/api/site-info')
@@ -566,6 +570,18 @@ def topup_status(tid):
 
 
 # ─── Bank ───
+@app.route('/api/casso/webhook', methods=['POST'])
+def casso_webhook():
+    try:
+        payload = request.get_json(silent=True) or {}
+        results = ingest_casso_webhook(payload, dict(request.headers))
+        return jsonify({'success': True, 'ok': True, 'results': results})
+    except PermissionError as e:
+        return jsonify({'success': False, 'error': str(e)}), 401
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
 @app.route('/api/bank/webhook', methods=['POST'])
 @app.route('/api/webhook/bank-transaction', methods=['POST'])
 def bank_webhook():

@@ -1,8 +1,11 @@
+import hashlib
+import hmac
+import json
 import re
 import secrets
 import time
 import database as db
-from config import BANK
+from config import BANK, CASSO
 
 
 def gen_topup_code(email, uid):
@@ -30,10 +33,94 @@ def find_user_by_code(conn, description):
     return db.fetchone(conn, 'SELECT * FROM users WHERE LOWER(topup_code) = LOWER(?)', (code,))
 
 
+def _norm_account(acct):
+    return re.sub(r'\D', '', str(acct or ''))
+
+
+def _sort_obj_by_key(data):
+    if not isinstance(data, dict):
+        return data
+    return {k: _sort_obj_by_key(data[k]) if isinstance(data[k], dict) else data[k] for k in sorted(data)}
+
+
+def verify_casso_v2_signature(headers, body, checksum_key):
+    sig = headers.get('X-Casso-Signature') or headers.get('x-casso-signature')
+    if not sig or not checksum_key:
+        return False
+    try:
+        parts = dict(p.split('=', 1) for p in sig.split(','))
+        timestamp = int(parts['t'])
+        received = parts['v1']
+    except (ValueError, KeyError):
+        return False
+    sorted_data = _sort_obj_by_key(body)
+    message = f"{timestamp}.{json.dumps(sorted_data, separators=(',', ':'))}"
+    expected = hmac.new(checksum_key.encode(), message.encode(), hashlib.sha512).hexdigest()
+    return hmac.compare_digest(received, expected)
+
+
+def verify_casso_v1_token(headers):
+    token = headers.get('Secure-Token') or headers.get('secure-token')
+    return bool(CASSO['secure_token'] and token and hmac.compare_digest(token, CASSO['secure_token']))
+
+
+def _casso_transactions(payload):
+    data = payload.get('data')
+    if not data:
+        return []
+    return data if isinstance(data, list) else [data]
+
+
+def _normalize_casso_tx(tx):
+    casso_id = tx.get('id')
+    bank_ref = tx.get('reference') or tx.get('tid') or ''
+    tx_id = f'CASSO_{casso_id}' if casso_id is not None else f'CASSO_{bank_ref or secrets.token_hex(4)}'
+    amount = int(tx.get('amount', 0))
+    desc = tx.get('description') or ''
+    account = str(
+        tx.get('accountNumber') or tx.get('bank_sub_acc_id') or tx.get('subAccId') or BANK['account']
+    )
+    return tx_id, amount, desc, account
+
+
+def ingest_casso_webhook(payload, headers):
+    if payload.get('error', 0) != 0:
+        raise ValueError('Casso báo lỗi trong payload.')
+
+    sig = headers.get('X-Casso-Signature') or headers.get('x-casso-signature')
+    if sig:
+        if not CASSO['checksum_key']:
+            raise PermissionError('Chưa cấu hình CASSO_CHECKSUM_KEY.')
+        if not verify_casso_v2_signature(headers, payload, CASSO['checksum_key']):
+            raise PermissionError('Chữ ký Casso V2 không hợp lệ.')
+    elif CASSO['secure_token']:
+        if not verify_casso_v1_token(headers):
+            raise PermissionError('Secure-Token Casso không hợp lệ.')
+    elif BANK['mode'] == 'casso':
+        raise PermissionError('Chưa cấu hình CASSO_SECURE_TOKEN hoặc CASSO_CHECKSUM_KEY.')
+
+    results = []
+    for tx in _casso_transactions(payload):
+        tx_id, amount, desc, account = _normalize_casso_tx(tx)
+        if amount <= 0:
+            results.append({'ok': False, 'reason': 'outgoing_tx', 'txId': tx_id})
+            continue
+        conn = db.get_conn()
+        try:
+            r = process_bank_tx(conn, tx_id, amount, desc, account)
+            r['txId'] = tx_id
+            results.append(r)
+            if r.get('ok'):
+                print(f"[Casso] +{r['amount']} -> {r['email']} ({r['bankTransactionId']})")
+        finally:
+            db.close(conn)
+    return results
+
+
 def process_bank_tx(conn, bank_tx_id, amount, description, account):
     if db.fetchone(conn, 'SELECT 1 AS x FROM processed_bank_transactions WHERE bank_transaction_id = ?', (bank_tx_id,)):
         return {'ok': False, 'reason': 'already_processed'}
-    if account != BANK['account']:
+    if _norm_account(account) != _norm_account(BANK['account']):
         return {'ok': False, 'reason': 'wrong_account'}
     user = find_user_by_code(conn, description)
     if not user:
@@ -95,7 +182,7 @@ def ingest_webhook(payload):
 
 
 def check_bank():
-    if BANK['mode'] != 'mock':
+    if BANK['mode'] not in ('mock',):
         return
     conn = db.get_conn()
     try:

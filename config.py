@@ -24,6 +24,10 @@ BANK = {
 }
 
 WEBHOOK_SECRET = os.getenv('WEBHOOK_SECRET', '')
+CASSO = {
+    'secure_token': os.getenv('CASSO_SECURE_TOKEN', ''),
+    'checksum_key': os.getenv('CASSO_CHECKSUM_KEY', ''),
+}
 ZALO_PHONE = os.getenv('ZALO_PHONE', '0944255413')
 
 SMTP = {

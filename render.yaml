@@ -20,7 +20,11 @@ services:
       - key: WEBHOOK_SECRET
         generateValue: true
       - key: BANK_MODE
-        value: mock
+        value: casso
+      - key: CASSO_SECURE_TOKEN
+        sync: false
+      - key: CASSO_CHECKSUM_KEY
+        sync: false
       - key: BANK_ACCOUNT
         value: "0394709137"
       - key: BANK_NAME
@@ -28,7 +32,7 @@ services:
       - key: BANK_CODE
         value: MB
       - key: BANK_ACCOUNT_HOLDER
-        value: ADMIN
+        value: BUI DUC HUY
       - key: ADMIN_EMAIL
         value: buiduchuy2010qn@gmail.com
       - key: ADMIN_PASSWORD
