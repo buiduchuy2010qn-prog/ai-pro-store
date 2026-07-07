@@ -17,7 +17,7 @@ const DR_CATEGORIES = [
     { id: 'effect', label: 'Hiệu ứng', icon: 'fa-star' },
 ];
 
-let drState = { gender: 'female', theme: 'japanese_cute', equipped: [], items: {} };
+let drState = { gender: 'female', theme: 'japanese_cute', equipped: [], items: {}, customBg: '', customOverlay: '' };
 let drCatalog = [];
 let drCategory = 'head';
 let drOutfits = [];
@@ -33,6 +33,8 @@ function drBuildEquipped(itemIds) {
 }
 
 function drResetDefaults() {
+    drState.customBg = '';
+    drState.customOverlay = '';
     const defaults = drState.gender === 'male'
         ? { background: 'dec-bg-school', head: 'dec-head-m-cool', torso: 'dec-torso-m-athletic', arms: 'dec-arms-m-rest', legs: 'dec-legs-m-normal', eyes: 'dec-eyes-brown', expression: 'dec-expr-cool', hair: 'dec-hair-black-layer', top: 'dec-top-m-uniform', bottom: 'dec-bottom-m-pants', shoes: 'dec-shoes-sneaker-white' }
         : { background: 'dec-bg-sakura', head: 'dec-head-f-idol', torso: 'dec-torso-f-idol', arms: 'dec-arms-f-grace', legs: 'dec-legs-f-slim', eyes: 'dec-eyes-blue', expression: 'dec-expr-cute', hair: 'dec-hair-silver-long', top: 'dec-top-idol-dress', bottom: 'dec-bottom-skirt-pastel', shoes: 'dec-shoes-loafer' };
@@ -48,9 +50,65 @@ function drResetDefaults() {
 function drRenderPreview() {
     const box = document.getElementById('dr-preview');
     if (!box) return;
-    box.innerHTML = drBuildSvg(drState.equipped, drState.gender);
+    box.innerHTML = drBuildSvg(drState.equipped, drState.gender, {
+        customBg: drState.customBg, customOverlay: drState.customOverlay,
+    });
     const svg = box.querySelector('svg');
     if (svg) { svg.classList.add('w-full', 'h-full', 'max-h-[480px]'); svg.id = 'dr-svg-output'; }
+    drUpdateUploadUi();
+}
+
+function drUpdateUploadUi() {
+    const has = !!(drState.customBg || drState.customOverlay);
+    document.getElementById('dr-clear-upload-btn')?.classList.toggle('hidden', !has);
+    const st = document.getElementById('dr-upload-status');
+    if (!st) return;
+    if (!has) { st.classList.add('hidden'); return; }
+    const parts = [];
+    if (drState.customBg) parts.push('nền');
+    if (drState.customOverlay) parts.push('sticker');
+    st.textContent = `Đã tải: ${parts.join(' + ')}`;
+    st.classList.remove('hidden');
+}
+
+function drCompressImage(file, maxW, maxH, quality) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+            let w = img.width, h = img.height;
+            const ratio = Math.min(maxW / w, maxH / h, 1);
+            w = Math.round(w * ratio); h = Math.round(h * ratio);
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            URL.revokeObjectURL(url);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Không đọc được ảnh')); };
+        img.src = url;
+    });
+}
+
+async function drHandleUpload(file, type) {
+    if (!file || !file.type.startsWith('image/')) return toast('Chọn file ảnh (JPG, PNG, WebP)', true);
+    if (file.size > 8 * 1024 * 1024) return toast('Ảnh tối đa 8MB', true);
+    try {
+        const data = await drCompressImage(file, type === 'bg' ? 960 : 640, type === 'bg' ? 1200 : 640, 0.82);
+        if (type === 'bg') drState.customBg = data;
+        else drState.customOverlay = data;
+        drRenderPreview();
+        await drSaveDraft(true);
+        toast(type === 'bg' ? 'Đã đặt ảnh nền!' : 'Đã thêm sticker!');
+    } catch (e) { toast(e.message || 'Lỗi tải ảnh', true); }
+}
+
+function drClearUploads() {
+    drState.customBg = '';
+    drState.customOverlay = '';
+    drRenderPreview();
+    drSaveDraft(true);
+    toast('Đã xóa ảnh tải lên');
 }
 
 async function loadDressRoom() {
@@ -62,11 +120,15 @@ async function loadDressRoom() {
         ]);
         drCatalog = itemsRes.items || [];
         drOutfits = outfitsRes.outfits || [];
-        if (draftRes.draft?.items && Object.keys(draftRes.draft.items).length) {
-            drState.gender = draftRes.draft.gender || drState.gender;
-            drState.theme = draftRes.draft.theme || drState.theme;
-            drState.items = draftRes.draft.items;
-            drState.equipped = drBuildEquipped(drState.items);
+        if (draftRes.draft) {
+            if (draftRes.draft.items && Object.keys(draftRes.draft.items).length) {
+                drState.gender = draftRes.draft.gender || drState.gender;
+                drState.theme = draftRes.draft.theme || drState.theme;
+                drState.items = draftRes.draft.items;
+                drState.equipped = drBuildEquipped(drState.items);
+            } else if (!drState.equipped.length) drResetDefaults();
+            drState.customBg = draftRes.draft.customBg || '';
+            drState.customOverlay = draftRes.draft.customOverlay || '';
         } else if (!drState.equipped.length) drResetDefaults();
         const themeEl = document.getElementById('dr-theme-select');
         if (themeEl) themeEl.value = drState.theme;
@@ -137,14 +199,17 @@ async function drSetGender(gender) {
     });
 }
 
-async function drSaveDraft() {
+async function drSaveDraft(silent) {
     const svg = document.getElementById('dr-svg-output');
     let preview = '';
     if (svg) { try { preview = await drSvgToPng(svg); } catch (_) {} }
     try {
-        await api('/decoration/save-draft', { method: 'POST', body: JSON.stringify({ gender: drState.gender, theme: drState.theme, items: drState.items, previewImage: preview }) });
-        toast('Đã lưu tiến độ!');
-    } catch (e) { toast(e.message, true); }
+        await api('/decoration/save-draft', { method: 'POST', body: JSON.stringify({
+            gender: drState.gender, theme: drState.theme, items: drState.items, previewImage: preview,
+            customBg: drState.customBg || '', customOverlay: drState.customOverlay || '',
+        }) });
+        if (!silent) toast('Đã lưu tiến độ!');
+    } catch (e) { if (!silent) toast(e.message, true); }
 }
 
 async function drSaveOutfit() {
@@ -154,7 +219,10 @@ async function drSaveOutfit() {
     let preview = '';
     if (svg) { try { preview = await drSvgToPng(svg); } catch (_) {} }
     try {
-        await api('/decoration/outfits', { method: 'POST', body: JSON.stringify({ name, gender: drState.gender, theme: drState.theme, items: drState.items, previewImage: preview }) });
+        await api('/decoration/outfits', { method: 'POST', body: JSON.stringify({
+            name, gender: drState.gender, theme: drState.theme, items: drState.items, previewImage: preview,
+            customBg: drState.customBg || '', customOverlay: drState.customOverlay || '',
+        }) });
         toast('Đã lưu outfit!');
         const { outfits } = await api('/decoration/outfits');
         drOutfits = outfits || [];
@@ -185,6 +253,8 @@ async function drApplyOutfit(id) {
         drState.theme = r.theme;
         drState.items = r.items;
         drState.equipped = r.equipped || drBuildEquipped(r.items);
+        drState.customBg = r.customBg || '';
+        drState.customOverlay = r.customOverlay || '';
         document.getElementById('dr-theme-select').value = drState.theme;
         drRenderPreview();
         drRenderItems();
@@ -238,6 +308,19 @@ function initDressRoomEvents() {
         } catch { toast('Lỗi tạo ảnh', true); }
     });
     document.getElementById('dr-share-btn')?.addEventListener('click', drShare);
+    document.getElementById('dr-upload-bg-btn')?.addEventListener('click', () => document.getElementById('dr-upload-bg-input')?.click());
+    document.getElementById('dr-upload-sticker-btn')?.addEventListener('click', () => document.getElementById('dr-upload-sticker-input')?.click());
+    document.getElementById('dr-clear-upload-btn')?.addEventListener('click', drClearUploads);
+    document.getElementById('dr-upload-bg-input')?.addEventListener('change', e => {
+        const f = e.target.files?.[0];
+        if (f) drHandleUpload(f, 'bg');
+        e.target.value = '';
+    });
+    document.getElementById('dr-upload-sticker-input')?.addEventListener('change', e => {
+        const f = e.target.files?.[0];
+        if (f) drHandleUpload(f, 'sticker');
+        e.target.value = '';
+    });
 }
 
 const initDecorationEvents = initDressRoomEvents;

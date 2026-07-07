@@ -977,6 +977,8 @@ def decoration_save_draft():
     theme = deco.norm_theme(d.get('theme'))
     items_map = d.get('items') or d.get('itemsUsed') or {}
     preview = (d.get('previewImage') or '')[:500000]
+    custom_bg = (d.get('customBg') or '')[:800000] or None
+    custom_overlay = (d.get('customOverlay') or '')[:400000] or None
     conn = db.get_conn()
     item_ids = deco.resolve_items(conn, gender, items_map)
     uid = request.user['id']
@@ -984,12 +986,12 @@ def decoration_save_draft():
     now = db.sql_now()
     if existing:
         db.execute(conn,
-            f'UPDATE decoration_drafts SET gender=?, theme=?, items_used=?, preview_image=?, updated_at={now} WHERE user_id=?',
-            (gender, theme, deco.to_json(item_ids), preview or None, uid))
+            f'UPDATE decoration_drafts SET gender=?, theme=?, items_used=?, preview_image=?, custom_bg=?, custom_overlay=?, updated_at={now} WHERE user_id=?',
+            (gender, theme, deco.to_json(item_ids), preview or None, custom_bg, custom_overlay, uid))
     else:
         db.insert_returning_id(conn,
-            'INSERT INTO decoration_drafts (user_id,gender,theme,items_used,preview_image) VALUES (?,?,?,?,?)',
-            (uid, gender, theme, deco.to_json(item_ids), preview or None))
+            'INSERT INTO decoration_drafts (user_id,gender,theme,items_used,preview_image,custom_bg,custom_overlay) VALUES (?,?,?,?,?,?,?)',
+            (uid, gender, theme, deco.to_json(item_ids), preview or None, custom_bg, custom_overlay))
     db.commit(conn)
     draft = db.fetchone(conn, 'SELECT * FROM decoration_drafts WHERE user_id = ?', (uid,))
     db.close(conn)
@@ -999,6 +1001,8 @@ def decoration_save_draft():
             'gender': draft['gender'], 'theme': draft['theme'],
             'items': deco.parse_json(draft.get('items_used')),
             'previewImage': draft.get('preview_image') or '',
+            'customBg': draft.get('custom_bg') or '',
+            'customOverlay': draft.get('custom_overlay') or '',
         },
     })
 
@@ -1018,6 +1022,8 @@ def decoration_get_draft():
             'items': item_ids,
             'equipped': [],  # filled by client from items + catalog
             'previewImage': draft.get('preview_image') or '',
+            'customBg': draft.get('custom_bg') or '',
+            'customOverlay': draft.get('custom_overlay') or '',
         },
     })
 
@@ -1035,6 +1041,8 @@ def decoration_outfits_list():
         'theme': r.get('theme') or 'japanese_cute',
         'items': deco.parse_json(r.get('items_used')),
         'previewImage': r.get('preview_image') or '',
+        'customBg': r.get('custom_bg') or '',
+        'customOverlay': r.get('custom_overlay') or '',
         'createdAt': str(r.get('created_at', '')),
     } for r in rows]})
 
@@ -1049,12 +1057,14 @@ def decoration_outfit_save():
         gender = 'female'
     theme = deco.norm_theme(d.get('theme'))
     preview = (d.get('previewImage') or '')[:500000]
+    custom_bg = (d.get('customBg') or '')[:800000] or None
+    custom_overlay = (d.get('customOverlay') or '')[:400000] or None
     items_map = d.get('items') or d.get('itemsUsed') or {}
     conn = db.get_conn()
     item_ids = deco.resolve_items(conn, gender, items_map)
     oid = db.insert_returning_id(conn,
-        'INSERT INTO decoration_saved_outfits (user_id,name,gender,theme,items_used,preview_image) VALUES (?,?,?,?,?,?)',
-        (request.user['id'], name[:80], gender, theme, deco.to_json(item_ids), preview or None))
+        'INSERT INTO decoration_saved_outfits (user_id,name,gender,theme,items_used,preview_image,custom_bg,custom_overlay) VALUES (?,?,?,?,?,?,?,?)',
+        (request.user['id'], name[:80], gender, theme, deco.to_json(item_ids), preview or None, custom_bg, custom_overlay))
     db.commit(conn)
     row = db.fetchone(conn, 'SELECT * FROM decoration_saved_outfits WHERE id = ?', (oid,))
     db.close(conn)
@@ -1062,6 +1072,8 @@ def decoration_outfit_save():
         'id': row['id'], 'name': row['name'], 'gender': row['gender'], 'theme': row['theme'],
         'items': deco.parse_json(row.get('items_used')),
         'previewImage': row.get('preview_image') or '',
+        'customBg': row.get('custom_bg') or '',
+        'customOverlay': row.get('custom_overlay') or '',
         'createdAt': str(row.get('created_at', '')),
     }}), 201
 
@@ -1098,14 +1110,16 @@ def decoration_outfit_apply(oid):
     now = db.sql_now()
     existing = db.fetchone(conn, 'SELECT id FROM decoration_drafts WHERE user_id = ?', (request.user['id'],))
     preview = row.get('preview_image') or ''
+    custom_bg = row.get('custom_bg') or None
+    custom_overlay = row.get('custom_overlay') or None
     if existing:
         db.execute(conn,
-            f'UPDATE decoration_drafts SET gender=?, theme=?, items_used=?, preview_image=?, updated_at={now} WHERE user_id=?',
-            (gender, theme, deco.to_json(item_ids), preview or None, request.user['id']))
+            f'UPDATE decoration_drafts SET gender=?, theme=?, items_used=?, preview_image=?, custom_bg=?, custom_overlay=?, updated_at={now} WHERE user_id=?',
+            (gender, theme, deco.to_json(item_ids), preview or None, custom_bg, custom_overlay, request.user['id']))
     else:
         db.insert_returning_id(conn,
-            'INSERT INTO decoration_drafts (user_id,gender,theme,items_used,preview_image) VALUES (?,?,?,?,?)',
-            (request.user['id'], gender, theme, deco.to_json(item_ids), preview or None))
+            'INSERT INTO decoration_drafts (user_id,gender,theme,items_used,preview_image,custom_bg,custom_overlay) VALUES (?,?,?,?,?,?,?)',
+            (request.user['id'], gender, theme, deco.to_json(item_ids), preview or None, custom_bg, custom_overlay))
     db.commit(conn)
     equipped = deco.equipped_from_ids(conn, item_ids)
     db.close(conn)
@@ -1113,6 +1127,8 @@ def decoration_outfit_apply(oid):
         'ok': True, 'gender': gender, 'theme': theme,
         'items': item_ids, 'equipped': equipped,
         'previewImage': preview,
+        'customBg': custom_bg or '',
+        'customOverlay': custom_overlay or '',
     })
 
 

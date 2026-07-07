@@ -609,13 +609,21 @@ function drSortEquipped(equipped) {
     });
 }
 
-function drBuildSvg(equipped, gender) {
+function drCustomImage(href, x, y, w, h, slice) {
+    if (!href) return '';
+    const safe = href.replace(/"/g, "'");
+    const par = slice ? 'xMidYMid slice' : 'xMidYMid meet';
+    return `<image href="${safe}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="${par}"/>`;
+}
+
+function drBuildSvg(equipped, gender, opts) {
+    const o = opts || {};
     const sorted = drSortEquipped(equipped);
     const charParts = drResolveParts(sorted, gender);
     const body = drBuildBodyParts(charParts);
     const layers = {
         bg: [], hairBack: [], bottom: [], top: [], shoes: [],
-        eyes: [], expr: [], makeup: [], hairFront: [], acc: [], fx: [],
+        eyes: [], expr: [], makeup: [], hairFront: [], acc: [], fx: [], overlay: [],
     };
     const slotOf = {
         background: 'bg', bottom: 'bottom', top: 'top', shoes: 'shoes',
@@ -636,7 +644,9 @@ function drBuildSvg(equipped, gender) {
         if (slot) layers[slot].push(svg);
     }
 
-    if (!layers.bg.length) layers.bg.push(drBg('dec-bg-sakura'));
+    if (o.customBg) layers.bg = [drCustomImage(o.customBg, 0, 0, 320, 400, true)];
+    else if (!layers.bg.length) layers.bg.push(drBg('dec-bg-sakura'));
+    if (o.customOverlay) layers.overlay.push(drCustomImage(o.customOverlay, 24, 80, 272, 272, false));
 
     const order = [
         ...layers.bg, ...layers.hairBack,
@@ -644,7 +654,7 @@ function drBuildSvg(equipped, gender) {
         ...layers.bottom, ...layers.top, ...layers.shoes,
         body.head,
         ...layers.eyes, ...layers.expr, ...layers.makeup,
-        ...layers.hairFront, ...layers.acc, ...layers.fx,
+        ...layers.hairFront, ...layers.acc, ...layers.overlay, ...layers.fx,
     ];
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 400">${drDefs('dr')}${order.join('')}</svg>`;
 }

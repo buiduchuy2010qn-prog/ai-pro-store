@@ -411,6 +411,8 @@ def resolve_items(conn, gender, items_map):
     merged.update(items_map or {})
     resolved = {}
     for cat, val in merged.items():
+        if cat not in VALID_CATEGORIES:
+            continue
         if isinstance(val, int):
             row = db.fetchone(conn, 'SELECT * FROM decoration_items WHERE id = ? AND is_active = ?',
                               (val, True if db.IS_PG else 1))

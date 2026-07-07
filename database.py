@@ -97,6 +97,10 @@ def migrate(conn):
         _safe_alter(conn, "ALTER TABLE products ADD COLUMN IF NOT EXISTS contact_mode TEXT DEFAULT 'none'")
         _safe_alter(conn, 'ALTER TABLE orders ADD COLUMN IF NOT EXISTS contact_email TEXT')
         _safe_alter(conn, 'ALTER TABLE orders ADD COLUMN IF NOT EXISTS contact_phone TEXT')
+        _safe_alter(conn, 'ALTER TABLE decoration_drafts ADD COLUMN IF NOT EXISTS custom_bg TEXT')
+        _safe_alter(conn, 'ALTER TABLE decoration_drafts ADD COLUMN IF NOT EXISTS custom_overlay TEXT')
+        _safe_alter(conn, 'ALTER TABLE decoration_saved_outfits ADD COLUMN IF NOT EXISTS custom_bg TEXT')
+        _safe_alter(conn, 'ALTER TABLE decoration_saved_outfits ADD COLUMN IF NOT EXISTS custom_overlay TEXT')
     else:
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN is_blocked INTEGER DEFAULT 0')
         _safe_alter(conn, 'ALTER TABLE processed_bank_transactions ADD COLUMN bank_account TEXT')
@@ -105,6 +109,10 @@ def migrate(conn):
         _safe_alter(conn, "ALTER TABLE products ADD COLUMN contact_mode TEXT DEFAULT 'none'")
         _safe_alter(conn, 'ALTER TABLE orders ADD COLUMN contact_email TEXT')
         _safe_alter(conn, 'ALTER TABLE orders ADD COLUMN contact_phone TEXT')
+        _safe_alter(conn, 'ALTER TABLE decoration_drafts ADD COLUMN custom_bg TEXT')
+        _safe_alter(conn, 'ALTER TABLE decoration_drafts ADD COLUMN custom_overlay TEXT')
+        _safe_alter(conn, 'ALTER TABLE decoration_saved_outfits ADD COLUMN custom_bg TEXT')
+        _safe_alter(conn, 'ALTER TABLE decoration_saved_outfits ADD COLUMN custom_overlay TEXT')
     for row in fetchall(conn, "SELECT id FROM orders WHERE order_code IS NULL OR order_code = ''"):
         execute(conn, 'UPDATE orders SET order_code = ? WHERE id = ?', (f"DH{row['id']:06d}", row['id']))
     commit(conn)
