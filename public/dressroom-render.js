@@ -92,7 +92,9 @@ function drExpr(key) {
     return m[key] || m['dec-expr-cute'];
 }
 
-/* ── Hair: tách layer sau (behind body) + trước (bangs trên mặt) ── */
+/* ── Hair: đối xứng quanh cx=160, mái không che mắt ── */
+const DR_CX = 160;
+
 function drParseHair(key) {
     if (key.includes('m-spiky')) return { color: DR_HAIR.black, style: 'spiky' };
     if (key.includes('m-idol')) return { color: DR_HAIR.black, style: 'm-idol' };
@@ -103,90 +105,110 @@ function drParseHair(key) {
     return { color: DR_HAIR.silver, style: 'long' };
 }
 
-function drHairHighlight(color) {
-    return `<path d="M142 74 Q160 66 178 76" stroke="${color}" stroke-width="5" fill="none" opacity="0.22" stroke-linecap="round"/>`;
+function drHairShade(color) {
+    return `<path d="M${DR_CX - 18} 78 Q${DR_CX} 70 ${DR_CX + 18} 78" stroke="#fff" stroke-width="3" fill="none" opacity="0.18" stroke-linecap="round"/>`;
 }
 
-function drHairBangs(hc, color) {
-    return `
-        <path d="M134 92 Q142 108 138 118 Q145 102 152 94 Q148 114 146 122" fill="${color}"/>
-        <path d="M152 88 Q160 72 168 88 Q170 106 164 120 Q158 98 152 88" fill="${color}"/>
-        <path d="M168 92 Q176 108 182 118 Q175 102 170 94 Q174 114 172 120" fill="${color}"/>`;
-}
-
-function drHairSideFront(hc, color) {
-    return `
-        <path d="M130 108 Q122 148 124 188 Q132 168 134 128 Z" fill="${color}" opacity="0.92"/>
-        <path d="M190 108 Q198 148 196 188 Q188 168 186 128 Z" fill="${color}" opacity="0.92"/>`;
-}
-
+/** Đỉnh đầu — chỉ phần trên, không phủ trán */
 function drHairCrown(hc, color) {
-    return `<path d="M130 90 Q160 68 190 90 Q194 104 188 116 Q160 124 132 116 Q126 104 130 90 Z" fill="${color}"/>`;
+    return `<path d="M${DR_CX - 30} ${hc - 12} Q${DR_CX} ${hc - 40} ${DR_CX + 30} ${hc - 12} Q${DR_CX + 28} ${hc - 4} ${DR_CX} ${hc} Q${DR_CX - 28} ${hc - 4} ${DR_CX - 30} ${hc - 12} Z" fill="${color}"/>`;
 }
 
-function drHairBackStrands(hc, color, long) {
-    const end = long ? 300 : 220;
+/** Mái 3 lọn — kết thúc trên mắt (y≈102), không che mặt */
+function drHairBangs(hc, color) {
+    const t = hc - 14;
+    const b = hc + 2;
     return `
-        <path d="M126 128 Q112 185 108 245 Q106 ${end} 118 ${end + 8} Q122 240 126 185 Q128 155 130 132 Z" fill="${color}" opacity="0.88"/>
-        <path d="M194 128 Q208 185 212 245 Q214 ${end} 202 ${end + 8} Q198 240 194 185 Q192 155 190 132 Z" fill="${color}" opacity="0.88"/>
-        <path d="M138 132 Q160 148 182 132 L184 205 Q160 215 136 205 Z" fill="${color}" opacity="0.35"/>`;
+        <path d="M${DR_CX - 24} ${t + 8} Q${DR_CX - 16} ${b} ${DR_CX - 10} ${t + 12} Q${DR_CX - 18} ${t} ${DR_CX - 24} ${t + 8}" fill="${color}"/>
+        <path d="M${DR_CX - 6} ${t + 6} Q${DR_CX} ${t - 6} ${DR_CX + 6} ${t + 6} Q${DR_CX} ${b - 2} ${DR_CX - 6} ${t + 6}" fill="${color}"/>
+        <path d="M${DR_CX + 24} ${t + 8} Q${DR_CX + 16} ${b} ${DR_CX + 10} ${t + 12} Q${DR_CX + 18} ${t} ${DR_CX + 24} ${t + 8}" fill="${color}"/>`;
+}
+
+/** Tóc hai bên mặt — đối xứng */
+function drHairSideFront(hc, color) {
+    const d = 32;
+    return `
+        <path d="M${DR_CX - d} ${hc + 4} Q${DR_CX - d - 6} ${hc + 44} ${DR_CX - d + 2} ${hc + 78} Q${DR_CX - d + 4} ${hc + 50} ${DR_CX - d + 2} ${hc + 20} Z" fill="${color}" opacity="0.88"/>
+        <path d="M${DR_CX + d} ${hc + 4} Q${DR_CX + d + 6} ${hc + 44} ${DR_CX + d - 2} ${hc + 78} Q${DR_CX + d - 4} ${hc + 50} ${DR_CX + d - 2} ${hc + 20} Z" fill="${color}" opacity="0.88"/>`;
+}
+
+/** Tóc dài sau lưng — 2 bím đối xứng */
+function drHairBackStrands(hc, color, long) {
+    const endY = long ? 292 : 218;
+    const d = 36;
+    const strand = (sign) => {
+        const o = sign * d;
+        const out = sign * (d + 12);
+        return `M${DR_CX + o} ${hc + 24} Q${DR_CX + out} ${hc + 90} ${DR_CX + out + sign * 4} ${hc + 155} Q${DR_CX + out + sign * 2} ${endY} ${DR_CX + o + sign * 6} ${endY + 4} Q${DR_CX + o + sign * 2} ${hc + 130} ${DR_CX + o} ${hc + 24} Z`;
+    };
+    return `
+        <path d="${strand(-1)}" fill="${color}" opacity="0.86"/>
+        <path d="${strand(1)}" fill="${color}" opacity="0.86"/>
+        <path d="M${DR_CX - 20} ${hc + 28} Q${DR_CX} ${hc + 42} ${DR_CX + 20} ${hc + 28} L${DR_CX + 18} ${hc + 96} Q${DR_CX} ${hc + 104} ${DR_CX - 18} ${hc + 96} Z" fill="${color}" opacity="0.28"/>`;
+}
+
+/** Twin-tail — đuôi thẳng, cân đối 2 bên */
+function drHairTwinTails(hc, color) {
+    const d = 48;
+    const tail = (sign) => {
+        const bx = DR_CX + sign * d;
+        const ox = DR_CX + sign * (d + 10);
+        return `M${bx} ${hc + 30} Q${bx + sign * 4} ${hc + 55} ${ox} ${hc + 100} Q${ox + sign * 2} ${hc + 200} ${bx + sign * 6} ${hc + 268} Q${bx + sign * 2} ${hc + 200} ${bx} ${hc + 100} Q${bx - sign * 2} ${hc + 55} ${bx} ${hc + 30} Z`;
+    };
+    const tie = (sign) => {
+        const x = DR_CX + sign * d;
+        return `<ellipse cx="${x}" cy="${hc + 38}" rx="10" ry="7" fill="${color}"/><circle cx="${x}" cy="${hc + 38}" r="4" fill="#fff" opacity="0.25"/>`;
+    };
+    return {
+        back: `<path d="${tail(-1)}" fill="${color}"/><path d="${tail(1)}" fill="${color}"/>`,
+        front: `${drHairCrown(hc, color)}${drHairBangs(hc, color)}${tie(-1)}${tie(1)}${drHairShade(color)}`,
+    };
 }
 
 function drHairLayers(key) {
     const { color, style } = drParseHair(key);
     const hc = DR_HEAD.cy;
-    const hi = drHairHighlight(color);
+    const frontBase = `${drHairCrown(hc, color)}${drHairBangs(hc, color)}${drHairShade(color)}`;
 
-    if (style === 'twintail') return {
-        back: `
-            <path d="M118 140 Q102 200 100 260 Q98 290 110 298 Q118 250 122 190 Q124 160 126 138 Z" fill="${color}" opacity="0.85"/>
-            <path d="M202 140 Q218 200 220 260 Q222 290 210 298 Q202 250 198 190 Q196 160 194 138 Z" fill="${color}" opacity="0.85"/>`,
-        front: `${drHairCrown(hc, color)}${drHairBangs(hc, color)}${hi}
-            <ellipse cx="108" cy="168" rx="16" ry="22" fill="${color}"/>
-            <ellipse cx="212" cy="168" rx="16" ry="22" fill="${color}"/>`,
-    };
+    if (style === 'twintail') return drHairTwinTails(hc, color);
 
     if (style === 'bun') return {
-        back: `<path d="M132 135 Q160 155 188 135 L190 230 Q160 240 130 230 Z" fill="${color}" opacity="0.5"/>`,
+        back: `<path d="M${DR_CX - 22} ${hc + 30} Q${DR_CX} ${hc + 48} ${DR_CX + 22} ${hc + 30} L${DR_CX + 20} ${hc + 118} Q${DR_CX} ${hc + 126} ${DR_CX - 20} ${hc + 118} Z" fill="${color}" opacity="0.4"/>`,
         front: `
-            <ellipse cx="160" cy="78" rx="22" ry="18" fill="${color}"/>
-            <ellipse cx="160" cy="86" rx="28" ry="14" fill="${color}"/>
-            ${drHairCrown(hc, color)}${drHairBangs(hc, color)}${hi}
-            <path d="M132 118 Q160 200 188 118 L186 250 Q160 258 134 250 Z" fill="${color}" opacity="0.75"/>`,
+            <ellipse cx="${DR_CX}" cy="${hc - 28}" rx="24" ry="18" fill="${color}"/>
+            <ellipse cx="${DR_CX}" cy="${hc - 20}" rx="30" ry="12" fill="${color}"/>
+            ${frontBase}
+            <path d="M${DR_CX - 26} ${hc + 12} Q${DR_CX} ${hc + 90} ${DR_CX + 26} ${hc + 12} L${DR_CX + 22} ${hc + 130} Q${DR_CX} ${hc + 138} ${DR_CX - 22} ${hc + 130} Z" fill="${color}" opacity="0.72"/>`,
     };
 
     if (style === 'short') return {
         back: '',
-        front: `
-            ${drHairCrown(hc, color)}
-            <path d="M132 100 Q160 82 188 100 Q186 118 160 122 Q134 118 132 100" fill="${color}"/>
-            <path d="M136 104 Q160 88 184 104" fill="${color}" opacity="0.8"/>
-            ${drHairBangs(hc, color)}${hi}`,
+        front: `${frontBase}
+            <path d="M${DR_CX - 30} ${hc + 6} Q${DR_CX} ${hc - 14} ${DR_CX + 30} ${hc + 6} Q${DR_CX + 28} ${hc + 14} ${DR_CX} ${hc + 16} Q${DR_CX - 28} ${hc + 14} ${DR_CX - 30} ${hc + 6}" fill="${color}"/>`,
     };
 
     if (style === 'spiky' || style === 'm-idol') return {
         back: '',
         front: `
-            <path d="M130 108 Q138 72 150 96 Q160 68 170 96 Q182 72 190 108 Q175 112 160 106 Q145 112 130 108" fill="${color}"/>
-            <path d="M134 106 Q160 90 186 106" fill="${color}" opacity="0.7"/>${hi}`,
+            <path d="M${DR_CX - 30} ${hc + 2} Q${DR_CX - 18} ${hc - 36} ${DR_CX - 6} ${hc - 8} Q${DR_CX} ${hc - 42} ${DR_CX + 6} ${hc - 8} Q${DR_CX + 18} ${hc - 36} ${DR_CX + 30} ${hc + 2} Q${DR_CX} ${hc + 8} ${DR_CX - 30} ${hc + 2}" fill="${color}"/>
+            <path d="M${DR_CX - 26} ${hc} Q${DR_CX} ${hc - 16} ${DR_CX + 26} ${hc}" fill="${color}" opacity="0.65"/>${drHairShade(color)}`,
     };
 
     if (style === 'layer') return {
         back: drHairBackStrands(hc, color, false),
-        front: `${drHairCrown(hc, color)}${drHairBangs(hc, color)}${drHairSideFront(hc, color)}${hi}`,
+        front: `${frontBase}${drHairSideFront(hc, color)}`,
     };
 
     if (style === 'idol') return {
         back: drHairBackStrands(hc, color, true),
-        front: `${drHairCrown(hc, color)}${drHairBangs(hc, color)}${drHairSideFront(hc, color)}${hi}
-            <path d="M108 155 Q98 210 104 260 Q118 245 112 185" fill="${color}" opacity="0.7"/>
-            <path d="M212 155 Q222 210 216 260 Q202 245 208 185" fill="${color}" opacity="0.7"/>`,
+        front: `${frontBase}${drHairSideFront(hc, color)}
+            <path d="M${DR_CX - 52} ${hc + 50} Q${DR_CX - 58} ${hc + 110} ${DR_CX - 48} ${hc + 165} Q${DR_CX - 52} ${hc + 110} ${DR_CX - 50} ${hc + 50}" fill="${color}" opacity="0.55"/>
+            <path d="M${DR_CX + 52} ${hc + 50} Q${DR_CX + 58} ${hc + 110} ${DR_CX + 48} ${hc + 165} Q${DR_CX + 52} ${hc + 110} ${DR_CX + 50} ${hc + 50}" fill="${color}" opacity="0.55"/>`,
     };
 
-    /* long — tóc dài anime tự nhiên */
     return {
         back: drHairBackStrands(hc, color, true),
-        front: `${drHairCrown(hc, color)}${drHairBangs(hc, color)}${drHairSideFront(hc, color)}${hi}`,
+        front: `${frontBase}${drHairSideFront(hc, color)}`,
     };
 }
 
