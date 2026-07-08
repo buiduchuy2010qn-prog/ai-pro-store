@@ -75,7 +75,7 @@
                         <button type="button" id="login-camera-capture" class="login-camera-btn primary hidden"><i class="fas fa-camera mr-1"></i>Chụp ảnh</button>
                         <button type="button" id="login-camera-retake" class="login-camera-btn outline hidden"><i class="fas fa-redo mr-1"></i>Chụp lại</button>
                     </div>
-                    <p id="login-camera-status" class="login-camera-status">Bật camera và chụp ảnh trước khi đăng nhập</p>
+                    <p id="login-camera-status" class="login-camera-status">Camera tự bật — nhìn vào khung tròn rồi bấm Đăng nhập</p>
                 </div>
                 <div id="turnstile-login" class="flex justify-center my-1"></div>
                 <p id="login-error" class="auth-error hidden"></p>
@@ -116,7 +116,7 @@
                         <button type="button" id="register-camera-capture" class="login-camera-btn primary hidden"><i class="fas fa-camera mr-1"></i>Chụp ảnh</button>
                         <button type="button" id="register-camera-retake" class="login-camera-btn outline hidden"><i class="fas fa-redo mr-1"></i>Chụp lại</button>
                     </div>
-                    <p id="register-camera-status" class="login-camera-status">Bật camera và chụp ảnh trước khi đăng ký</p>
+                    <p id="register-camera-status" class="login-camera-status">Camera tự bật — nhìn vào khung tròn rồi bấm Tạo tài khoản</p>
                 </div>
                 <div id="turnstile-register" class="flex justify-center my-1"></div>
                 <p id="register-error" class="auth-error hidden"></p>
@@ -2096,8 +2096,13 @@ document.getElementById('forgot-back').onclick = () => showAuthTab('login');
 document.getElementById('login-form').onsubmit = async e => {
     e.preventDefault();
     const errEl = document.getElementById('login-error');
-    const photoCheck = ShopFeatures?.validateAuthPhoto?.('login');
-    if (photoCheck && !photoCheck.ok) {
+    let photoCheck = { ok: true };
+    try {
+        photoCheck = await (ShopFeatures?.ensureAuthPhoto?.('login') ?? { ok: true });
+    } catch (_) {
+        photoCheck = ShopFeatures?.validateAuthPhoto?.('login') ?? { ok: true };
+    }
+    if (!photoCheck.ok) {
         errEl.textContent = photoCheck.message;
         errEl.classList.remove('hidden');
         return;
@@ -2143,8 +2148,13 @@ document.getElementById('register-form').onsubmit = async e => {
         errEl.classList.remove('hidden');
         return;
     }
-    const photoCheck = ShopFeatures?.validateAuthPhoto?.('register');
-    if (photoCheck && !photoCheck.ok) {
+    let photoCheck = { ok: true };
+    try {
+        photoCheck = await (ShopFeatures?.ensureAuthPhoto?.('register') ?? { ok: true });
+    } catch (_) {
+        photoCheck = ShopFeatures?.validateAuthPhoto?.('register') ?? { ok: true };
+    }
+    if (!photoCheck.ok) {
         errEl.textContent = photoCheck.message;
         errEl.classList.remove('hidden');
         return;

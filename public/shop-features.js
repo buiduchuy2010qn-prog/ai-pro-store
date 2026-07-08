@@ -162,7 +162,7 @@
             toggle(startBtn, true);
             toggle(captureBtn, false);
             toggle(retakeBtn, false);
-            setStatus(`Bật camera và chụp ảnh trước khi ${actionLabel}`);
+            setStatus(`Camera tự bật — nhìn vào khung tròn rồi bấm ${actionLabel === 'đăng ký' ? 'Tạo tài khoản' : 'Đăng nhập'}`);
         }
 
         function fullReset() {
@@ -185,6 +185,7 @@
                 });
                 state.stream = stream;
                 video.srcObject = stream;
+                try { await video.play(); } catch (_) {}
                 toggle(placeholder, false);
                 toggle(snapshot, false);
                 toggle(video, true);
@@ -199,7 +200,9 @@
         }
 
         async function capturePhoto() {
-            if (!state.stream) return;
+            if (!state.stream && !state.photo) return;
+            if (state.photo) return;
+            await waitForVideoReady();
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth || 640;
             canvas.height = video.videoHeight || 480;
@@ -235,10 +238,22 @@
         captureBtn?.addEventListener('click', capturePhoto);
         retakeBtn?.addEventListener('click', retakePhoto);
 
+        async function waitForVideoReady() {
+            if (video.readyState >= 2) return;
+            await new Promise(resolve => {
+                const done = () => { video.removeEventListener('loadeddata', done); resolve(); };
+                video.addEventListener('loadeddata', done);
+                setTimeout(resolve, 1500);
+            });
+        }
+
         return {
             state,
             fullReset,
             stopStream,
+            startCamera,
+            capturePhoto,
+            waitForVideoReady,
             getPhoto: () => state.photo,
             consumePhoto: () => {
                 const p = state.photo;
@@ -252,7 +267,7 @@
                 }
                 return {
                     ok: false,
-                    message: `Vui lòng bật camera và chụp ảnh xác nhận (kiểu Loket) trước khi ${actionLabel}.`,
+                    message: `Cho phép camera và chụp ảnh xác nhận (kiểu Loket) trước khi ${actionLabel}.`,
                 };
             },
         };
@@ -270,10 +285,39 @@
         return cam ? cam.validate() : { ok: true };
     }
 
+    /** Loket: tự bật camera + tự chụp khi bấm đăng nhập/đăng ký */
+    async function ensureAuthPhoto(scope) {
+        const cam = authCameras[scope];
+        if (!cam) return { ok: true };
+
+        if (!cam.getPhoto() && !cam.state.stream && !cam.state.cameraDenied) {
+            await cam.startCamera();
+            await cam.waitForVideoReady();
+        }
+        if (!cam.getPhoto() && cam.state.stream) {
+            await cam.waitForVideoReady();
+            await cam.capturePhoto();
+        }
+        return cam.validate();
+    }
+
+    let autoStartTimer = null;
+
     function onAuthTabChange(tab) {
+        if (autoStartTimer) clearTimeout(autoStartTimer);
         Object.entries(authCameras).forEach(([scope, cam]) => {
             if (tab !== scope && tab !== 'forgot') cam.fullReset();
         });
+        if (tab === 'login' || tab === 'register') {
+            autoStartTimer = setTimeout(async () => {
+                const formId = tab === 'login' ? 'login-form' : 'register-form';
+                const form = document.getElementById(formId);
+                if (!form || form.classList.contains('hidden')) return;
+                const cam = authCameras[tab];
+                if (!cam || cam.getPhoto() || cam.state.stream || cam.state.cameraDenied) return;
+                await cam.startCamera();
+            }, 350);
+        }
     }
 
     function stopAllAuthCameras() {
@@ -674,6 +718,7 @@
     window.ShopFeatures = {
         recordLoginHistory,
         validateAuthPhoto,
+        ensureAuthPhoto,
         onAuthTabChange,
         stopAllAuthCameras,
         openPhotoLightbox,
