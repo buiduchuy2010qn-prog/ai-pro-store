@@ -1985,7 +1985,7 @@
         const decoIds = meta.decorations || [];
         if (decoIds.length) {
             decoIds.forEach(id => {
-                const chip = window.SocialCreative?.getDecorationBadgeHtml?.(id, p.createdAt);
+                const chip = window.SocialCreative?.getDecorationBadgeHtml?.(id, p.createdAt, meta);
                 if (chip) badges.push(chip);
             });
             return badges.join('');
@@ -2691,12 +2691,15 @@
         const syncToDrawer = () => {
             drawer.value = inline.value;
             drawer.dispatchEvent(new Event('input', { bubbles: true }));
+            window.SocialCreative?.syncCaptionOverlay?.();
         };
         const syncToInline = () => {
             inline.value = drawer.value;
+            window.SocialCreative?.syncCaptionOverlay?.();
         };
         inline.addEventListener('input', syncToDrawer);
         drawer.addEventListener('input', syncToInline);
+        inline.addEventListener('focus', () => window.SocialCreative?.closeStudio?.());
     }
 
     function initDrawerTabs() {

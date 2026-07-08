@@ -33,16 +33,16 @@
             title: 'General',
             isNew: true,
             pills: [
-                { id: 'text', label: 'Aa Văn bản', cls: 'pill-gray', icon: 'fa-font', caption: '' },
-                { id: 'color', label: 'Màu sắc', cls: 'pill-purple', icon: 'fa-palette' },
-                { id: 'spotify', label: 'Spotify', cls: 'pill-green', icon: 'fa-spotify' },
-                { id: 'music', label: 'Apple Music', cls: 'pill-pink', icon: 'fa-apple' },
-                { id: 'weather', label: '31°C', cls: 'pill-blue', icon: 'fa-cloud-sun', dynamic: 'weather' },
-                { id: 'review', label: 'Review', cls: 'pill-yellow', icon: 'fa-star' },
-                { id: 'time', label: '', cls: 'pill-gray', icon: 'fa-clock', dynamic: 'time' },
-                { id: 'streak', label: '🔥 1', cls: 'pill-orange' },
-                { id: 'poll', label: 'Bình chọn', cls: 'pill-purple' },
-                { id: 'location', label: 'Vị trí', cls: 'pill-teal', icon: 'fa-location-dot' },
+                { id: 'text', label: 'Aa Văn bản', cls: 'pill-gray', icon: 'fa-font', mode: 'caption' },
+                { id: 'color', label: 'Màu sắc', cls: 'pill-purple', icon: 'fa-palette', mode: 'widget' },
+                { id: 'spotify', label: 'Spotify', cls: 'pill-green', icon: 'fa-spotify', mode: 'widget' },
+                { id: 'music', label: 'Apple Music', cls: 'pill-pink', icon: 'fa-apple', mode: 'widget' },
+                { id: 'weather', label: '31°C', cls: 'pill-blue', icon: 'fa-cloud-sun', dynamic: 'weather', mode: 'widget' },
+                { id: 'review', label: 'Review', cls: 'pill-yellow', icon: 'fa-star', mode: 'widget' },
+                { id: 'time', label: '', cls: 'pill-gray', icon: 'fa-clock', dynamic: 'time', mode: 'widget' },
+                { id: 'streak', label: '🔥 1', cls: 'pill-orange', mode: 'widget' },
+                { id: 'poll', label: 'Bình chọn', cls: 'pill-purple', mode: 'widget' },
+                { id: 'location', label: 'Vị trí', cls: 'pill-teal', icon: 'fa-location-dot', dynamic: 'location', mode: 'location' },
             ],
         },
         {
@@ -50,36 +50,36 @@
             title: 'Caption Season',
             isNew: true,
             pills: [
-                { id: 'cap1', label: 'GEM AI', cls: 'pill-brown', caption: 'Gemini Pro ✨' },
-                { id: 'cap2', label: 'GPT PRO', cls: 'pill-green', caption: 'ChatGPT Plus 🚀' },
-                { id: 'cap3', label: 'CLAUDE', cls: 'pill-orange', caption: 'Claude AI 🤖' },
-                { id: 'cap4', label: 'GROK', cls: 'pill-red', caption: 'Grok AI ⚡' },
-                { id: 'cap5', label: 'SALE 50%', cls: 'pill-pink', caption: 'Khuyến mãi 50% 🔥' },
-                { id: 'cap6', label: 'VIP', cls: 'pill-indigo', caption: 'Tài khoản VIP 💎' },
+                { id: 'cap1', label: 'GEM AI', cls: 'pill-brown', caption: 'Gemini Pro ✨', mode: 'caption' },
+                { id: 'cap2', label: 'GPT PRO', cls: 'pill-green', caption: 'ChatGPT Plus 🚀', mode: 'caption' },
+                { id: 'cap3', label: 'CLAUDE', cls: 'pill-orange', caption: 'Claude AI 🤖', mode: 'caption' },
+                { id: 'cap4', label: 'GROK', cls: 'pill-red', caption: 'Grok AI ⚡', mode: 'caption' },
+                { id: 'cap5', label: 'SALE 50%', cls: 'pill-pink', caption: 'Khuyến mãi 50% 🔥', mode: 'caption' },
+                { id: 'cap6', label: 'VIP', cls: 'pill-indigo', caption: 'Tài khoản VIP 💎', mode: 'caption' },
             ],
         },
         {
             id: 'suggest',
             title: 'Suggest Caption',
             pills: [
-                { id: 's1', label: 'Caption', cls: 'pill-purple', caption: 'Trải nghiệm AI tuyệt vời ✨' },
-                { id: 's2', label: 'Caption', cls: 'pill-orange', caption: 'Mua tài khoản chính hãng 🚀' },
-                { id: 's3', label: 'Caption', cls: 'pill-red', caption: 'Khuyến mãi hôm nay 🔥' },
-                { id: 's4', label: 'Caption', cls: 'pill-teal', caption: 'Gemini · ChatGPT · Claude' },
-                { id: 's5', label: 'Caption', cls: 'pill-pink', caption: 'Shop Đức Hi — uy tín 💯' },
-                { id: 's6', label: 'Caption', cls: 'pill-blue', caption: 'Nạp nhanh VietQR ⚡' },
+                { id: 's1', label: 'Caption', cls: 'pill-purple', caption: 'Trải nghiệm AI tuyệt vời ✨', mode: 'caption' },
+                { id: 's2', label: 'Caption', cls: 'pill-orange', caption: 'Mua tài khoản chính hãng 🚀', mode: 'caption' },
+                { id: 's3', label: 'Caption', cls: 'pill-red', caption: 'Khuyến mãi hôm nay 🔥', mode: 'caption' },
+                { id: 's4', label: 'Caption', cls: 'pill-teal', caption: 'Gemini · ChatGPT · Claude', mode: 'caption' },
+                { id: 's5', label: 'Caption', cls: 'pill-pink', caption: 'Shop Đức Hi — uy tín 💯', mode: 'caption' },
+                { id: 's6', label: 'Caption', cls: 'pill-blue', caption: 'Nạp nhanh VietQR ⚡', mode: 'caption' },
             ],
         },
         {
             id: 'decorative',
             title: 'Decorative by Locket',
             pills: [
-                { id: 'd1', label: 'PRIDE', cls: 'pill-purple' },
-                { id: 'd2', label: 'Good morning ☀️', cls: 'pill-orange', caption: 'Good morning ☀️' },
-                { id: 'd3', label: 'Goodnight 🌙', cls: 'pill-indigo', caption: 'Goodnight 🌙' },
-                { id: 'd4', label: 'Miss you', cls: 'pill-red', caption: 'Miss you 💕' },
-                { id: 'd5', label: 'Party Time!', cls: 'pill-green', caption: 'Party Time! 🎉' },
-                { id: 'd6', label: 'OOTD', cls: 'pill-pink' },
+                { id: 'd1', label: 'PRIDE', cls: 'pill-purple', mode: 'widget' },
+                { id: 'd2', label: 'Good morning ☀️', cls: 'pill-orange', caption: 'Good morning ☀️', mode: 'caption' },
+                { id: 'd3', label: 'Goodnight 🌙', cls: 'pill-indigo', caption: 'Goodnight 🌙', mode: 'caption' },
+                { id: 'd4', label: 'Miss you', cls: 'pill-red', caption: 'Miss you 💕', mode: 'caption' },
+                { id: 'd5', label: 'Party Time!', cls: 'pill-green', caption: 'Party Time! 🎉', mode: 'caption' },
+                { id: 'd6', label: 'OOTD', cls: 'pill-pink', mode: 'widget' },
             ],
         },
         {
@@ -87,14 +87,14 @@
             title: 'Decorative by Dio',
             isNew: true,
             pills: [
-                { id: 'dio1', label: 'Wedding Time!', cls: 'pill-pink', caption: 'Wedding Time! 💒' },
-                { id: 'dio2', label: 'Cảm thấy hạnh phúc', cls: 'pill-orange', caption: 'Cảm thấy hạnh phúc ✨' },
-                { id: 'dio3', label: 'Coffee Time!', cls: 'pill-brown', caption: 'Coffee Time! ☕' },
-                { id: 'dio4', label: 'Locket Time!', cls: 'pill-purple', caption: 'Locket Time! 📸' },
-                { id: 'dio5', label: 'Cinema Time!', cls: 'pill-indigo', caption: 'Cinema Time! 🎬' },
-                { id: 'dio6', label: 'Chilling Time!', cls: 'pill-teal', caption: 'Chilling Time! 😎' },
-                { id: 'dio7', label: 'Shopping Time!', cls: 'pill-green', caption: 'Shopping Time! 🛍️' },
-                { id: 'dio8', label: 'Dinner Time!', cls: 'pill-red', caption: 'Dinner Time! 🍽️' },
+                { id: 'dio1', label: 'Wedding Time!', cls: 'pill-pink', caption: 'Wedding Time! 💒', mode: 'caption' },
+                { id: 'dio2', label: 'Cảm thấy hạnh phúc', cls: 'pill-orange', caption: 'Cảm thấy hạnh phúc ✨', mode: 'caption' },
+                { id: 'dio3', label: 'Coffee Time!', cls: 'pill-brown', caption: 'Coffee Time! ☕', mode: 'caption' },
+                { id: 'dio4', label: 'Locket Time!', cls: 'pill-purple', caption: 'Locket Time! 📸', mode: 'caption' },
+                { id: 'dio5', label: 'Cinema Time!', cls: 'pill-indigo', caption: 'Cinema Time! 🎬', mode: 'caption' },
+                { id: 'dio6', label: 'Chilling Time!', cls: 'pill-teal', caption: 'Chilling Time! 😎', mode: 'caption' },
+                { id: 'dio7', label: 'Shopping Time!', cls: 'pill-green', caption: 'Shopping Time! 🛍️', mode: 'caption' },
+                { id: 'dio8', label: 'Dinner Time!', cls: 'pill-red', caption: 'Dinner Time! 🍽️', mode: 'caption' },
             ],
         },
     ];
@@ -111,9 +111,11 @@
         friends: [],
         studioPills: new Set(),
         studioOpen: false,
+        locationLabel: null,
     };
 
     let studioTickInterval = null;
+    let locationFetchPromise = null;
 
     /** Vẽ khung viền lên canvas (ảnh) */
     function drawFrameOnCanvas(ctx, w, h, frameId, customImg) {
@@ -286,8 +288,13 @@
     function updateCaptionOverlay() {
         const el = document.getElementById('social-caption-overlay');
         const input = document.getElementById('social-caption');
+        const inline = document.getElementById('social-caption-inline');
         if (!el) return;
-        const text = (input?.value || '').trim();
+        if (document.querySelector('.social-locket-frame.has-preview')) {
+            el.classList.add('hidden');
+            return;
+        }
+        const text = (inline?.value || input?.value || '').trim();
         const st = state.captionStyle;
         el.textContent = text;
         el.className = 'social-caption-overlay style-' + (st.style || 'classic')
@@ -351,10 +358,85 @@
         return null;
     }
 
+    function getPillMode(p) {
+        if (p.mode) return p.mode;
+        if (p.dynamic === 'location') return 'location';
+        if (p.caption) return 'caption';
+        return 'widget';
+    }
+
+    function isWidgetPill(p) {
+        return getPillMode(p) === 'widget';
+    }
+
     function pillDynamicLabel(p) {
         if (p.dynamic === 'time') return currentClock();
         if (p.dynamic === 'weather') return '31°C';
+        if (p.dynamic === 'location') return state.locationLabel || p.label || 'Vị trí';
         return p.label || p.caption || p.id;
+    }
+
+    function formatViAddress(data) {
+        const a = data?.address || {};
+        const ward = a.suburb || a.neighbourhood || a.village || a.hamlet || a.road || '';
+        const district = a.city_district || a.county || a.town || a.municipality || a.city || '';
+        const province = a.state || a.region || '';
+        const parts = [ward, district, province].filter(Boolean);
+        if (parts.length) return parts.join(', ');
+        const display = String(data?.display_name || '').split(',').map(s => s.trim()).filter(Boolean);
+        return display.slice(0, 3).join(', ') || 'Vị trí hiện tại';
+    }
+
+    function fetchRealLocation() {
+        if (locationFetchPromise) return locationFetchPromise;
+        locationFetchPromise = new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                reject(new Error('Thiết bị không hỗ trợ GPS'));
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const { latitude, longitude } = pos.coords;
+                try {
+                    const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=vi`;
+                    const res = await fetch(url, {
+                        headers: { 'Accept-Language': 'vi', 'Accept': 'application/json' },
+                    });
+                    const data = await res.json();
+                    resolve(formatViAddress(data));
+                } catch (_) {
+                    resolve(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+                }
+            }, (err) => {
+                reject(new Error(err?.message || 'Không lấy được vị trí — bật quyền GPS'));
+            }, { enableHighAccuracy: true, timeout: 14000, maximumAge: 60000 });
+        }).finally(() => {
+            locationFetchPromise = null;
+        });
+        return locationFetchPromise;
+    }
+
+    function focusCaptionInput(selectAll) {
+        closeStudio();
+        const input = document.getElementById('social-caption-inline');
+        if (!input) return;
+        requestAnimationFrame(() => {
+            input.focus();
+            if (selectAll && input.value) input.select();
+        });
+    }
+
+    function updateLocationPillUi(label, loading) {
+        document.querySelectorAll('[data-social-studio-pill="location"]').forEach(el => {
+            if (loading) {
+                el.innerHTML = '<i class="fas fa-location-dot mr-1"></i>Đang lấy...';
+                el.disabled = true;
+                return;
+            }
+            el.disabled = false;
+            const text = label || 'Vị trí';
+            const short = text.length > 28 ? text.slice(0, 26) + '…' : text;
+            el.innerHTML = `<i class="fas fa-location-dot mr-1"></i>${escapeHtml(short)}`;
+        });
     }
 
     function pillButtonHtml(p) {
@@ -409,10 +491,42 @@
         updateCaptionOverlay();
     }
 
-    function onStudioPillClick(pill) {
+    async function onStudioPillClick(pill) {
         const id = pill.dataset.socialStudioPill;
-        const caption = pill.dataset.caption;
-        if (caption) setCaptionInputs(caption);
+        const p = findStudioPill(id);
+        if (!p) return;
+        const mode = getPillMode(p);
+
+        if (mode === 'caption') {
+            const caption = pill.dataset.caption || '';
+            if (caption) setCaptionInputs(caption);
+            focusCaptionInput(!!caption);
+            return;
+        }
+
+        if (mode === 'location') {
+            if (state.locationLabel) {
+                state.locationLabel = null;
+                pill.classList.remove('is-selected');
+                setCaptionInputs('');
+                updateLocationPillUi('Vị trí', false);
+                return;
+            }
+            updateLocationPillUi(null, true);
+            try {
+                const addr = await fetchRealLocation();
+                state.locationLabel = addr;
+                setCaptionInputs(addr);
+                pill.classList.add('is-selected');
+                updateLocationPillUi(addr, false);
+                focusCaptionInput(true);
+            } catch (err) {
+                updateLocationPillUi('Vị trí', false);
+                window.toast?.(err.message || 'Không lấy được vị trí', true);
+            }
+            return;
+        }
+
         if (state.studioPills.has(id)) {
             state.studioPills.delete(id);
             pill.classList.remove('is-selected');
@@ -440,9 +554,9 @@
         const bottom = [];
         state.studioPills.forEach(pid => {
             const p = findStudioPill(pid);
-            if (!p) return;
+            if (!p || !isWidgetPill(p)) return;
             const chip = buildDecoChip(p);
-            if (p.dynamic) bottom.push(chip);
+            if (p.dynamic && p.dynamic !== 'location') bottom.push(chip);
             else top.push(chip);
         });
         const hasDeco = top.length > 0 || bottom.length > 0;
@@ -464,7 +578,7 @@
     function hasDynamicStudioSelection() {
         return [...state.studioPills].some(id => {
             const p = findStudioPill(id);
-            return p?.dynamic;
+            return p?.dynamic && p.dynamic !== 'location';
         });
     }
 
@@ -499,6 +613,7 @@
         buildSocialStudio();
         state.studioOpen = true;
         updateDynamicStudioPills();
+        if (state.locationLabel) updateLocationPillUi(state.locationLabel, false);
         document.getElementById('social-studio-backdrop')?.classList.add('is-open');
         document.getElementById('social-caption-studio')?.classList.add('is-open');
         document.getElementById('social-caption-studio')?.setAttribute('aria-hidden', 'false');
@@ -515,7 +630,9 @@
 
     function clearStudioDecorations() {
         state.studioPills.clear();
+        state.locationLabel = null;
         document.querySelectorAll('[data-social-studio-pill].is-selected').forEach(p => p.classList.remove('is-selected'));
+        updateLocationPillUi('Vị trí', false);
         renderDecoOverlay();
         stopStudioTicker();
     }
@@ -615,6 +732,7 @@
             captionStyle: { ...state.captionStyle },
             bgId: state.bgId,
             decorations: [...state.studioPills],
+            locationLabel: state.locationLabel || null,
         };
     }
 
@@ -680,6 +798,8 @@
         openStudio,
         closeStudio,
         isStudioOpen() { return state.studioOpen; },
+        syncCaptionOverlay: updateCaptionOverlay,
+        focusCaptionInput,
 
         onCameraStart() {
             applyCameraBackground();
@@ -691,7 +811,8 @@
         },
 
         async prepareImageForPost(dataUrl) {
-            const caption = document.getElementById('social-caption')?.value?.trim() || '';
+            const caption = document.getElementById('social-caption-inline')?.value?.trim()
+                || document.getElementById('social-caption')?.value?.trim() || '';
             if (state.frameId === 'none' && !caption) return dataUrl;
             try {
                 return await bakeImage(dataUrl, caption);
@@ -719,7 +840,7 @@
 
         visibilityBadge,
 
-        getDecorationBadgeHtml(pillId, createdAt) {
+        getDecorationBadgeHtml(pillId, createdAt, postMeta) {
             const p = findStudioPill(pillId);
             if (!p) return '';
             let label = pillDynamicLabel(p);
@@ -728,6 +849,9 @@
                 if (!isNaN(t)) {
                     label = t.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
                 }
+            }
+            if (p.dynamic === 'location' && postMeta?.locationLabel) {
+                label = postMeta.locationLabel;
             }
             const icon = p.icon ? `<i class="fas ${p.icon}"></i> ` : '';
             const cls = p.dynamic === 'weather' ? 'badge-warm' : (p.cls?.includes('purple') ? 'badge-purple' : '');

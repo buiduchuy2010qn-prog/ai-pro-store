@@ -25,6 +25,18 @@
 .social-deco-top { top: 12px; }
 .social-deco-bottom { bottom: 52px; }
 
+.social-locket-frame.has-preview .social-deco-bottom {
+    bottom: 58px;
+}
+
+.social-locket-frame.has-preview .social-frame-caption-bar {
+    display: block !important;
+}
+
+.social-frame-caption-input:focus {
+    background: rgba(255, 255, 255, 0.98);
+}
+
 .social-deco-chip {
     display: inline-flex;
     align-items: center;
