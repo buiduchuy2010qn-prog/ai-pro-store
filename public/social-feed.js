@@ -717,6 +717,23 @@
         }
         if (setup && redirectInput) redirectInput.value = setup.redirectUri || '';
         if (setup && clientIdInput && setup.clientId) clientIdInput.value = setup.clientId;
+
+        const test = setup?.credentialTest;
+        if (test && !oauthReady && isAdmin) {
+            const setupBox = document.getElementById('social-drive-oauth-setup');
+            let testEl = document.getElementById('social-drive-cred-test');
+            if (!testEl && setupBox) {
+                testEl = document.createElement('p');
+                testEl.id = 'social-drive-cred-test';
+                testEl.className = 'social-drive-cred-test';
+                setupBox.appendChild(testEl);
+            }
+            if (testEl) {
+                testEl.textContent = test.message || '';
+                testEl.classList.toggle('is-error', test.ok === false);
+                testEl.classList.toggle('is-ok', test.ok === true);
+            }
+        }
     }
 
     async function loadOAuthSetup() {

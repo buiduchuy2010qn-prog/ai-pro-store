@@ -93,7 +93,7 @@ def get_oauth_setup_info():
     normalize_stored_oauth_credentials()
     creds = get_oauth_credentials()
     has_secret = bool(creds['client_secret'])
-    return {
+    info = {
         'redirectUri': creds['redirect_uri'],
         'clientId': creds['client_id'],
         'hasClientSecret': has_secret,
@@ -101,6 +101,49 @@ def get_oauth_setup_info():
         'cloudConsoleUrl': 'https://console.cloud.google.com/apis/credentials',
         'driveApiUrl': 'https://console.cloud.google.com/apis/library/drive.googleapis.com',
     }
+    if oauth_available():
+        info['credentialTest'] = test_oauth_credentials()
+    return info
+
+
+def test_oauth_credentials():
+    """Gọi Google token endpoint — invalid_grant = ID/Secret đúng."""
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+
+    oauth = get_oauth_credentials()
+    if not oauth_available():
+        return {'ok': False, 'message': 'Chưa cấu hình đủ OAuth'}
+
+    body = urllib.parse.urlencode({
+        'code': 'credential-probe-invalid',
+        'client_id': oauth['client_id'],
+        'client_secret': oauth['client_secret'],
+        'redirect_uri': oauth['redirect_uri'],
+        'grant_type': 'authorization_code',
+    }).encode()
+    req = urllib.request.Request(
+        'https://oauth2.googleapis.com/token',
+        data=body,
+        method='POST',
+        headers={'Content-Type': 'application/x-www-form-urlencoded'},
+    )
+    try:
+        urllib.request.urlopen(req, timeout=15)
+        return {'ok': True, 'message': 'Google chấp nhận Client ID + Secret'}
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode('utf-8', errors='replace')
+        if 'invalid_client' in raw:
+            return {
+                'ok': False,
+                'message': 'Client Secret SAI — copy lại secret đang Bật trên Google Console',
+            }
+        if 'invalid_grant' in raw:
+            return {'ok': True, 'message': 'Client ID + Secret đúng — có thể kết nối Google'}
+        return {'ok': False, 'message': 'Google từ chối: ' + raw[:120]}
+    except Exception as e:
+        return {'ok': False, 'message': 'Không kiểm tra được: ' + str(e)[:120]}
 
 
 def _validate_oauth_credentials(client_id, client_secret):
@@ -202,6 +245,11 @@ def get_oauth_connect_url(user_id):
     if not oauth_available():
         raise ValueError('Google OAuth chưa cấu hình trên server')
 
+    probe = test_oauth_credentials()
+    if not probe.get('ok'):
+        raise ValueError(probe.get('message') or 'Client Secret không hợp lệ')
+
+    os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
     from google_auth_oauthlib.flow import Flow
 
     creds = get_oauth_credentials()
@@ -276,10 +324,8 @@ def handle_oauth_callback(code, state, authorization_response=None):
     )
     flow.redirect_uri = oauth['redirect_uri']
     try:
-        if authorization_response:
-            flow.fetch_token(authorization_response=authorization_response)
-        else:
-            flow.fetch_token(code=code)
+        # Dùng code trực tiếp — tránh lỗi http/https trên Render reverse proxy
+        flow.fetch_token(code=code)
     except Exception as e:
         msg = str(e).lower()
         if 'invalid_client' in msg:

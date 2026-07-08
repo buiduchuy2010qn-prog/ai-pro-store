@@ -1217,6 +1217,26 @@ body.app-light .app-main {
     border-radius: 4px;
 }
 
+.social-drive-cred-test {
+    font-size: 0.72rem;
+    margin: 0.35rem 0 0;
+    line-height: 1.35;
+    padding: 0.45rem 0.55rem;
+    border-radius: 8px;
+}
+
+.social-drive-cred-test.is-error {
+    color: #b91c1c;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+}
+
+.social-drive-cred-test.is-ok {
+    color: #047857;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+}
+
 .social-drive-save-oauth-btn {
     width: 100%;
     margin-top: 0.25rem;
