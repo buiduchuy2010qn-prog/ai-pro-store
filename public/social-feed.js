@@ -635,14 +635,91 @@
 
     }
 
+    function handleDriveCallbackParams() {
+        const params = new URLSearchParams(window.location.search);
+        const drive = params.get('drive');
+        if (!drive) return;
+        if (drive === 'connected') {
+            window.toast?.('Đã kết nối Google Drive thành công!');
+        } else if (drive === 'error') {
+            window.toast?.('Không kết nối được Google Drive — thử lại hoặc kiểm tra cấu hình OAuth.', true, 6000);
+        }
+        const hash = window.location.hash || '';
+        history.replaceState(null, '', window.location.pathname + hash);
+    }
+
+    async function connectGoogleDrive() {
+        const btn = document.getElementById('social-drive-connect-btn');
+        if (btn) btn.disabled = true;
+        try {
+            const data = await socialApi('/social/drive/connect');
+            if (data.authUrl) {
+                window.location.href = data.authUrl;
+                return;
+            }
+            window.toast?.('Không lấy được liên kết Google', true);
+        } catch (err) {
+            window.toast?.(err.message || 'Lỗi kết nối Google Drive', true);
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    async function disconnectGoogleDrive() {
+        if (!confirm('Ngắt kết nối Google Drive?\nẢnh mới sẽ không sao lưu lên Drive cho đến khi kết nối lại.')) return;
+        try {
+            await socialApi('/social/drive/disconnect', { method: 'POST', body: '{}' });
+            window.toast?.('Đã ngắt kết nối Google Drive');
+            await loadDriveStatus();
+        } catch (err) {
+            window.toast?.(err.message, true);
+        }
+    }
+
+    function renderDriveConnectCard(data) {
+        const card = document.getElementById('social-drive-connect-card');
+        const isAdmin = window.currentUser?.role === 'admin';
+        if (card) card.classList.toggle('hidden', !isAdmin);
+
+        const connectedBox = document.getElementById('social-drive-connected');
+        const disconnectedBox = document.getElementById('social-drive-disconnected');
+        const emailEl = document.getElementById('social-drive-email');
+        const atEl = document.getElementById('social-drive-connected-at');
+        const oauthMissing = document.getElementById('social-drive-oauth-missing');
+        const connectBtn = document.getElementById('social-drive-connect-btn');
+
+        if (!isAdmin) return;
+
+        const connected = !!data.connected;
+        if (connectedBox) connectedBox.classList.toggle('hidden', !connected);
+        if (disconnectedBox) disconnectedBox.classList.toggle('hidden', connected);
+        if (emailEl) emailEl.textContent = data.googleEmail || 'Tài khoản Google';
+        if (atEl) {
+            atEl.textContent = data.connectedAt
+                ? 'Kết nối lúc ' + fmtTime(data.connectedAt)
+                : '';
+            atEl.classList.toggle('hidden', !data.connectedAt);
+        }
+        if (oauthMissing) oauthMissing.classList.toggle('hidden', data.oauthAvailable !== false);
+        if (connectBtn) connectBtn.disabled = data.oauthAvailable === false;
+    }
+
     async function loadDriveStatus() {
         const hint = document.getElementById('social-drive-hint');
         const info = document.getElementById('social-drive-info');
         try {
             const data = await socialApi('/social/drive/status');
             driveAdminBackup = !!data.configured;
+            renderDriveConnectCard(data);
+            const driveEmail = data.googleEmail || data.backupGoogleEmail;
+            if (info && data.method === 'oauth' && driveEmail) {
+                info.innerHTML = '<i class="fab fa-google-drive mr-1"></i>Ảnh đăng được sao lưu tự động lên <strong>Drive ' + esc(driveEmail) + '</strong>.';
+            } else if (info) {
+                info.innerHTML = '<i class="fab fa-google-drive mr-1"></i>Ảnh đăng được sao lưu tự động lên <strong>Drive admin</strong> để quản lý.';
+            }
         } catch (_) {
             driveAdminBackup = false;
+            renderDriveConnectCard({ oauthAvailable: false });
         }
         if (hint) hint.classList.toggle('hidden', driveAdminBackup);
         if (info) info.classList.toggle('hidden', !driveAdminBackup);
@@ -703,6 +780,7 @@
             window.toast?.('Đăng nhập để dùng bảng tin ảnh', true);
             return;
         }
+        handleDriveCallbackParams();
         clearPreview();
         await stopCamera();
         await Promise.all([loadFriendsPanel(), loadDriveStatus()]);
@@ -716,10 +794,16 @@
 
     window.SocialFeed = { loadView, leaveView };
 
+    function initDriveConnect() {
+        document.getElementById('social-drive-connect-btn')?.addEventListener('click', connectGoogleDrive);
+        document.getElementById('social-drive-disconnect')?.addEventListener('click', disconnectGoogleDrive);
+    }
+
     function init() {
         initFabButton();
         initSaveMode();
         initComposerEvents();
+        initDriveConnect();
     }
 
     if (document.readyState === 'loading') {

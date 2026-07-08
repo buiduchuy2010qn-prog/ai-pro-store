@@ -116,6 +116,9 @@ def migrate(conn):
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN IF NOT EXISTS last_fingerprint TEXT')
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN IF NOT EXISTS trust_score INTEGER DEFAULT 100')
         _safe_alter(conn, 'ALTER TABLE orders ADD COLUMN IF NOT EXISTS quantity INTEGER DEFAULT 1')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN IF NOT EXISTS google_drive_refresh_token TEXT')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN IF NOT EXISTS google_drive_email TEXT')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN IF NOT EXISTS google_drive_connected_at TIMESTAMP')
     else:
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN is_blocked INTEGER DEFAULT 0')
         _safe_alter(conn, 'ALTER TABLE processed_bank_transactions ADD COLUMN bank_account TEXT')
@@ -137,6 +140,9 @@ def migrate(conn):
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN last_fingerprint TEXT')
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN trust_score INTEGER DEFAULT 100')
         _safe_alter(conn, 'ALTER TABLE orders ADD COLUMN quantity INTEGER DEFAULT 1')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN google_drive_refresh_token TEXT')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN google_drive_email TEXT')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN google_drive_connected_at TEXT')
     execute(conn, 'UPDATE orders SET quantity = 1 WHERE quantity IS NULL OR quantity < 1')
     for row in fetchall(conn, "SELECT id FROM orders WHERE order_code IS NULL OR order_code = ''"):
         execute(conn, 'UPDATE orders SET order_code = ? WHERE id = ?', (f"DH{row['id']:06d}", row['id']))

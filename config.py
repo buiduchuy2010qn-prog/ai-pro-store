@@ -86,9 +86,15 @@ SECURITY = {
     'alert_cooldown_sec': int(os.getenv('ALERT_COOLDOWN_SEC', '300')),
 }
 
-# Google Drive — đồng bộ ảnh MXH (Service Account + folder ID)
+# Google Drive — đồng bộ ảnh MXH (OAuth admin hoặc Service Account)
 GOOGLE_DRIVE = {
     'folder_id': os.getenv('GOOGLE_DRIVE_FOLDER_ID', '').strip(),
     'service_account_json': os.getenv('GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON', '').strip(),
     'service_account_file': os.getenv('GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE', '').strip(),
+    'oauth_client_id': os.getenv('GOOGLE_OAUTH_CLIENT_ID', '').strip(),
+    'oauth_client_secret': os.getenv('GOOGLE_OAUTH_CLIENT_SECRET', '').strip(),
+    'oauth_redirect_uri': os.getenv(
+        'GOOGLE_OAUTH_REDIRECT_URI',
+        'https://ai-pro-store.onrender.com/api/social/drive/callback',
+    ).strip(),
 }

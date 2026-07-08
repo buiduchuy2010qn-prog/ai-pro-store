@@ -10,7 +10,7 @@ from pathlib import Path
 
 import bcrypt
 import jwt
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, redirect
 
 import database as db
 from config import (
@@ -2391,10 +2391,63 @@ def social_feed():
 @app.route('/api/social/drive/status')
 @auth_required
 def social_drive_status():
-    return jsonify({
-        'configured': drive.is_configured(),
+    conn = db.get_conn()
+    row = db.fetchone(conn,
+        'SELECT google_drive_refresh_token, google_drive_email, google_drive_connected_at FROM users WHERE id = ?',
+        (request.user['id'],))
+    configured = drive.is_configured(conn)
+    method = drive.get_active_method(conn)
+    oauth_admin = drive.get_oauth_admin(conn)
+    db.close(conn)
+    resp = {
+        'configured': configured,
         'adminBackup': True,
-    })
+        'method': method,
+        'oauthAvailable': drive.oauth_available(),
+        'backupGoogleEmail': (oauth_admin or {}).get('google_drive_email'),
+    }
+    if request.user['role'] == 'admin':
+        resp['isAdmin'] = True
+        resp['connected'] = bool(row and row.get('google_drive_refresh_token'))
+        resp['googleEmail'] = row.get('google_drive_email') if row else None
+        resp['connectedAt'] = str(row.get('google_drive_connected_at') or '') if row else None
+    return jsonify(resp)
+
+
+@app.route('/api/social/drive/connect')
+@admin_required
+def social_drive_connect():
+    if not drive.oauth_available():
+        return jsonify({'error': 'Chưa cấu hình Google OAuth trên server (CLIENT_ID / SECRET).'}), 400
+    try:
+        auth_url = drive.get_oauth_connect_url(request.user['id'])
+        return jsonify({'authUrl': auth_url})
+    except Exception as e:
+        print(f'[Drive] connect error: {e}')
+        return jsonify({'error': 'Không tạo được liên kết Google — thử lại sau.'}), 500
+
+
+@app.route('/api/social/drive/callback')
+def social_drive_callback():
+    err = request.args.get('error')
+    if err:
+        print(f'[Drive] OAuth denied: {err}')
+        return redirect('/?drive=error#social')
+    code = request.args.get('code', '').strip()
+    state = request.args.get('state', '').strip()
+    try:
+        drive.handle_oauth_callback(code, state)
+        return redirect('/?drive=connected#social')
+    except Exception as e:
+        print(f'[Drive] callback error: {e}')
+        return redirect('/?drive=error#social')
+
+
+@app.route('/api/social/drive/disconnect', methods=['POST'])
+@admin_required
+def social_drive_disconnect():
+    drive.disconnect_oauth(request.user['id'])
+    return jsonify({'ok': True})
 
 
 @app.route('/api/social/posts', methods=['POST'])
@@ -2412,9 +2465,9 @@ def social_create_post():
     drive_file_id = None
     drive_error = None
     # Tự động sao lưu lên Drive admin (quản lý ảnh mọi người)
-    if drive.is_configured():
+    if drive.is_configured(conn):
         drive_file_id, drive_error = drive.upload_post_image(
-            image, request.user['email'], pid, caption)
+            image, request.user['email'], pid, caption, conn=conn)
         if drive_file_id:
             db.execute(conn, 'UPDATE social_posts SET drive_file_id = ? WHERE id = ?',
                        (drive_file_id, pid))

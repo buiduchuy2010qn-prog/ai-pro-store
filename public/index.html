@@ -484,6 +484,27 @@
                         <h2 class="social-side-title"><i class="fas fa-user-friends text-emerald-500 mr-1"></i>Bạn bè</h2>
                         <div id="social-friends-list" class="social-friends-list pretty-scrollbar"></div>
                     </div>
+                    <div id="social-drive-connect-card" class="glass-card padded social-friends-card social-drive-card hidden">
+                        <h2 class="social-side-title"><i class="fab fa-google-drive text-blue-500 mr-1"></i>Liên kết Google Drive</h2>
+                        <p class="text-sm text-slate-500 mb-3">Sao lưu ảnh MXH vào Drive Google của admin</p>
+                        <div id="social-drive-connected" class="social-drive-connected hidden">
+                            <p class="social-drive-linked-email">
+                                <i class="fas fa-check-circle text-emerald-500 mr-1"></i>
+                                Đã kết nối: <strong id="social-drive-email"></strong>
+                            </p>
+                            <p id="social-drive-connected-at" class="social-drive-linked-at"></p>
+                            <button type="button" id="social-drive-disconnect" class="social-drive-disconnect-btn">
+                                <i class="fas fa-unlink mr-1"></i>Ngắt kết nối
+                            </button>
+                        </div>
+                        <div id="social-drive-disconnected">
+                            <p class="social-drive-setup-hint">Bấm bên dưới để đăng nhập Google và cấp quyền lưu ảnh.</p>
+                            <button type="button" id="social-drive-connect-btn" class="social-drive-connect-btn">
+                                <i class="fab fa-google mr-1"></i>Kết nối Google Drive
+                            </button>
+                            <p id="social-drive-oauth-missing" class="social-drive-oauth-missing hidden">Server chưa cấu hình OAuth — thêm GOOGLE_OAUTH_CLIENT_ID trên Render.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -795,7 +816,7 @@
 </a>
 
 <script src="/security-client.js"></script>
-<script src="/social-feed.js?v=drive2"></script>
+<script src="/social-feed.js?v=drive3"></script>
 <script src="/shop-features.js?v=mxh1"></script>
 <script>
 const API = '/api';
@@ -1061,7 +1082,9 @@ async function showApp() {
     document.getElementById('ai-chat-wrap')?.classList.remove('hidden');
     document.getElementById('zalo-float-btn')?.classList.remove('hidden');
     await refreshUser();
-    navigateTo('products');
+    const driveReturn = new URLSearchParams(location.search).get('drive');
+    const startView = driveReturn ? 'social' : 'products';
+    navigateTo(startView);
     if (!sessionStorage.getItem('social_fab_hint_shown')) {
         sessionStorage.setItem('social_fab_hint_shown', '1');
         setTimeout(() => toast('Bấm nút "Chụp ảnh" góc trái dưới để đăng ảnh cho bạn bè', false, 5500), 900);

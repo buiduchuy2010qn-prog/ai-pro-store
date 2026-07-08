@@ -1098,6 +1098,62 @@ body.app-light .app-main {
     line-height: 1.35;
 }
 
+.social-drive-card .social-drive-connect-btn {
+    width: 100%;
+    padding: 0.65rem 1rem;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.social-drive-card .social-drive-connect-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+}
+
+.social-drive-card .social-drive-disconnect-btn {
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.55rem 0.9rem;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    background: #fff;
+    color: #b91c1c;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.social-drive-linked-email {
+    font-size: 0.85rem;
+    color: var(--al-ink);
+    margin: 0 0 0.25rem;
+}
+
+.social-drive-linked-at {
+    font-size: 0.72rem;
+    color: #64748b;
+    margin: 0 0 0.65rem;
+}
+
+.social-drive-setup-hint {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin: 0 0 0.75rem;
+    line-height: 1.4;
+}
+
+.social-drive-oauth-missing {
+    font-size: 0.72rem;
+    color: #b45309;
+    margin: 0.5rem 0 0;
+    line-height: 1.35;
+}
+
 .social-post-actions {
     display: flex;
     gap: 0.35rem;

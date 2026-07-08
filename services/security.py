@@ -53,6 +53,7 @@ CSRF_EXEMPT = frozenset({
     '/api/health',
     '/api/security/bootstrap',
     '/api/security/turnstile-config',
+    '/api/social/drive/callback',
 })
 
 
