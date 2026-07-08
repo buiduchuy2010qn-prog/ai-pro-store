@@ -4,15 +4,26 @@
  */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
 
-/* Particle canvas — fallback nếu Tailwind chưa load */
+/* Particle canvas — LUÔN nằm dưới UI, không nhận click */
 #particle-canvas {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: -1;
-    opacity: 0.7;
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    pointer-events: none !important;
+    z-index: 0 !important;
+    opacity: 0.55;
+    touch-action: none !important;
+}
+
+/* Mọi UI tương tác nằm TRÊN canvas */
+#auth-screen,
+#app,
+#toast,
+.zalo-float,
+.modal-overlay:not(.hidden) {
+    position: relative;
+    z-index: 2;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -45,25 +56,6 @@ body.shop-carousel-theme {
 body.shop-carousel-theme::before,
 body.shop-carousel-theme::after {
     display: none !important;
-}
-
-body.shop-carousel-theme #app,
-body.shop-carousel-theme #auth-screen {
-    position: relative;
-    z-index: 1;
-}
-
-/* Ambient static glow (no animation) */
-body.shop-carousel-theme #app::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    background:
-        radial-gradient(ellipse 50% 40% at 15% 10%, rgba(59, 130, 246, 0.12), transparent 55%),
-        radial-gradient(ellipse 45% 35% at 85% 20%, rgba(139, 92, 246, 0.1), transparent 50%),
-        radial-gradient(ellipse 60% 30% at 50% 100%, rgba(192, 38, 211, 0.06), transparent 55%);
 }
 
 body.shop-carousel-theme .app-main {
@@ -393,6 +385,10 @@ body.shop-carousel-theme .carousel-track .product-card-price {
 body.shop-carousel-theme .carousel-track .product-card-buy {
     background: linear-gradient(135deg, var(--sc-blue), var(--sc-purple)) !important;
     box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+    position: relative;
+    z-index: 5;
+    pointer-events: auto !important;
+    touch-action: manipulation;
 }
 
 body.shop-carousel-theme .carousel-track .anim-shimmer {

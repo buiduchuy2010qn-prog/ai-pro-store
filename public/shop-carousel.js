@@ -80,13 +80,12 @@
     }
 
     function tick() {
-        if (!running || paused || dragging || reducedMotion) {
-            rafId = global.requestAnimationFrame(tick);
-            return;
+        if (!running || reducedMotion) return;
+        if (!paused && !dragging) {
+            offset += SPEED;
+            normalizeOffset();
+            applyTransform();
         }
-        offset += SPEED;
-        normalizeOffset();
-        applyTransform();
         rafId = global.requestAnimationFrame(tick);
     }
 
@@ -124,17 +123,26 @@
         paused = false;
     }
 
+    function isInteractiveTarget(el) {
+        return el && el.closest('button, a, input, select, textarea, [data-buy], .product-card-buy');
+    }
+
     function bindDrag() {
         if (!viewport) return;
 
         viewport.addEventListener('mousedown', (e) => {
             if (e.button !== 0) return;
+            if (isInteractiveTarget(e.target)) return;
             onDragStart(e.clientX);
         });
-        global.addEventListener('mousemove', (e) => onDragMove(e.clientX));
-        global.addEventListener('mouseup', onDragEnd);
+        viewport.addEventListener('mousemove', (e) => onDragMove(e.clientX));
+        viewport.addEventListener('mouseup', onDragEnd);
+        viewport.addEventListener('mouseleave', () => {
+            if (dragging) onDragEnd();
+        });
 
         viewport.addEventListener('touchstart', (e) => {
+            if (isInteractiveTarget(e.target)) return;
             onDragStart(e.touches[0].clientX);
         }, { passive: true });
         viewport.addEventListener('touchmove', (e) => {
@@ -142,10 +150,14 @@
         }, { passive: true });
         viewport.addEventListener('touchend', onDragEnd);
 
-        viewport.addEventListener('mouseenter', () => { paused = true; });
-        viewport.addEventListener('mouseleave', () => {
-            if (!dragging) paused = false;
-        });
+    }
+
+    function setCarouselVisible(visible) {
+        if (visible) {
+            if (built) startLoop();
+        } else {
+            stopLoop();
+        }
     }
 
     function destroyCarousel() {
@@ -191,7 +203,8 @@
             offset = setWidth;
             built = true;
             applyTransform();
-            startLoop();
+            const section = document.getElementById('view-products');
+            if (section && !section.classList.contains('hidden')) startLoop();
         });
     }
 
@@ -220,12 +233,23 @@
         onGridChange();
     }
 
+    function watchVisibility() {
+        const section = document.getElementById('view-products');
+        if (!section) return;
+        const obs = new MutationObserver(() => {
+            setCarouselVisible(!section.classList.contains('hidden'));
+        });
+        obs.observe(section, { attributes: true, attributeFilter: ['class'] });
+        setCarouselVisible(!section.classList.contains('hidden'));
+    }
+
     function boot() {
         document.body.classList.remove('bright-blue');
         document.body.classList.add('shop-carousel-theme');
         viewport = document.getElementById('products-carousel-viewport');
         bindDrag();
         initObserver();
+        watchVisibility();
 
         global.ShopCarousel = {
             refresh: onGridChange,
