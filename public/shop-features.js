@@ -77,29 +77,8 @@
         });
     }
 
-    /* ─── Camera chụp ảnh đăng nhập (kiểu Loket) ─── */
-
-    const PHOTO_MAX_W = 280;
-    const PHOTO_QUALITY = 0.52;
     const MAX_LOGIN_HISTORY = 30;
-    const authCameras = {};
     let photoLightboxEl = null;
-
-    function compressDataUrl(dataUrl) {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const scale = Math.min(1, PHOTO_MAX_W / Math.max(img.width, 1));
-                canvas.width = Math.round(img.width * scale);
-                canvas.height = Math.round(img.height * scale);
-                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                resolve(canvas.toDataURL('image/jpeg', PHOTO_QUALITY));
-            };
-            img.onerror = reject;
-            img.src = dataUrl;
-        });
-    }
 
     function openPhotoLightbox(src) {
         if (!src) return;
@@ -119,272 +98,6 @@
         }
         photoLightboxEl.querySelector('img').src = src;
         photoLightboxEl.classList.remove('hidden');
-    }
-
-    function createAuthCamera(scope) {
-        const video = document.getElementById(`${scope}-camera-video`);
-        const snapshot = document.getElementById(`${scope}-camera-snapshot`);
-        const placeholder = document.getElementById(`${scope}-camera-placeholder`);
-        const startBtn = document.getElementById(`${scope}-camera-start`);
-        const captureBtn = document.getElementById(`${scope}-camera-capture`);
-        const retakeBtn = document.getElementById(`${scope}-camera-retake`);
-        const statusEl = document.getElementById(`${scope}-camera-status`);
-        const actionLabel = scope === 'checkin' ? 'check-in' : scope === 'register' ? 'đăng ký' : 'đăng nhập';
-
-        if (!video) return null;
-
-        const state = { scope, stream: null, photo: null, cameraDenied: false };
-
-        function setStatus(msg, type = '') {
-            if (!statusEl) return;
-            statusEl.textContent = msg;
-            statusEl.className = 'login-camera-status' + (type ? ` ${type}` : '');
-        }
-
-        function toggle(el, show) {
-            if (el) el.classList.toggle('hidden', !show);
-        }
-
-        async function stopStream() {
-            if (state.stream) {
-                state.stream.getTracks().forEach(t => t.stop());
-                state.stream = null;
-            }
-            video.srcObject = null;
-        }
-
-        function resetUi() {
-            state.photo = null;
-            snapshot.src = '';
-            toggle(snapshot, false);
-            toggle(placeholder, true);
-            toggle(video, false);
-            toggle(startBtn, true);
-            toggle(captureBtn, false);
-            toggle(retakeBtn, false);
-            if (scope === 'checkin') {
-                document.getElementById('checkin-camera-save')?.classList.add('hidden');
-                setStatus('Bật camera để bắt đầu chụp ảnh xác minh');
-            } else {
-                setStatus(`Bật camera và chụp ảnh trước khi ${actionLabel}`);
-            }
-        }
-
-        function fullReset() {
-            stopStream();
-            state.cameraDenied = false;
-            resetUi();
-            if (scope === 'checkin') {
-                document.getElementById('checkin-camera-save')?.classList.add('hidden');
-            }
-        }
-
-        async function startCamera() {
-            if (!navigator.mediaDevices?.getUserMedia) {
-                state.cameraDenied = true;
-                setStatus('Thiết bị không hỗ trợ camera — có thể tiếp tục không ảnh', 'err');
-                return;
-            }
-            try {
-                await stopStream();
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-                    audio: false,
-                });
-                state.stream = stream;
-                video.srcObject = stream;
-                try { await video.play(); } catch (_) {}
-                toggle(placeholder, false);
-                toggle(snapshot, false);
-                toggle(video, true);
-                toggle(startBtn, false);
-                toggle(captureBtn, true);
-                toggle(retakeBtn, false);
-                setStatus('Căn mặt vào khung tròn rồi bấm Chụp ảnh');
-            } catch (_) {
-                state.cameraDenied = true;
-                setStatus('Không truy cập được camera — có thể tiếp tục không ảnh', 'err');
-            }
-        }
-
-        async function capturePhoto() {
-            if (!state.stream && !state.photo) return;
-            if (state.photo) return;
-            await waitForVideoReady();
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth || 640;
-            canvas.height = video.videoHeight || 480;
-            const ctx = canvas.getContext('2d');
-            ctx.translate(canvas.width, 0);
-            ctx.scale(-1, 1);
-            ctx.drawImage(video, 0, 0);
-            try {
-                const compressed = await compressDataUrl(canvas.toDataURL('image/jpeg', 0.85));
-                state.photo = compressed;
-                snapshot.src = compressed;
-                toggle(video, false);
-                toggle(snapshot, true);
-                toggle(captureBtn, false);
-                toggle(retakeBtn, true);
-                toggle(startBtn, false);
-                await stopStream();
-                setStatus(`Đã chụp ảnh — có thể ${actionLabel}`, 'ok');
-                if (scope === 'checkin') {
-                    document.getElementById('checkin-camera-save')?.classList.remove('hidden');
-                    setStatus('Bấm "Lưu check-in" để ghi nhận ảnh + IP & thiết bị', 'ok');
-                }
-            } catch (_) {
-                setStatus('Lỗi xử lý ảnh, thử chụp lại', 'err');
-            }
-        }
-
-        async function retakePhoto() {
-            state.photo = null;
-            snapshot.src = '';
-            toggle(snapshot, false);
-            toggle(retakeBtn, false);
-            await startCamera();
-        }
-
-        startBtn?.addEventListener('click', startCamera);
-        captureBtn?.addEventListener('click', capturePhoto);
-        retakeBtn?.addEventListener('click', retakePhoto);
-
-        async function waitForVideoReady() {
-            if (video.readyState >= 2) return;
-            await new Promise(resolve => {
-                const done = () => { video.removeEventListener('loadeddata', done); resolve(); };
-                video.addEventListener('loadeddata', done);
-                setTimeout(resolve, 1500);
-            });
-        }
-
-        return {
-            state,
-            fullReset,
-            stopStream,
-            startCamera,
-            capturePhoto,
-            waitForVideoReady,
-            getPhoto: () => state.photo,
-            consumePhoto: () => {
-                const p = state.photo;
-                state.photo = null;
-                return p;
-            },
-            validate: () => {
-                if (state.photo) return { ok: true };
-                if (state.cameraDenied || !navigator.mediaDevices?.getUserMedia) {
-                    return { ok: true, noPhoto: true };
-                }
-                return {
-                    ok: false,
-                    message: `Cho phép camera và chụp ảnh xác nhận (kiểu Loket) trước khi ${actionLabel}.`,
-                };
-            },
-        };
-    }
-
-    const MAX_CHECKINS = 40;
-
-    function checkinKey(userId) {
-        return 'loket_checkins_' + userId;
-    }
-
-    function getCheckins(userId) {
-        return readJson(checkinKey(userId), []);
-    }
-
-    function saveCheckin(userId, photo) {
-        if (!userId || !photo) return;
-        const list = getCheckins(userId);
-        list.unshift({
-            time: new Date().toISOString(),
-            device: getClientDevice(),
-            ip: window._clientIp || 'Không xác định',
-            photo,
-            status: 'Đã check-in',
-        });
-        try {
-            writeJson(checkinKey(userId), list.slice(0, MAX_CHECKINS));
-        } catch (_) {
-            const trimmed = list.slice(0, 12).map((c, i) => (i < 6 ? c : { ...c, photo: null }));
-            writeJson(checkinKey(userId), trimmed);
-        }
-    }
-
-    function updateCheckinBar() {
-        const user = window.currentUser;
-        const ipEl = document.getElementById('checkin-bar-ip');
-        const devEl = document.getElementById('checkin-bar-device');
-        if (ipEl) ipEl.textContent = window._clientIp || (user ? getLastLoginIp(user.id) : '—') || '—';
-        if (devEl) devEl.textContent = getClientDevice();
-    }
-
-    function renderCheckinGallery(userId) {
-        const grid = document.getElementById('checkin-history-grid');
-        if (!grid) return;
-        const list = getCheckins(userId);
-        const esc = window.escapeHtml || (s => String(s ?? ''));
-        if (!list.length) {
-            grid.innerHTML = '<div class="profile-empty">Chưa có ảnh check-in. Chụp và lưu bên trái.</div>';
-            return;
-        }
-        grid.innerHTML = list.map((c, i) => `
-            <div class="loket-gallery-card">
-                ${c.photo
-                    ? `<img src="${c.photo}" class="loket-gallery-img" data-checkin-idx="${i}" alt="Check-in ${i + 1}">`
-                    : '<div class="loket-gallery-img loket-gallery-empty"><i class="fas fa-user"></i></div>'}
-                <div class="loket-gallery-meta">
-                    <div class="loket-gallery-time">${esc(formatDateTime(c.time))}</div>
-                    <div class="loket-gallery-ip"><i class="fas fa-globe mr-1"></i>${esc(c.ip)}</div>
-                    <div class="loket-gallery-device text-xs">${esc(c.device)}</div>
-                </div>
-            </div>`).join('');
-        grid.querySelectorAll('.loket-gallery-img[data-checkin-idx]').forEach(img => {
-            img.addEventListener('click', () => openPhotoLightbox(img.src));
-        });
-    }
-
-    function initCheckinCamera() {
-        if (authCameras.checkin) return;
-        const cam = createAuthCamera('checkin');
-        if (!cam) return;
-        authCameras.checkin = cam;
-        document.getElementById('checkin-camera-save')?.addEventListener('click', () => {
-            const user = window.currentUser;
-            if (!user) return;
-            const photo = cam.getPhoto();
-            if (!photo) {
-                window.toast?.('Chụp ảnh trước khi lưu check-in', true);
-                return;
-            }
-            cam.consumePhoto();
-            saveCheckin(user.id, photo);
-            renderCheckinGallery(user.id);
-            window.toast?.('Đã lưu check-in Loket!');
-            cam.fullReset();
-            setTimeout(() => cam.startCamera(), 400);
-        });
-    }
-
-    async function loadCheckinView() {
-        const user = window.currentUser;
-        if (!user) return;
-        if (typeof window.refreshUser === 'function') {
-            try { await window.refreshUser(); } catch (_) {}
-        }
-        initCheckinCamera();
-        updateCheckinBar();
-        renderCheckinGallery(user.id);
-        const cam = authCameras.checkin;
-        if (cam && !cam.getPhoto() && !cam.state.stream && !cam.state.cameraDenied) {
-            setTimeout(() => cam.startCamera(), 300);
-        }
-    }
-
-    function leaveCheckinView() {
-        authCameras.checkin?.fullReset?.();
     }
 
     /* ─── Thiết bị & IP thật cho lịch sử đăng nhập ─── */
@@ -476,12 +189,12 @@
         cancelProfileEdit();
     }
 
-    function gotoCheckinPage() {
+    function gotoSocialPage() {
         closeProfileModal();
         if (typeof window.navigateTo === 'function') {
-            window.navigateTo('checkin');
+            window.navigateTo('social');
         } else {
-            location.hash = 'checkin';
+            location.hash = 'social';
         }
     }
 
@@ -583,7 +296,7 @@
             closeProfileModal();
             document.getElementById('logout-btn')?.click();
         });
-        document.getElementById('profile-goto-checkin')?.addEventListener('click', gotoCheckinPage);
+        document.getElementById('profile-goto-social')?.addEventListener('click', gotoSocialPage);
     }
 
     /* ─── Coupon validation & purchase ─── */
@@ -757,8 +470,6 @@
 
     window.ShopFeatures = {
         recordLoginHistory,
-        loadCheckinView,
-        leaveCheckinView,
         openPhotoLightbox,
         clearPurchaseCoupon,
         renderPurchaseTotals,

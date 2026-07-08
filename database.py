@@ -141,7 +141,56 @@ def migrate(conn):
     for row in fetchall(conn, "SELECT id FROM orders WHERE order_code IS NULL OR order_code = ''"):
         execute(conn, 'UPDATE orders SET order_code = ? WHERE id = ?', (f"DH{row['id']:06d}", row['id']))
     _ensure_security_tables(conn)
+    _ensure_social_tables(conn)
     commit(conn)
+
+
+def _ensure_social_tables(conn):
+    """Bảng tin ảnh MXH — bạn bè & bài đăng."""
+    n = sql_now()
+    if IS_PG:
+        stmts = [
+            '''CREATE TABLE IF NOT EXISTS social_friendships (
+                id SERIAL PRIMARY KEY,
+                requester_id INTEGER NOT NULL REFERENCES users(id),
+                addressee_id INTEGER NOT NULL REFERENCES users(id),
+                status TEXT NOT NULL DEFAULT 'pending',
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                UNIQUE(requester_id, addressee_id))''',
+            '''CREATE TABLE IF NOT EXISTS social_posts (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                caption TEXT DEFAULT '',
+                image_data TEXT NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+        ]
+    else:
+        stmts = [
+            f'''CREATE TABLE IF NOT EXISTS social_friendships (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                requester_id INTEGER NOT NULL,
+                addressee_id INTEGER NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                created_at TEXT DEFAULT ({n}),
+                updated_at TEXT DEFAULT ({n}),
+                FOREIGN KEY (requester_id) REFERENCES users(id),
+                FOREIGN KEY (addressee_id) REFERENCES users(id),
+                UNIQUE(requester_id, addressee_id))''',
+            f'''CREATE TABLE IF NOT EXISTS social_posts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                caption TEXT DEFAULT '',
+                image_data TEXT NOT NULL,
+                created_at TEXT DEFAULT ({n}),
+                FOREIGN KEY (user_id) REFERENCES users(id))''',
+        ]
+    for stmt in stmts:
+        try:
+            execute(conn, stmt)
+            commit(conn)
+        except Exception as e:
+            print(f'[SocialTables] {e}')
 
 
 def _ensure_security_tables(conn):

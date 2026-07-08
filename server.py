@@ -2320,6 +2320,259 @@ def admin_avatar_top_selling():
     } for r in rows]})
 
 
+# ─── Social (MXH mini — đăng ảnh, kết bạn) ───
+
+MAX_SOCIAL_IMAGE_LEN = 700_000
+
+
+def _valid_social_image(data):
+    if not data or not isinstance(data, str):
+        return False
+    if not re.match(r'^data:image/(jpeg|jpg|png|webp);base64,', data, re.I):
+        return False
+    return len(data) <= MAX_SOCIAL_IMAGE_LEN
+
+
+def _social_user_brief(row):
+    return {'id': row['id'], 'fullName': row['name'], 'email': row['email']}
+
+
+def _friend_ids(conn, uid):
+    rows = db.fetchall(conn, '''
+        SELECT requester_id, addressee_id FROM social_friendships
+        WHERE status = 'accepted' AND (requester_id = ? OR addressee_id = ?)
+    ''', (uid, uid))
+    ids = set()
+    for r in rows:
+        other = r['addressee_id'] if r['requester_id'] == uid else r['requester_id']
+        ids.add(other)
+    return ids
+
+
+def _friendship_between(conn, a, b):
+    return db.fetchone(conn, '''
+        SELECT * FROM social_friendships
+        WHERE (requester_id = ? AND addressee_id = ?)
+           OR (requester_id = ? AND addressee_id = ?)
+        ORDER BY id DESC LIMIT 1
+    ''', (a, b, b, a))
+
+
+@app.route('/api/social/feed')
+@auth_required
+def social_feed():
+    uid = request.user['id']
+    conn = db.get_conn()
+    visible = [uid] + list(_friend_ids(conn, uid))
+    placeholders = ','.join(['?'] * len(visible))
+    rows = db.fetchall(conn, f'''
+        SELECT p.id, p.user_id, p.caption, p.image_data, p.created_at,
+               u.name, u.email
+        FROM social_posts p
+        JOIN users u ON u.id = p.user_id
+        WHERE p.user_id IN ({placeholders})
+        ORDER BY p.created_at DESC
+        LIMIT 50
+    ''', tuple(visible))
+    db.close(conn)
+    posts = [{
+        'id': r['id'],
+        'userId': r['user_id'],
+        'caption': r['caption'] or '',
+        'imageData': r['image_data'],
+        'createdAt': str(r['created_at']),
+        'author': {'id': r['user_id'], 'fullName': r['name'], 'email': r['email']},
+        'isMine': r['user_id'] == uid,
+    } for r in rows]
+    return jsonify({'posts': posts})
+
+
+@app.route('/api/social/posts', methods=['POST'])
+@auth_required
+def social_create_post():
+    d = request.get_json(silent=True) or {}
+    caption = sec.sanitize_string(d.get('caption', ''), max_len=500)
+    image = d.get('imageData') or d.get('image_data') or ''
+    if not _valid_social_image(image):
+        return jsonify({'error': 'Ảnh không hợp lệ hoặc quá lớn (tối đa ~500KB).'}), 400
+    conn = db.get_conn()
+    pid = db.insert_returning_id(conn,
+        'INSERT INTO social_posts (user_id, caption, image_data) VALUES (?, ?, ?)',
+        (request.user['id'], caption, image))
+    db.commit(conn)
+    db.close(conn)
+    return jsonify({'ok': True, 'postId': pid}), 201
+
+
+@app.route('/api/social/posts/<int:pid>', methods=['DELETE'])
+@auth_required
+def social_delete_post(pid):
+    conn = db.get_conn()
+    row = db.fetchone(conn, 'SELECT * FROM social_posts WHERE id = ?', (pid,))
+    if not row:
+        db.close(conn)
+        return jsonify({'error': 'Bài đăng không tồn tại.'}), 404
+    if row['user_id'] != request.user['id']:
+        db.close(conn)
+        return jsonify({'error': 'Chỉ xóa được bài của mình.'}), 403
+    db.execute(conn, 'DELETE FROM social_posts WHERE id = ?', (pid,))
+    db.commit(conn)
+    db.close(conn)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/social/users/search')
+@auth_required
+def social_search_users():
+    q = sec.sanitize_string(request.args.get('q', ''), max_len=80).strip()
+    if len(q) < 2:
+        return jsonify({'users': []})
+    uid = request.user['id']
+    like = f'%{q}%'
+    conn = db.get_conn()
+    rows = db.fetchall(conn, '''
+        SELECT id, name, email, is_blocked FROM users
+        WHERE id != ? AND (LOWER(email) LIKE LOWER(?) OR LOWER(name) LIKE LOWER(?))
+        ORDER BY name LIMIT 15
+    ''', (uid, like, like))
+    users = []
+    for r in rows:
+        if r.get('is_blocked'):
+            continue
+        fs = _friendship_between(conn, uid, r['id'])
+        status = 'none'
+        friendship_id = None
+        if fs:
+            friendship_id = fs['id']
+            if fs['status'] == 'accepted':
+                status = 'friends'
+            elif fs['status'] == 'pending':
+                status = 'outgoing' if fs['requester_id'] == uid else 'incoming'
+        users.append({
+            **_social_user_brief(r),
+            'friendshipStatus': status,
+            'friendshipId': friendship_id,
+        })
+    db.close(conn)
+    return jsonify({'users': users})
+
+
+@app.route('/api/social/friends')
+@auth_required
+def social_friends_list():
+    uid = request.user['id']
+    conn = db.get_conn()
+    rows = db.fetchall(conn, '''
+        SELECT f.*,
+               ru.name AS req_name, ru.email AS req_email,
+               au.name AS add_name, au.email AS add_email
+        FROM social_friendships f
+        JOIN users ru ON ru.id = f.requester_id
+        JOIN users au ON au.id = f.addressee_id
+        WHERE f.requester_id = ? OR f.addressee_id = ?
+        ORDER BY f.updated_at DESC
+    ''', (uid, uid))
+    db.close(conn)
+    friends, incoming, outgoing = [], [], []
+    for r in rows:
+        is_req = r['requester_id'] == uid
+        other = {
+            'id': r['addressee_id'] if is_req else r['requester_id'],
+            'fullName': r['add_name'] if is_req else r['req_name'],
+            'email': r['add_email'] if is_req else r['req_email'],
+        }
+        item = {
+            'friendshipId': r['id'],
+            'user': other,
+            'since': str(r.get('updated_at') or r.get('created_at', '')),
+        }
+        if r['status'] == 'accepted':
+            friends.append(item)
+        elif r['status'] == 'pending':
+            (outgoing if is_req else incoming).append(item)
+    return jsonify({'friends': friends, 'incoming': incoming, 'outgoing': outgoing})
+
+
+@app.route('/api/social/friends/request', methods=['POST'])
+@auth_required
+def social_friend_request():
+    d = request.get_json(silent=True) or {}
+    uid = request.user['id']
+    target_id = d.get('userId') or d.get('user_id')
+    email = (d.get('email') or '').strip().lower()
+    conn = db.get_conn()
+    if not target_id and email:
+        row = db.fetchone(conn, 'SELECT id FROM users WHERE LOWER(email) = ?', (email,))
+        if not row:
+            db.close(conn)
+            return jsonify({'error': 'Không tìm thấy người dùng.'}), 404
+        target_id = row['id']
+    try:
+        target_id = int(target_id)
+    except (TypeError, ValueError):
+        db.close(conn)
+        return jsonify({'error': 'Chọn người dùng hợp lệ.'}), 400
+    if target_id == uid:
+        db.close(conn)
+        return jsonify({'error': 'Không thể kết bạn với chính mình.'}), 400
+    target = db.fetchone(conn, 'SELECT id, is_blocked FROM users WHERE id = ?', (target_id,))
+    if not target or target.get('is_blocked'):
+        db.close(conn)
+        return jsonify({'error': 'Người dùng không tồn tại.'}), 404
+    existing = _friendship_between(conn, uid, target_id)
+    if existing:
+        if existing['status'] == 'accepted':
+            db.close(conn)
+            return jsonify({'error': 'Đã là bạn bè.'}), 400
+        if existing['status'] == 'pending':
+            if existing['requester_id'] == target_id and existing['addressee_id'] == uid:
+                db.execute(conn,
+                    f"UPDATE social_friendships SET status='accepted', updated_at={db.sql_now()} WHERE id = ?",
+                    (existing['id'],))
+                db.commit(conn)
+                db.close(conn)
+                return jsonify({'ok': True, 'status': 'accepted'})
+            db.close(conn)
+            return jsonify({'error': 'Đã gửi lời mời kết bạn.'}), 400
+    fid = db.insert_returning_id(conn,
+        'INSERT INTO social_friendships (requester_id, addressee_id, status) VALUES (?, ?, ?)',
+        (uid, target_id, 'pending'))
+    db.commit(conn)
+    db.close(conn)
+    return jsonify({'ok': True, 'friendshipId': fid, 'status': 'pending'}), 201
+
+
+@app.route('/api/social/friends/respond', methods=['POST'])
+@auth_required
+def social_friend_respond():
+    d = request.get_json(silent=True) or {}
+    action = (d.get('action') or '').strip().lower()
+    if action not in ('accept', 'reject'):
+        return jsonify({'error': 'Hành động không hợp lệ.'}), 400
+    try:
+        fid = int(d.get('friendshipId') or d.get('friendship_id'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Lời mời không hợp lệ.'}), 400
+    uid = request.user['id']
+    conn = db.get_conn()
+    row = db.fetchone(conn, 'SELECT * FROM social_friendships WHERE id = ?', (fid,))
+    if not row or row['status'] != 'pending':
+        db.close(conn)
+        return jsonify({'error': 'Lời mời không tồn tại.'}), 404
+    if row['addressee_id'] != uid:
+        db.close(conn)
+        return jsonify({'error': 'Bạn không thể phản hồi lời mời này.'}), 403
+    if action == 'accept':
+        db.execute(conn,
+            f"UPDATE social_friendships SET status='accepted', updated_at={db.sql_now()} WHERE id = ?",
+            (fid,))
+    else:
+        db.execute(conn, 'DELETE FROM social_friendships WHERE id = ?', (fid,))
+    db.commit(conn)
+    db.close(conn)
+    return jsonify({'ok': True, 'status': 'accepted' if action == 'accept' else 'rejected'})
+
+
 # ─── Static ───
 @app.route('/')
 def index():

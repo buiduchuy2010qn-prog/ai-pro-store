@@ -747,99 +747,360 @@ body.app-light .app-main {
     opacity: 0.4;
 }
 
-/* ─── Trang Chụp ảnh Loket (tính năng riêng) ─── */
-.loket-checkin-card {
-    text-align: center;
+/* ─── MXH mini — Bảng tin ảnh ─── */
+.social-composer-card {
+    border: 1.5px solid var(--al-border);
 }
 
-.loket-checkin-badge {
+.social-composer-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--al-purple);
-    background: linear-gradient(135deg, #f5f3ff, #eff6ff);
+    color: var(--al-blue);
+    background: linear-gradient(135deg, #eff6ff, #f5f3ff);
     border: 1px solid var(--al-border);
     padding: 0.35rem 0.85rem;
     border-radius: 999px;
-    margin-bottom: 1rem;
+    margin-bottom: 0.85rem;
 }
 
-.loket-camera-box {
-    border: none;
-    background: transparent;
-    padding: 0;
-}
-
-.loket-camera-frame {
-    width: 220px !important;
-    height: 220px !important;
-    margin-bottom: 0.5rem;
-}
-
-.loket-gallery {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 0.75rem;
-    max-height: 520px;
-    overflow-y: auto;
-}
-
-.loket-gallery-card {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    overflow: hidden;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.loket-gallery-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.12);
-}
-
-.loket-gallery-img {
+.social-caption-input {
     width: 100%;
-    aspect-ratio: 1;
-    object-fit: cover;
-    cursor: pointer;
-    display: block;
+    border: 1.5px solid var(--al-border);
+    border-radius: 14px;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    resize: vertical;
+    min-height: 52px;
+    background: #fff;
+    margin-bottom: 0.75rem;
 }
 
-.loket-gallery-empty {
+.social-caption-input:focus {
+    outline: none;
+    border-color: var(--al-blue-light);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.social-preview-wrap {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #f8fafc, #eff6ff);
+    border: 1.5px dashed var(--al-border);
+    min-height: 220px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #e2e8f0;
-    color: #94a3b8;
-    font-size: 1.5rem;
 }
 
-.loket-gallery-meta {
-    padding: 0.5rem 0.6rem;
-    font-size: 0.7rem;
+.social-preview-img,
+.social-preview-video {
+    width: 100%;
+    max-height: 360px;
+    object-fit: contain;
+    display: block;
+    background: #0f172a;
+}
+
+.social-preview-video {
+    transform: scaleX(-1);
+}
+
+.social-preview-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--al-muted);
+    padding: 2rem;
+    text-align: center;
+    font-size: 0.85rem;
+}
+
+.social-preview-placeholder i {
+    font-size: 2.5rem;
+    color: var(--al-blue-light);
+    opacity: 0.7;
+}
+
+.social-composer-status {
+    font-size: 0.78rem;
+    color: var(--al-muted);
+    margin: 0.6rem 0;
+    text-align: center;
+}
+
+.social-composer-status.ok {
+    color: #059669;
+    font-weight: 600;
+}
+
+.social-composer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.social-action-btn {
+    padding: 0.55rem 1rem;
+    border-radius: 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.social-action-btn.outline {
+    background: #fff;
+    color: var(--al-blue);
+    border: 1.5px solid var(--al-border);
+}
+
+.social-action-btn.primary {
+    background: linear-gradient(135deg, var(--al-blue), var(--al-purple));
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
+}
+
+.social-action-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.social-action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.social-feed-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.social-post-card {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--al-border);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.06);
+}
+
+.social-post-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem 0.5rem;
+}
+
+.social-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--al-blue), var(--al-purple));
+    color: #fff;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.social-post-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.social-post-author {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--al-ink);
+}
+
+.social-post-time {
+    font-size: 0.75rem;
     color: var(--al-muted);
 }
 
-.loket-gallery-time {
-    font-weight: 600;
+.social-delete-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0.35rem;
+    border-radius: 8px;
+}
+
+.social-delete-btn:hover {
+    color: #dc2626;
+    background: #fef2f2;
+}
+
+.social-post-caption {
+    padding: 0 1rem 0.65rem;
+    font-size: 0.9rem;
     color: var(--al-ink);
-    font-size: 0.75rem;
+    white-space: pre-wrap;
 }
 
-.loket-gallery-ip {
-    margin-top: 0.2rem;
-    font-family: ui-monospace, monospace;
-    color: var(--al-blue);
+.social-post-img {
+    width: 100%;
+    max-height: 480px;
+    object-fit: cover;
+    cursor: zoom-in;
+    display: block;
+    background: #e2e8f0;
 }
 
-.loket-gallery-device {
-    margin-top: 0.15rem;
-    opacity: 0.85;
+.social-side-title {
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
 }
 
-.profile-checkin-link .btn-primary {
+.social-search-input {
+    width: 100%;
+    border: 1.5px solid var(--al-border);
+    border-radius: 12px;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.85rem;
+    background: #fff;
+}
+
+.social-search-input:focus {
+    outline: none;
+    border-color: var(--al-blue-light);
+}
+
+.social-search-results,
+.social-friends-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 0.65rem;
+}
+
+.social-user-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.social-user-row:last-child {
+    border-bottom: none;
+}
+
+.social-user-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.social-user-email {
+    font-size: 0.72rem;
+    color: var(--al-muted);
+    word-break: break-all;
+}
+
+.social-user-actions {
+    display: flex;
+    gap: 0.35rem;
+    flex-shrink: 0;
+}
+
+.social-mini-btn {
+    padding: 0.35rem 0.65rem;
+    border-radius: 9px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid var(--al-border);
+    background: #fff;
+}
+
+.social-mini-btn.primary {
+    background: var(--al-blue);
+    color: #fff;
+    border-color: var(--al-blue);
+}
+
+.social-mini-btn.accept {
+    background: #059669;
+    color: #fff;
+    border-color: #059669;
+}
+
+.social-mini-btn.reject {
+    color: #64748b;
+}
+
+.social-tag {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.social-tag.friends {
+    background: #ecfdf5;
+    color: #059669;
+}
+
+.social-tag.pending {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.social-pending-badge {
+    background: #ef4444;
+    color: #fff;
+    font-size: 0.65rem;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.3rem;
+}
+
+.social-empty,
+.social-hint {
+    text-align: center;
+    color: var(--al-muted);
+    font-size: 0.85rem;
+    padding: 1.5rem 1rem;
+}
+
+.social-empty i {
+    font-size: 2rem;
+    opacity: 0.35;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.social-loading {
+    text-align: center;
+    color: var(--al-muted);
+    padding: 2rem;
+    font-size: 0.9rem;
+}
+
+.social-loading.small {
+    padding: 0.75rem;
+    font-size: 0.8rem;
+}
+
+.profile-social-link .btn-primary {
     background: linear-gradient(135deg, var(--al-blue), var(--al-purple));
 }
 

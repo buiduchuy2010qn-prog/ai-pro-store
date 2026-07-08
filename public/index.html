@@ -145,7 +145,7 @@
                 <button data-view="wallet" class="nav-btn nav-pill"><i class="fas fa-wallet mr-1"></i>Ví tiền</button>
                 <button data-view="orders" class="nav-btn nav-pill"><i class="fas fa-shopping-bag mr-1"></i>Đơn hàng</button>
                 <button data-view="transactions" class="nav-btn nav-pill"><i class="fas fa-clock-rotate-left mr-1"></i>Lịch sử</button>
-                <button data-view="checkin" class="nav-btn nav-pill"><i class="fas fa-camera mr-1"></i>Chụp ảnh</button>
+                <button data-view="social" class="nav-btn nav-pill"><i class="fas fa-images mr-1"></i>Bảng tin</button>
                 <button type="button" id="nav-profile-btn" class="nav-btn nav-pill"><i class="fas fa-user-circle mr-1"></i>Hồ sơ</button>
                 <button data-view="dressroom" class="nav-btn nav-pill"><i class="fas fa-shirt mr-1"></i>Phòng Thay Đồ</button>
                 <button data-view="admin" id="admin-nav-btn" class="nav-btn nav-pill hidden"><i class="fas fa-shield-alt mr-1"></i>Quản trị</button>
@@ -171,7 +171,7 @@
             <button data-view="wallet" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-wallet mr-2 w-4"></i>Ví tiền</button>
             <button data-view="orders" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-shopping-bag mr-2 w-4"></i>Đơn hàng</button>
             <button data-view="transactions" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-clock-rotate-left mr-2 w-4"></i>Lịch sử</button>
-            <button data-view="checkin" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-camera mr-2 w-4"></i>Chụp ảnh</button>
+            <button data-view="social" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-images mr-2 w-4"></i>Bảng tin</button>
             <button data-view="dressroom" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-shirt mr-2 w-4"></i>Phòng Thay Đồ</button>
             <button data-view="admin" id="admin-mobile-nav-btn" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium hidden"><i class="fas fa-shield-alt mr-2 w-4"></i>Quản trị</button>
             <button type="button" id="profile-mobile-btn" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-user-circle mr-2 w-4"></i>Hồ sơ</button>
@@ -394,43 +394,58 @@
             </div>
         </section>
 
-        <!-- Chụp ảnh Loket — tính năng riêng -->
-        <section id="view-checkin" class="hidden app-section">
+        <!-- MXH mini — đăng ảnh, kết bạn -->
+        <section id="view-social" class="hidden app-section">
             <div class="section-header mb-2">
                 <div>
-                    <h1 class="page-title"><i class="fas fa-camera text-brand-500 mr-2"></i>Chụp ảnh Loket</h1>
-                    <p class="page-subtitle">Tính năng xác minh khuôn mặt — lưu ảnh kèm IP &amp; thiết bị</p>
+                    <h1 class="page-title"><i class="fas fa-images text-brand-500 mr-2"></i>Bảng tin ảnh</h1>
+                    <p class="page-subtitle">Đăng ảnh kiểu mạng xã hội — chỉ bạn bè mới xem được trên web</p>
                 </div>
             </div>
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <div class="glass-card padded loket-checkin-card">
-                    <div class="loket-checkin-badge"><i class="fas fa-shield-alt"></i> Xác minh Loket</div>
-                    <div class="login-camera-box loket-camera-box">
-                        <div class="login-camera-frame loket-camera-frame">
-                            <video id="checkin-camera-video" class="login-camera-video hidden" autoplay playsinline muted></video>
-                            <img id="checkin-camera-snapshot" class="login-camera-snapshot hidden" alt="Ảnh check-in">
-                            <div id="checkin-camera-placeholder" class="login-camera-placeholder">
-                                <i class="fas fa-user-circle"></i>
-                                <span>Nhìn thẳng vào camera</span>
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div class="xl:col-span-2 space-y-5">
+                    <div class="glass-card padded social-composer-card">
+                        <div class="social-composer-badge"><i class="fas fa-pen-fancy"></i> Tạo bài đăng mới</div>
+                        <textarea id="social-caption" class="social-caption-input" rows="2" maxlength="500" placeholder="Viết chú thích cho ảnh..."></textarea>
+                        <div class="social-preview-wrap">
+                            <video id="social-camera-video" class="social-preview-video hidden" autoplay playsinline muted></video>
+                            <img id="social-preview" class="social-preview-img hidden" alt="Xem trước ảnh">
+                            <div id="social-preview-placeholder" class="social-preview-placeholder">
+                                <i class="fas fa-image"></i>
+                                <span>Chọn ảnh hoặc chụp bằng camera</span>
                             </div>
                         </div>
-                        <div class="login-camera-actions mt-4">
-                            <button type="button" id="checkin-camera-start" class="login-camera-btn outline"><i class="fas fa-video mr-1"></i>Bật camera</button>
-                            <button type="button" id="checkin-camera-capture" class="login-camera-btn primary hidden"><i class="fas fa-camera mr-1"></i>Chụp ảnh</button>
-                            <button type="button" id="checkin-camera-save" class="login-camera-btn primary hidden"><i class="fas fa-check mr-1"></i>Lưu check-in</button>
-                            <button type="button" id="checkin-camera-retake" class="login-camera-btn outline hidden"><i class="fas fa-redo mr-1"></i>Chụp lại</button>
-                        </div>
-                        <p id="checkin-camera-status" class="login-camera-status">Bật camera để bắt đầu chụp ảnh xác minh</p>
-                        <div class="profile-ip-device-bar">
-                            <span><i class="fas fa-globe mr-1"></i>IP: <strong id="checkin-bar-ip">—</strong></span>
-                            <span><i class="fas fa-laptop mr-1"></i><span id="checkin-bar-device">—</span></span>
+                        <p id="social-composer-status" class="social-composer-status">Chọn ảnh từ máy hoặc chụp bằng camera</p>
+                        <div class="social-composer-actions">
+                            <input type="file" id="social-file-input" accept="image/*" class="hidden">
+                            <button type="button" id="social-file-btn" class="social-action-btn outline"><i class="fas fa-folder-open mr-1"></i>Chọn ảnh</button>
+                            <button type="button" id="social-camera-start" class="social-action-btn outline"><i class="fas fa-camera mr-1"></i>Camera</button>
+                            <button type="button" id="social-camera-capture" class="social-action-btn outline hidden"><i class="fas fa-camera-retro mr-1"></i>Chụp ảnh</button>
+                            <button type="button" id="social-retake-btn" class="social-action-btn outline hidden"><i class="fas fa-redo mr-1"></i>Chọn lại</button>
+                            <button type="button" id="social-post-btn" class="social-action-btn primary hidden"><i class="fas fa-paper-plane mr-1"></i>Đăng bài</button>
                         </div>
                     </div>
+                    <div id="social-feed-list" class="social-feed-list"></div>
                 </div>
-                <div class="glass-card padded">
-                    <h2 class="font-bold text-lg mb-1"><i class="fas fa-images text-violet-500 mr-1"></i>Lịch sử chụp ảnh</h2>
-                    <p class="text-sm text-slate-500 mb-4">Các lần check-in đã lưu trên thiết bị này</p>
-                    <div id="checkin-history-grid" class="loket-gallery pretty-scrollbar"></div>
+                <div class="space-y-4">
+                    <div class="glass-card padded social-friends-card">
+                        <h2 class="social-side-title"><i class="fas fa-user-plus text-violet-500 mr-1"></i>Kết bạn</h2>
+                        <p class="text-sm text-slate-500 mb-3">Tìm theo email hoặc tên để gửi lời mời</p>
+                        <input id="social-search" type="search" class="social-search-input" placeholder="vd: email@example.com" autocomplete="off">
+                        <div id="social-search-results" class="social-search-results pretty-scrollbar"></div>
+                    </div>
+                    <div class="glass-card padded social-friends-card">
+                        <h2 class="social-side-title">
+                            <i class="fas fa-inbox text-brand-500 mr-1"></i>Lời mời
+                            <span id="social-pending-badge" class="social-pending-badge hidden">0</span>
+                        </h2>
+                        <div id="social-pending-in" class="social-friends-list pretty-scrollbar"></div>
+                        <div id="social-pending-out" class="social-friends-list pretty-scrollbar mt-2"></div>
+                    </div>
+                    <div class="glass-card padded social-friends-card">
+                        <h2 class="social-side-title"><i class="fas fa-user-friends text-emerald-500 mr-1"></i>Bạn bè</h2>
+                        <div id="social-friends-list" class="social-friends-list pretty-scrollbar"></div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -626,9 +641,9 @@
         </div>
         <div class="profile-modal-body pretty-scrollbar">
             <div id="profile-panel-info">
-                <div class="profile-checkin-link mb-4">
-                    <button type="button" id="profile-goto-checkin" class="btn-primary w-full py-2.5 text-sm">
-                        <i class="fas fa-camera mr-1"></i>Mở tính năng Chụp ảnh Loket
+                <div class="profile-social-link mb-4">
+                    <button type="button" id="profile-goto-social" class="btn-primary w-full py-2.5 text-sm">
+                        <i class="fas fa-images mr-1"></i>Mở Bảng tin ảnh (MXH)
                     </button>
                 </div>
                 <div id="profile-view-mode" class="profile-info-grid">
@@ -735,7 +750,8 @@
 </a>
 
 <script src="/security-client.js"></script>
-<script src="/shop-features.js?v=loket-page"></script>
+<script src="/social-feed.js?v=mxh1"></script>
+<script src="/shop-features.js?v=mxh1"></script>
 <script>
 const API = '/api';
 
@@ -997,7 +1013,7 @@ async function showApp() {
     navigateTo('products');
     if (!sessionStorage.getItem('profile_hint_shown')) {
         sessionStorage.setItem('profile_hint_shown', '1');
-        setTimeout(() => toast('Bấm "Chụp ảnh" trên menu để dùng tính năng Loket', false, 5500), 900);
+        setTimeout(() => toast('Bấm "Bảng tin" trên menu để đăng ảnh và kết bạn', false, 5500), 900);
     }
 }
 
@@ -1017,7 +1033,7 @@ function navigateTo(view) {
         if (location.hash !== '#' + view) location.hash = view;
         return;
     }
-    const dressAliases = { avatar: 'dressroom', decoration: 'dressroom' };
+    const dressAliases = { avatar: 'dressroom', decoration: 'dressroom', checkin: 'social' };
     const viewId = dressAliases[view] || view;
     const prevView = currentView;
     currentView = viewId;
@@ -1039,8 +1055,8 @@ function navigateTo(view) {
     if (view === 'transactions') loadMyTransactions();
     if (viewId === 'dressroom') loadDressRoom();
     if (viewId === 'admin') loadAdmin();
-    if (prevView === 'checkin' && viewId !== 'checkin') ShopFeatures?.leaveCheckinView?.();
-    if (viewId === 'checkin') ShopFeatures?.loadCheckinView?.();
+    if (prevView === 'social' && viewId !== 'social') SocialFeed?.leaveView?.();
+    if (viewId === 'social') SocialFeed?.loadView?.();
     highlightNav(viewId);
     if (location.hash !== '#' + viewId) location.hash = viewId;
 }
@@ -2368,6 +2384,7 @@ window.escapeHtml = escapeHtml;
 window.toast = toast;
 window.refreshUser = refreshUser;
 window.navigateTo = navigateTo;
+window.api = api;
 
 /* ─── Init ─── */
 (async () => {
@@ -2386,7 +2403,7 @@ window.navigateTo = navigateTo;
             const h = location.hash.replace('#', '');
             const viewMap = { avatar: 'dressroom', decoration: 'dressroom' };
             const v = viewMap[h] || h;
-            if (['products', 'wallet', 'orders', 'transactions', 'checkin', 'dressroom', 'avatar', 'decoration', 'admin'].includes(h)) navigateTo(v);
+            if (['products', 'wallet', 'orders', 'transactions', 'social', 'checkin', 'dressroom', 'avatar', 'decoration', 'admin'].includes(h)) navigateTo(v);
         } catch {
             clearToken();
             showAuth();
