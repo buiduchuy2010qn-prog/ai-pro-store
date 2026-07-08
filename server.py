@@ -2731,7 +2731,7 @@ def social_video_preview_upload():
             return jsonify({'error': 'File video rỗng.'}), 400
         if len(raw) > MAX_SOCIAL_VIDEO_BYTES:
             return jsonify({'error': 'Video quá lớn (tối đa ~8MB). Quay ngắn hơn.'}), 400
-        drive_file_id, err = drive.upload_preview_bytes(
+        drive_file_id, err, embed_url = drive.upload_preview_bytes(
             raw, mime, ext, request.user['email'], conn=conn)
         if err:
             return jsonify({'error': err}), 400
@@ -2740,6 +2740,7 @@ def social_video_preview_upload():
             'ok': True,
             'driveFileId': drive_file_id,
             'previewUrl': f'/api/social/preview/{drive_file_id}?t={token}',
+            'embedUrl': embed_url or drive.drive_embed_url(drive_file_id),
         }), 201
     finally:
         db.close(conn)

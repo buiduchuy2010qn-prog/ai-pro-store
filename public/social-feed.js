@@ -40,6 +40,7 @@
     /** Video đã tải lên Drive để xem trước — đăng bài dùng lại file này */
     let pendingDriveFileId = null;
     let pendingDriveStreamUrl = null;
+    let pendingDriveEmbedUrl = null;
     let searchTimer = null;
     /** 'user' = trước, 'environment' = sau */
     let cameraFacing = 'user';
@@ -137,6 +138,44 @@
         const d = vid?.duration;
         if (d && Number.isFinite(d) && d > 0 && d !== Infinity) return d;
         return lastRecordDurationSec > 0 ? lastRecordDurationSec : 0;
+    }
+
+    function hideDriveEmbedPreview() {
+        const iframe = document.getElementById('social-preview-drive');
+        if (iframe) {
+            iframe.src = 'about:blank';
+            iframe.classList.add('hidden');
+        }
+        document.querySelector('.social-locket-frame')?.classList.remove('is-drive-embed');
+    }
+
+    function setupDriveEmbedPreview(embedUrl, blob) {
+        if (!embedUrl) return;
+        const frame = document.querySelector('.social-locket-frame');
+        const iframe = document.getElementById('social-preview-drive');
+        const previewVid = document.getElementById('social-preview-video');
+        frame?.classList.add('is-video-preview', 'is-drive-embed');
+        hidePreviewPlayBtn();
+        if (previewVid) {
+            previewVid.pause?.();
+            previewVid.removeAttribute('src');
+            previewVid.load();
+            previewVid.classList.add('hidden');
+        }
+        if (iframe) {
+            iframe.src = embedUrl;
+            iframe.classList.remove('hidden');
+        }
+        if (blob) {
+            const durPart = lastRecordDurationSec > 0
+                ? '<span><i class="fas fa-clock"></i> ' + formatDurationLabel(lastRecordDurationSec) + '</span>'
+                : '';
+            setMediaInfo([
+                durPart,
+                '<span><i class="fas fa-database"></i> ' + formatFileSize(blob.size) + '</span>',
+                '<span><i class="fab fa-google-drive"></i> Drive</span>',
+            ].filter(Boolean), true);
+        }
     }
 
     function setupPreviewVideoElement(vid, playUrl, blob, posterUrl) {
@@ -395,8 +434,9 @@
             const data = await uploadVideoPreviewToDrive(blob);
             pendingDriveFileId = data.driveFileId || null;
             pendingDriveStreamUrl = data.previewUrl || null;
+            pendingDriveEmbedUrl = data.embedUrl || null;
             showPreview(pendingDriveStreamUrl, 'video', blob, poster);
-            window.toast?.('Video đã lên Drive — bấm ▶ để xem lại', false, 2800);
+            window.toast?.('Video trên Google Drive — bấm ▶ trong khung để xem', false, 3200);
         } finally {
             if (postBtn) postBtn.disabled = false;
         }
@@ -426,10 +466,11 @@
         silentAudioCtx = null;
     }
 
-    /** Gắn track âm thanh im lặng để container WebM/MP4 phát được sau khi quay */
+    /** Gắn track âm thanh im lặng nếu stream chưa có audio (WebM không audio hay lỗi phát) */
     function buildRecordStream(videoStream) {
         releaseSilentAudio();
         if (!videoStream) return null;
+        if (videoStream.getAudioTracks().length > 0) return videoStream;
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (!AudioCtx) return videoStream;
         try {
@@ -462,10 +503,16 @@
     }
 
     function getRecorderMime() {
-        const isApple = /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+        const ua = navigator.userAgent || '';
+        const isApple = /iPhone|iPad|iPod/i.test(ua);
+        const isWindows = /Windows/i.test(ua);
+        const mp4Types = ['video/mp4', 'video/mp4;codecs=avc1', 'video/mp4;codecs="avc1.42E01E,mp4a.40.2"'];
+        const webmTypes = ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8', 'video/webm;codecs=vp9', 'video/webm'];
         const candidates = isApple
-            ? ['video/mp4', 'video/webm;codecs=vp8,opus', 'video/webm;codecs=vp8', 'video/webm', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp9']
-            : ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8', 'video/webm;codecs=vp9', 'video/webm', 'video/mp4'];
+            ? [...mp4Types, ...webmTypes]
+            : isWindows
+                ? [...mp4Types, ...webmTypes]
+                : [...webmTypes, ...mp4Types];
         for (const mime of candidates) {
             if (MediaRecorder.isTypeSupported(mime)) return mime;
         }
@@ -643,6 +690,7 @@
             pendingVideoBlob = null;
             pendingDriveFileId = null;
             pendingDriveStreamUrl = null;
+            pendingDriveEmbedUrl = null;
             revokePreviewObjectUrl();
         }
 
@@ -654,15 +702,20 @@
             if (!isVid) preview.src = src;
             else preview.src = '';
         }
-        if (previewVid) {
-            if (isVid) {
-                const playUrl = pendingDriveStreamUrl || previewObjectUrl || src;
-                setupPreviewVideoElement(previewVid, playUrl, pendingVideoBlob, previewPosterUrl);
-            } else {
-                hidePreviewPlayBtn();
-                previewVid.pause?.();
-                previewVid.src = '';
-                previewVid.classList.add('hidden');
+        if (isVid && pendingDriveEmbedUrl) {
+            setupDriveEmbedPreview(pendingDriveEmbedUrl, pendingVideoBlob);
+        } else {
+            hideDriveEmbedPreview();
+            if (previewVid) {
+                if (isVid) {
+                    const playUrl = pendingDriveStreamUrl || previewObjectUrl || src;
+                    setupPreviewVideoElement(previewVid, playUrl, pendingVideoBlob, previewPosterUrl);
+                } else {
+                    hidePreviewPlayBtn();
+                    previewVid.pause?.();
+                    previewVid.src = '';
+                    previewVid.classList.add('hidden');
+                }
             }
         }
         placeholder?.classList.add('hidden');
@@ -680,9 +733,11 @@
         updateComposerMode();
         setComposerStatus(
             isVid
-                ? (pendingDriveStreamUrl
-                    ? 'Video trên Google Drive — bấm ▶ để xem lại, rồi Đăng hoặc Hủy'
-                    : 'Bấm ▶ trên video để xem lại — Đăng, Lưu hoặc Hủy')
+                ? (pendingDriveEmbedUrl
+                    ? 'Video trên Google Drive — bấm ▶ trong khung để xem, rồi Đăng hoặc Hủy'
+                    : pendingDriveStreamUrl
+                        ? 'Video trên Drive — bấm ▶ để xem lại, rồi Đăng hoặc Hủy'
+                        : 'Bấm ▶ trên video để xem lại — Đăng, Lưu hoặc Hủy')
                 : 'Đăng ảnh, Lưu vào máy, hoặc Hủy',
             'ok'
         );
@@ -714,9 +769,11 @@
         previewPosterUrl = null;
         pendingDriveFileId = null;
         pendingDriveStreamUrl = null;
+        pendingDriveEmbedUrl = null;
         revokePreviewObjectUrl();
         releaseSilentAudio();
         hidePreviewPlayBtn();
+        hideDriveEmbedPreview();
         document.querySelector('.social-locket-frame')?.classList.remove('is-video-preview');
         const preview = document.getElementById('social-preview');
         const previewVid = document.getElementById('social-preview-video');
@@ -785,7 +842,12 @@
     }
 
     async function startVideoRecord() {
-        if (!cameraStream) await startCamera();
+        const needsAudio = composerMode === 'video';
+        const hasAudio = !!cameraStream?.getAudioTracks?.().length;
+        if (!cameraStream || (needsAudio && !hasAudio)) {
+            await stopCamera();
+            await startCamera();
+        }
         if (!cameraStream) return;
         const mime = getRecorderMime();
         if (!mime || typeof MediaRecorder === 'undefined') {
@@ -900,20 +962,26 @@
 
     async function requestCameraStream() {
         const facing = cameraFacing;
-        const constraints = facing === 'environment'
+        const wantAudio = composerMode === 'video';
+        const baseVideo = facing === 'environment'
             ? [
-                { video: { facingMode: { exact: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
-                { video: { facingMode: 'environment' }, audio: false },
-                { video: { facingMode: 'user' }, audio: false },
-                { video: true, audio: false },
+                { video: { facingMode: { exact: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } },
+                { video: { facingMode: 'environment' } },
+                { video: { facingMode: 'user' } },
+                { video: true },
             ]
             : [
-                { video: { facingMode: { exact: 'user' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
-                { video: { facingMode: 'user' }, audio: false },
-                { video: true, audio: false },
+                { video: { facingMode: { exact: 'user' }, width: { ideal: 1280 }, height: { ideal: 720 } } },
+                { video: { facingMode: 'user' } },
+                { video: true },
             ];
+        const attempts = [];
+        if (wantAudio) {
+            for (const v of baseVideo) attempts.push({ ...v, audio: true });
+        }
+        for (const v of baseVideo) attempts.push({ ...v, audio: false });
         let lastErr;
-        for (const c of constraints) {
+        for (const c of attempts) {
             try {
                 return await navigator.mediaDevices.getUserMedia(c);
             } catch (e) {

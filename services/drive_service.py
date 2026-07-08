@@ -861,6 +861,73 @@ def _user_email_slug(user_email):
     return re.sub(r'[^a-zA-Z0-9@._-]', '_', (user_email or 'user').lower())
 
 
+def drive_embed_url(file_id):
+    return f'https://drive.google.com/file/d/{file_id}/preview'
+
+
+def share_file_anyone_reader(file_id, conn=None):
+    """Cho phép xem embed Google Drive (preview iframe)."""
+    own_conn = conn is None
+    if own_conn:
+        from database import get_conn
+        conn = get_conn()
+    service = _get_admin_drive_service(conn)
+    if not service:
+        if own_conn:
+            from database import close
+            close(conn)
+        return False
+    try:
+        service.permissions().create(
+            fileId=file_id,
+            body={'type': 'anyone', 'role': 'reader'},
+        ).execute()
+        if own_conn:
+            from database import close
+            close(conn)
+        return True
+    except Exception as e:
+        print(f'[Drive] share failed file={file_id}: {e}')
+        if own_conn:
+            from database import close
+            close(conn)
+        return False
+
+
+def maybe_transcode_video_mp4(raw, mime, ext):
+    """Đổi WebM → MP4 nếu server có ffmpeg — MP4 phát được trên mọi trình duyệt."""
+    if ext == 'mp4' or 'mp4' in (mime or '').lower():
+        return raw, mime or 'video/mp4', 'mp4'
+    try:
+        import os
+        import shutil
+        import subprocess
+        import tempfile
+        if not shutil.which('ffmpeg'):
+            return raw, mime, ext
+        with tempfile.NamedTemporaryFile(suffix='.webm', delete=False) as inf:
+            inf.write(raw)
+            inpath = inf.name
+        outpath = inpath + '.mp4'
+        subprocess.run(
+            ['ffmpeg', '-y', '-i', inpath, '-c:v', 'libx264', '-preset', 'veryfast',
+             '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-an', outpath],
+            capture_output=True,
+            timeout=90,
+            check=True,
+        )
+        with open(outpath, 'rb') as outf:
+            out = outf.read()
+        os.unlink(inpath)
+        os.unlink(outpath)
+        if out:
+            print(f'[Drive] transcoded webm→mp4 ({len(raw)} → {len(out)} bytes)')
+            return out, 'video/mp4', 'mp4'
+    except Exception as e:
+        print(f'[Drive] transcode skip: {e}')
+    return raw, mime, ext
+
+
 def user_owns_drive_filename(meta, user_email, prefixes=('shop-video', 'shop-video-preview')):
     """Kiểm tra tên file Drive có khớp user (dùng cho preview / đăng từ file có sẵn)."""
     name = (meta or {}).get('name') or ''
@@ -871,21 +938,26 @@ def user_owns_drive_filename(meta, user_email, prefixes=('shop-video', 'shop-vid
 
 
 def upload_preview_bytes(raw, mime, ext, user_email, conn=None):
-    """Upload video tạm lên Drive để xem trước — không tạo bài đăng."""
+    """Upload video tạm lên Drive để xem trước — iframe Google + stream API."""
     own_conn = conn is None
     if own_conn:
         from database import get_conn
         conn = get_conn()
+    raw, mime, ext = maybe_transcode_video_mp4(raw, mime, ext)
     slug = _user_email_slug(user_email)
     stamp = int(time.time())
     filename = f'shop-video-preview-{slug}-{stamp}.{ext}'
     fid, err = upload_media_bytes(
         raw, mime, ext, user_email, f'preview-{stamp}', caption='', conn=conn, is_video=True,
         filename_override=filename)
+    embed_url = None
+    if fid:
+        share_file_anyone_reader(fid, conn=conn)
+        embed_url = drive_embed_url(fid)
     if own_conn:
         from database import close
         close(conn)
-    return fid, err
+    return fid, err, embed_url
 
 
 def delete_file(file_id, conn=None):
@@ -943,6 +1015,8 @@ def upload_media_bytes(raw, mime, ext, user_email, post_id, caption='', conn=Non
         return None, 'Thiếu thư viện Google Drive trên server'
 
     safe_email = _user_email_slug(user_email)
+    if is_video:
+        raw, mime, ext = maybe_transcode_video_mp4(raw, mime, ext)
     if filename_override:
         filename = filename_override
     else:

@@ -983,6 +983,16 @@ body.app-light .app-main {
     z-index: 4;
 }
 
+#social-preview-drive.social-preview-drive {
+    border: none;
+    background: #0f172a;
+    z-index: 5;
+}
+
+.social-locket-frame.is-drive-embed .social-preview-play-btn {
+    display: none !important;
+}
+
 .social-preview-play-btn {
     position: absolute;
     left: 50%;
