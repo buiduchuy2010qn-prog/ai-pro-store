@@ -409,6 +409,7 @@
                                 <span id="social-friend-count-num">0</span> người bạn
                             </div>
                             <div class="social-locket-frame">
+                                <div id="social-camera-bg-layer" class="social-camera-bg-layer" data-bg="none" aria-hidden="true"></div>
                                 <video id="social-camera-video" class="social-locket-media hidden" autoplay playsinline muted></video>
                                 <img id="social-preview" class="social-locket-media hidden" alt="Ảnh chụp">
                                 <video id="social-preview-video" class="social-locket-media hidden" playsinline controls preload="auto"></video>
@@ -433,6 +434,26 @@
                                 <button type="button" id="social-flip-camera" class="social-flip-camera-btn hidden" title="Đổi camera trước / sau" aria-label="Đổi camera">
                                     <i class="fas fa-arrows-rotate"></i>
                                 </button>
+                                <div id="social-caption-overlay" class="social-caption-overlay pos-bottom style-classic hidden" aria-hidden="true"></div>
+                            </div>
+                            <div id="social-creative-camera-tools" class="social-creative-toolbar social-creative-camera-only">
+                                <p class="social-creative-section-title"><i class="fas fa-palette"></i> Trang trí nền khi chụp</p>
+                                <div class="social-bg-picker">
+                                    <button type="button" class="social-bg-option" data-bg="none" title="Không nền">Tắt</button>
+                                    <button type="button" class="social-bg-option" data-bg="vintage">Vintage</button>
+                                    <button type="button" class="social-bg-option" data-bg="polaroid">Polaroid</button>
+                                    <button type="button" class="social-bg-option" data-bg="neon">Neon</button>
+                                    <button type="button" class="social-bg-option" data-bg="aesthetic">Aesthetic</button>
+                                    <button type="button" class="social-bg-option" data-bg="bokeh">Bokeh</button>
+                                    <button type="button" class="social-bg-option" data-bg="warm">Ấm</button>
+                                    <button type="button" class="social-bg-option" data-bg="cool">Lạnh</button>
+                                </div>
+                                <div class="social-bg-opacity-row">
+                                    <button type="button" id="social-bg-toggle" class="social-bg-toggle">Bật nền</button>
+                                    <label>Độ mờ</label>
+                                    <input type="range" id="social-bg-opacity" min="10" max="80" value="40">
+                                    <span id="social-bg-opacity-val">40%</span>
+                                </div>
                             </div>
                             <p id="social-composer-status" class="social-composer-status">Chọn Ảnh/Video trên khung rồi bấm nút tròn</p>
                             <div class="social-locket-controls">
@@ -447,6 +468,59 @@
                                 </button>
                             </div>
                             <div id="social-post-row" class="social-locket-post-row hidden">
+                                <div class="social-creative-toolbar" id="social-creative-edit-tools">
+                                    <p class="social-creative-section-title"><i class="fas fa-border-style"></i> Khung viền</p>
+                                    <div class="social-frame-picker">
+                                        <button type="button" class="social-frame-option is-active" data-frame="none" title="Không khung"><span class="social-frame-option-inner"></span></button>
+                                        <button type="button" class="social-frame-option" data-frame="polaroid" title="Polaroid"><span class="social-frame-option-inner"></span></button>
+                                        <button type="button" class="social-frame-option" data-frame="neon" title="Neon"><span class="social-frame-option-inner"></span></button>
+                                        <button type="button" class="social-frame-option" data-frame="vintage" title="Vintage"><span class="social-frame-option-inner"></span></button>
+                                        <button type="button" class="social-frame-option" data-frame="gold" title="Vàng"><span class="social-frame-option-inner"></span></button>
+                                        <button type="button" class="social-frame-option" data-frame="aesthetic" title="Aesthetic"><span class="social-frame-option-inner"></span></button>
+                                        <button type="button" class="social-frame-option" data-frame="film" title="Phim"><span class="social-frame-option-inner"></span></button>
+                                        <button type="button" class="social-frame-option" data-frame="minimal" title="Tối giản"><span class="social-frame-option-inner"></span></button>
+                                        <button type="button" class="social-frame-option" data-frame="rainbow" title="Cầu vồng"><span class="social-frame-option-inner"></span></button>
+                                        <button type="button" class="social-frame-option" data-frame="heart" title="Tim"><span class="social-frame-option-inner"></span></button>
+                                        <button type="button" class="social-frame-option" data-frame="custom" title="Tuỳ chỉnh"><span class="social-frame-option-inner"><i class="fas fa-plus"></i></span></button>
+                                    </div>
+                                    <button type="button" id="social-frame-upload" class="social-frame-upload-btn"><i class="fas fa-upload mr-1"></i>Tải ảnh làm khung viền (PNG trong suốt giữa)</button>
+                                    <input type="file" id="social-frame-file" accept="image/png,image/webp" class="hidden">
+                                    <p class="social-creative-section-title mt-2"><i class="fas fa-font"></i> Caption đẹp</p>
+                                    <div class="social-caption-editor">
+                                        <div class="social-caption-presets">
+                                            <button type="button" class="social-caption-preset-btn" data-caption-preset="classic">Cổ điển</button>
+                                            <button type="button" class="social-caption-preset-btn" data-caption-preset="neon">Neon</button>
+                                            <button type="button" class="social-caption-preset-btn" data-caption-preset="outline">Viền chữ</button>
+                                            <button type="button" class="social-caption-preset-btn" data-caption-preset="gradient">Gradient</button>
+                                            <button type="button" class="social-caption-preset-btn" data-caption-preset="bubble">Bong bóng</button>
+                                            <button type="button" class="social-caption-preset-btn" data-caption-preset="minimal">Tối giản</button>
+                                        </div>
+                                        <div class="social-caption-controls">
+                                            <input type="color" id="social-caption-color" value="#ffffff" title="Màu chữ">
+                                            <select id="social-caption-position" title="Vị trí">
+                                                <option value="top">Trên</option>
+                                                <option value="center">Giữa</option>
+                                                <option value="bottom" selected>Dưới</option>
+                                            </select>
+                                            <input type="range" id="social-caption-size" min="12" max="28" value="16" title="Cỡ chữ">
+                                        </div>
+                                    </div>
+                                    <p class="social-creative-section-title mt-2"><i class="fas fa-user-lock"></i> Ai được xem?</p>
+                                    <div class="social-audience-panel">
+                                        <div class="social-audience-options">
+                                            <label class="social-audience-option">
+                                                <input type="radio" name="social-visibility" value="all_friends" checked>
+                                                <span><i class="fas fa-globe-asia mr-1"></i>Tất cả bạn bè (mặc định)</span>
+                                            </label>
+                                            <label class="social-audience-option">
+                                                <input type="radio" name="social-visibility" value="selected">
+                                                <span><i class="fas fa-user-check mr-1"></i>Chọn bạn bè cụ thể</span>
+                                            </label>
+                                        </div>
+                                        <input type="search" id="social-audience-search" class="social-audience-search hidden" placeholder="Tìm bạn bè...">
+                                        <div id="social-audience-friends" class="social-audience-friends"></div>
+                                    </div>
+                                </div>
                                 <input id="social-caption" type="text" maxlength="500" class="social-locket-caption" placeholder="Thêm chú thích (tuỳ chọn)...">
                                 <div class="social-post-primary-actions">
                                     <button type="button" id="social-post-btn" class="social-locket-send-btn"><i class="fas fa-paper-plane mr-1"></i>Đăng</button>
@@ -859,7 +933,9 @@
 </a>
 
 <script src="/security-client.js"></script>
-<script src="/social-feed.js?v=video2"></script>
+<link rel="stylesheet" href="/social-creative.css?v=1">
+<script src="/social-creative.js?v=1"></script>
+<script src="/social-feed.js?v=creative2"></script>
 <script src="/shop-features.js?v=mxh1"></script>
 <script>
 const API = '/api';

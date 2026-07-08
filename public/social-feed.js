@@ -411,6 +411,10 @@
     async function uploadVideoPost(blob, caption, driveFileId) {
         const form = new FormData();
         form.append('caption', caption || '');
+        const extras = window.SocialCreative?.getPostExtras() || {};
+        form.append('visibility', extras.visibility || 'all_friends');
+        form.append('audienceUserIds', JSON.stringify(extras.audienceUserIds || []));
+        form.append('postMeta', JSON.stringify(extras.postMeta || {}));
         if (driveFileId) {
             form.append('driveFileId', driveFileId);
         } else {
@@ -481,6 +485,7 @@
         updateCameraUi();
         updateComposerMode();
         setComposerStatus('Đang xử lý video MP4 trên Drive — chờ xong rồi bấm ▶');
+        window.SocialCreative?.onPreviewShown();
 
         driveUploadPromise = uploadVideoPreviewToDrive(blob)
             .then(data => {
@@ -811,6 +816,7 @@
         if (shouldSaveWhen('capture')) {
             saveMediaToDevice(isVid ? (pendingVideoBlob || src) : src, isVid ? 'quay' : 'chup');
         }
+        window.SocialCreative?.onPreviewShown();
     }
 
     function clearPreview(opts = {}) {
@@ -862,6 +868,7 @@
         updateComposerMode();
         updateComposerStatusText();
         clearMediaInfo();
+        window.SocialCreative?.onPreviewCleared();
     }
 
     function updateComposerStatusText() {
@@ -1086,6 +1093,7 @@
             updateShutterState();
             updateCameraUi();
             updateComposerStatusText();
+            window.SocialCreative?.onCameraStart();
         } catch (err) {
             console.warn('[SocialFeed] camera:', err);
             await stopCamera();
@@ -1175,7 +1183,11 @@
             : 'Đăng ảnh này lên bảng tin?\nBạn bè đã kết bạn sẽ xem được.';
         if (!confirm(confirmMsg)) return;
         const caption = document.getElementById('social-caption')?.value.trim() || '';
-        const imageToPost = pendingImage;
+        const extras = window.SocialCreative?.getPostExtras() || {};
+        let imageToPost = pendingImage;
+        if (!isVid && pendingImage) {
+            imageToPost = await (window.SocialCreative?.prepareImageForPost(pendingImage) || pendingImage);
+        }
         const videoBlob = pendingVideoBlob;
         const btn = document.getElementById('social-post-btn');
         if (btn) btn.disabled = true;
@@ -1193,7 +1205,7 @@
                 )
                 : await socialApi('/social/posts', {
                     method: 'POST',
-                    body: JSON.stringify({ caption, imageData: imageToPost }),
+                    body: JSON.stringify({ caption, imageData: imageToPost, ...extras }),
                 });
             if (shouldSaveWhen('post')) {
                 saveImageToDevice(isVid ? (videoBlob || imageToPost) : imageToPost, 'dang');
@@ -1470,6 +1482,15 @@
             const driveBadge = p.driveStored
                 ? '<span class="social-drive-badge" title="Video lưu trên Google Drive"><i class="fab fa-google-drive"></i> Drive</span>'
                 : '';
+            const visBadge = window.SocialCreative?.visibilityBadge(p) || '';
+            const hasCaptionOverlay = !!(p.postMeta?.captionStyle && p.caption && isVid);
+            const captionHtml = hasCaptionOverlay || !p.caption
+                ? ''
+                : `<p class="social-post-caption">${esc(p.caption)}</p>`;
+            const mediaHtml = isVid
+                ? `<video src="${esc(mediaSrc)}" class="social-post-video" controls playsinline preload="metadata"></video>`
+                : `<img src="${esc(mediaSrc)}" class="social-post-img" data-lightbox="1" alt="Ảnh bài đăng">`;
+            const wrappedMedia = window.SocialCreative?.renderFeedMediaWrap(p, mediaHtml) || mediaHtml;
             return `
             <article class="social-post-card" data-post-id="${p.id}">
                 <div class="social-post-header">
@@ -1479,15 +1500,14 @@
                         <div class="social-post-time">${esc(fmtTime(p.createdAt))}</div>
                     </div>
                     <div class="social-post-actions">
+                        ${visBadge}
                         ${driveBadge}
                         <button type="button" class="social-save-post-btn" data-save-post="${p.id}" title="Lưu vào máy"><i class="fas fa-download"></i></button>
                         ${p.isMine ? `<button type="button" class="social-delete-btn" data-delete-post="${p.id}" title="Hủy đăng"><i class="fas fa-times-circle mr-1"></i>Hủy đăng</button>` : ''}
                     </div>
                 </div>
-                ${p.caption ? `<p class="social-post-caption">${esc(p.caption)}</p>` : ''}
-                ${isVid
-                    ? `<video src="${esc(mediaSrc)}" class="social-post-video" controls playsinline preload="metadata"></video>`
-                    : `<img src="${esc(mediaSrc)}" class="social-post-img" data-lightbox="1" alt="Ảnh bài đăng">`}
+                ${captionHtml}
+                ${wrappedMedia}
                 ${renderPostMediaMeta(p)}
                 <div class="social-post-engage">
                     ${renderReactionSummary(p)}
@@ -1665,6 +1685,11 @@
             }
             const countEl = document.getElementById('social-friend-count-num');
             if (countEl) countEl.textContent = String((data.friends || []).length);
+            window.SocialCreative?.setFriendsList((data.friends || []).map(item => ({
+                id: item.user?.id,
+                fullName: item.user?.fullName,
+                email: item.user?.email,
+            })));
         } catch (err) {
             if (friendsEl) friendsEl.innerHTML = '<div class="social-hint">' + esc(err.message) + '</div>';
         }
@@ -2098,6 +2123,7 @@
         initModeToggle();
         initComposerEvents();
         initDriveConnect();
+        window.SocialCreative?.init();
         setComposerMode('photo');
     }
 

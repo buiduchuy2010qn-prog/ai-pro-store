@@ -154,9 +154,14 @@ def migrate(conn):
     if IS_PG:
         _safe_alter(conn, 'ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS drive_file_id TEXT')
         _safe_alter(conn, "ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS media_type TEXT DEFAULT 'image'")
+        _safe_alter(conn, "ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS visibility TEXT DEFAULT 'all_friends'")
+        _safe_alter(conn, "ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS post_meta TEXT DEFAULT '{}'")
     else:
         _safe_alter(conn, 'ALTER TABLE social_posts ADD COLUMN drive_file_id TEXT')
         _safe_alter(conn, "ALTER TABLE social_posts ADD COLUMN media_type TEXT DEFAULT 'image'")
+        _safe_alter(conn, "ALTER TABLE social_posts ADD COLUMN visibility TEXT DEFAULT 'all_friends'")
+        _safe_alter(conn, "ALTER TABLE social_posts ADD COLUMN post_meta TEXT DEFAULT '{}'")
+    _ensure_social_audience_table(conn)
     commit(conn)
 
 
@@ -236,6 +241,29 @@ def _ensure_social_tables(conn):
             commit(conn)
         except Exception as e:
             print(f'[SocialTables] {e}')
+
+
+def _ensure_social_audience_table(conn):
+    """Bảng audience — bạn bè được xem bài đăng riêng tư."""
+    if IS_PG:
+        stmt = '''CREATE TABLE IF NOT EXISTS social_post_audience (
+            id SERIAL PRIMARY KEY,
+            post_id INTEGER NOT NULL REFERENCES social_posts(id) ON DELETE CASCADE,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            UNIQUE(post_id, user_id))'''
+    else:
+        stmt = '''CREATE TABLE IF NOT EXISTS social_post_audience (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            post_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            FOREIGN KEY (post_id) REFERENCES social_posts(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            UNIQUE(post_id, user_id))'''
+    try:
+        execute(conn, stmt)
+        commit(conn)
+    except Exception as e:
+        print(f'[SocialAudience] {e}')
 
 
 def _ensure_security_tables(conn):

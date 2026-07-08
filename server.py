@@ -1,4 +1,5 @@
 """Shop của Đức Hi - Production Server"""
+import json
 import os
 import re
 import secrets
@@ -2370,10 +2371,82 @@ def _valid_social_media(data):
 MAX_SOCIAL_VIDEO_BYTES = 8 * 1024 * 1024
 
 
-def _social_can_view_post(conn, viewer_id, post_user_id):
+def _parse_post_meta(raw):
+    if not raw:
+        return {}
+    if isinstance(raw, dict):
+        return raw
+    try:
+        return json.loads(raw) if isinstance(raw, str) else {}
+    except Exception:
+        return {}
+
+
+def _parse_audience_ids(raw):
+    """Parse danh sách user_id từ JSON string hoặc list."""
+    if not raw:
+        return []
+    if isinstance(raw, list):
+        return raw
+    try:
+        data = json.loads(raw) if isinstance(raw, str) else raw
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def _apply_post_extras(conn, pid, author_id, visibility, audience_ids, post_meta):
+    """Lưu quyền xem + meta khung/caption vào bài đăng."""
+    visibility = visibility if visibility in ('all_friends', 'selected') else 'all_friends'
+    meta_json = json.dumps(post_meta or {}, ensure_ascii=False)
+    db.execute(conn,
+        'UPDATE social_posts SET visibility = ?, post_meta = ? WHERE id = ?',
+        (visibility, meta_json, pid))
+    if visibility == 'selected':
+        friend_set = _friend_ids(conn, author_id)
+        for uid in audience_ids or []:
+            try:
+                uid = int(uid)
+            except (TypeError, ValueError):
+                continue
+            if uid in friend_set and uid != author_id:
+                try:
+                    db.execute(conn,
+                        'INSERT INTO social_post_audience (post_id, user_id) VALUES (?, ?)',
+                        (pid, uid))
+                except Exception:
+                    pass
+    db.commit(conn)
+
+
+def _social_post_visible_to(conn, viewer_id, row):
+    author_id = row['user_id']
+    if viewer_id == author_id:
+        return True
+    if author_id not in _friend_ids(conn, viewer_id):
+        return False
+    vis = row.get('visibility') or 'all_friends'
+    if vis != 'selected':
+        return True
+    hit = db.fetchone(conn,
+        'SELECT 1 AS ok FROM social_post_audience WHERE post_id = ? AND user_id = ? LIMIT 1',
+        (row['id'], viewer_id))
+    return bool(hit)
+
+
+def _social_can_view_post(conn, viewer_id, post_user_id, post_id=None):
     if viewer_id == post_user_id:
         return True
-    return post_user_id in _friend_ids(conn, viewer_id)
+    if post_user_id not in _friend_ids(conn, viewer_id):
+        return False
+    if post_id:
+        row = db.fetchone(conn, 'SELECT visibility FROM social_posts WHERE id = ?', (post_id,))
+        if row and (row.get('visibility') or 'all_friends') == 'selected':
+            hit = db.fetchone(conn,
+                'SELECT 1 AS ok FROM social_post_audience WHERE post_id = ? AND user_id = ? LIMIT 1',
+                (post_id, viewer_id))
+            return bool(hit)
+    return True
 
 
 def _social_get_post(conn, pid):
@@ -2389,7 +2462,7 @@ def _social_require_post_access(conn, viewer_id, pid):
     row = _social_get_post(conn, pid)
     if not row:
         return None, (jsonify({'error': 'Bài đăng không tồn tại.'}), 404)
-    if not _social_can_view_post(conn, viewer_id, row['user_id']):
+    if not _social_can_view_post(conn, viewer_id, row['user_id'], row['id']):
         return None, (jsonify({'error': 'Bạn không có quyền xem bài này.'}), 403)
     return row, None
 
@@ -2474,6 +2547,8 @@ def _social_post_payload(row, viewer_id, conn):
         'author': {'id': row['user_id'], 'fullName': row['name'], 'email': row['email']},
         'isMine': row['user_id'] == viewer_id,
         'driveStored': False,
+        'visibility': row.get('visibility') or 'all_friends',
+        'postMeta': _parse_post_meta(row.get('post_meta')),
     }
     if media_type == 'video' and drive_file_id:
         token = sec.sign_media_token(viewer_id, row['id'])
@@ -2575,14 +2650,15 @@ def social_feed():
     placeholders = ','.join(['?'] * len(visible))
     rows = db.fetchall(conn, f'''
         SELECT p.id, p.user_id, p.caption, p.image_data, p.media_type, p.drive_file_id,
-               p.created_at, u.name, u.email
+               p.visibility, p.post_meta, p.created_at, u.name, u.email
         FROM social_posts p
         JOIN users u ON u.id = p.user_id
         WHERE p.user_id IN ({placeholders})
         ORDER BY p.created_at DESC
-        LIMIT 50
+        LIMIT 80
     ''', tuple(visible))
-    posts = [_social_post_payload(r, uid, conn) for r in rows]
+    rows = [r for r in rows if _social_post_visible_to(conn, uid, r)]
+    posts = [_social_post_payload(r, uid, conn) for r in rows[:50]]
     posts = _social_attach_engagement(conn, posts, uid)
     db.close(conn)
     return jsonify({'posts': posts})
@@ -2868,6 +2944,8 @@ def social_create_video_post():
             pid, err = _create_drive_video_post(conn, request.user, caption, raw, mime, ext)
             if err:
                 return jsonify({'error': err}), 400
+        visibility, audience_ids, post_meta = _extract_post_extras_from_form()
+        _apply_post_extras(conn, pid, request.user['id'], visibility, audience_ids, post_meta)
         token = sec.sign_media_token(request.user['id'], pid)
         return jsonify({
             'ok': True,
@@ -2877,6 +2955,33 @@ def social_create_video_post():
         }), 201
     finally:
         db.close(conn)
+
+
+def _extract_post_extras_from_json(data):
+    data = data or {}
+    visibility = (data.get('visibility') or 'all_friends').strip()
+    audience = data.get('audienceUserIds') or data.get('audience_user_ids') or []
+    if not isinstance(audience, list):
+        audience = []
+    post_meta = data.get('postMeta') or data.get('post_meta') or {}
+    if isinstance(post_meta, str):
+        post_meta = _parse_post_meta(post_meta)
+    return visibility, audience, post_meta
+
+
+def _extract_post_extras_from_form():
+    visibility = (request.form.get('visibility') or 'all_friends').strip()
+    raw_aud = request.form.get('audienceUserIds') or '[]'
+    try:
+        audience = json.loads(raw_aud) if isinstance(raw_aud, str) else list(raw_aud or [])
+    except Exception:
+        audience = []
+    raw_meta = request.form.get('postMeta') or '{}'
+    try:
+        post_meta = json.loads(raw_meta) if isinstance(raw_meta, str) else {}
+    except Exception:
+        post_meta = {}
+    return visibility, audience, post_meta
 
 
 @app.route('/api/social/media/<int:pid>')
@@ -2899,7 +3004,7 @@ def social_stream_media(pid):
     if not row:
         db.close(conn)
         return jsonify({'error': 'Bài đăng không tồn tại.'}), 404
-    if not _social_can_view_post(conn, viewer_id, row['user_id']):
+    if not _social_can_view_post(conn, viewer_id, row['user_id'], row['id']):
         db.close(conn)
         return jsonify({'error': 'Bạn không có quyền xem video này.'}), 403
 
@@ -2956,6 +3061,8 @@ def social_create_post():
             pid, err = _create_drive_video_post(conn, request.user, caption, raw, mime, ext)
             if err:
                 return jsonify({'error': err}), 400
+            visibility, audience_ids, post_meta = _extract_post_extras_from_json(d)
+            _apply_post_extras(conn, pid, request.user['id'], visibility, audience_ids, post_meta)
             token = sec.sign_media_token(request.user['id'], pid)
             return jsonify({
                 'ok': True,
@@ -2984,7 +3091,8 @@ def social_create_post():
             if drive_file_id:
                 db.execute(conn, 'UPDATE social_posts SET drive_file_id = ? WHERE id = ?',
                            (drive_file_id, pid))
-        db.commit(conn)
+        visibility, audience_ids, post_meta = _extract_post_extras_from_json(d)
+        _apply_post_extras(conn, pid, request.user['id'], visibility, audience_ids, post_meta)
         resp = {'ok': True, 'postId': pid, 'driveSynced': bool(drive_file_id)}
         if drive_file_id:
             resp['driveFileId'] = drive_file_id
@@ -3008,6 +3116,7 @@ def social_delete_post(pid):
         return jsonify({'error': 'Chỉ xóa được bài của mình.'}), 403
     db.execute(conn, 'DELETE FROM social_post_comments WHERE post_id = ?', (pid,))
     db.execute(conn, 'DELETE FROM social_post_reactions WHERE post_id = ?', (pid,))
+    db.execute(conn, 'DELETE FROM social_post_audience WHERE post_id = ?', (pid,))
     db.execute(conn, 'DELETE FROM social_posts WHERE id = ?', (pid,))
     db.commit(conn)
     db.close(conn)
