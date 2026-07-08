@@ -747,6 +747,102 @@ body.app-light .app-main {
     opacity: 0.4;
 }
 
+/* ─── Trang Chụp ảnh Loket (tính năng riêng) ─── */
+.loket-checkin-card {
+    text-align: center;
+}
+
+.loket-checkin-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--al-purple);
+    background: linear-gradient(135deg, #f5f3ff, #eff6ff);
+    border: 1px solid var(--al-border);
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    margin-bottom: 1rem;
+}
+
+.loket-camera-box {
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+
+.loket-camera-frame {
+    width: 220px !important;
+    height: 220px !important;
+    margin-bottom: 0.5rem;
+}
+
+.loket-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+    max-height: 520px;
+    overflow-y: auto;
+}
+
+.loket-gallery-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.loket-gallery-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.12);
+}
+
+.loket-gallery-img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    cursor: pointer;
+    display: block;
+}
+
+.loket-gallery-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e2e8f0;
+    color: #94a3b8;
+    font-size: 1.5rem;
+}
+
+.loket-gallery-meta {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.7rem;
+    color: var(--al-muted);
+}
+
+.loket-gallery-time {
+    font-weight: 600;
+    color: var(--al-ink);
+    font-size: 0.75rem;
+}
+
+.loket-gallery-ip {
+    margin-top: 0.2rem;
+    font-family: ui-monospace, monospace;
+    color: var(--al-blue);
+}
+
+.loket-gallery-device {
+    margin-top: 0.15rem;
+    opacity: 0.85;
+}
+
+.profile-checkin-link .btn-primary {
+    background: linear-gradient(135deg, var(--al-blue), var(--al-purple));
+}
+
 .login-photo-lightbox {
     position: fixed;
     inset: 0;
