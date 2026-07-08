@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/theme.css">
+    <link rel="stylesheet" href="/cyber-3d.css">
     <script>
         tailwind.config = {
             theme: {
@@ -24,6 +25,9 @@
     </script>
 </head>
 <body class="app-bg min-h-screen">
+
+<!-- Cyber 3D background layer (pointer-events: none — không chặn UI) -->
+<div id="cyber-3d-canvas-host" aria-hidden="true"></div>
 
 <!-- ═══ AUTH SCREEN ═══ -->
 <div id="auth-screen" class="auth-bg">
@@ -2214,6 +2218,10 @@ document.getElementById('mock-transfer-btn').onclick = async () => {
     }
 })();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" defer></script>
+<script src="/cyber-3d.js" defer></script>
 <script src="/ai-assistant.js"></script>
 <script src="/dressroom-render.js"></script>
 <script src="/decoration.js"></script>

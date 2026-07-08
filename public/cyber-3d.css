@@ -1,0 +1,195 @@
+/**
+ * Cyber 3D UI Layer — chỉ style/hiệu ứng, không đụng logic app.
+ * Canvas nằm dưới UI; pointer-events: none.
+ */
+
+/* ─── Canvas host (Three.js) ─── */
+#cyber-3d-canvas-host {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+#cyber-3d-canvas-host canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    pointer-events: none;
+}
+
+/* ─── Đưa toàn bộ UI lên trên canvas ─── */
+body.fx-cyber-enabled #auth-screen,
+body.fx-cyber-enabled #app,
+body.fx-cyber-enabled .zalo-float,
+body.fx-cyber-enabled #toast,
+body.fx-cyber-enabled #ai-assistant-root,
+body.fx-cyber-enabled .modal-overlay,
+body.fx-cyber-enabled #purchase-modal,
+body.fx-cyber-enabled #order-detail-modal {
+    position: relative;
+    z-index: 1;
+}
+
+body.fx-cyber-enabled #app {
+    isolation: isolate;
+}
+
+body.fx-cyber-enabled .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+/* ─── Hero glass overlay (không chặn click) ─── */
+body.fx-cyber-enabled .shop-hero {
+    position: relative;
+    overflow: hidden;
+}
+
+body.fx-cyber-enabled .shop-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        135deg,
+        rgba(240, 249, 255, 0.72) 0%,
+        rgba(224, 242, 254, 0.55) 40%,
+        rgba(196, 181, 253, 0.35) 100%
+    );
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 1;
+}
+
+body.fx-cyber-enabled .shop-hero > * {
+    position: relative;
+    z-index: 2;
+}
+
+body.fx-cyber-enabled .auth-card {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow:
+        0 0 0 1px rgba(6, 182, 212, 0.12),
+        0 24px 48px rgba(14, 165, 233, 0.12),
+        0 8px 32px rgba(139, 92, 246, 0.08);
+}
+
+/* ─── Scroll reveal (GSAP sẽ animate) ─── */
+.fx-reveal-pending {
+    opacity: 0;
+    transform: translateY(40px) translateZ(0);
+    will-change: transform, opacity;
+}
+
+.fx-reveal-done {
+    opacity: 1;
+    transform: none;
+}
+
+/* ─── 3D Tilt + Holographic glow ─── */
+.fx-tilt {
+    transform-style: preserve-3d;
+    transition: box-shadow 0.35s ease;
+    will-change: transform;
+    position: relative;
+}
+
+.fx-tilt::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: radial-gradient(
+        600px circle at var(--fx-mx, 50%) var(--fx-my, 50%),
+        rgba(34, 211, 238, 0.55),
+        rgba(139, 92, 246, 0.35) 35%,
+        transparent 60%
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.fx-tilt.is-hover::after {
+    opacity: 1;
+}
+
+.fx-tilt.is-hover {
+    box-shadow:
+        0 12px 40px rgba(6, 182, 212, 0.18),
+        0 4px 24px rgba(139, 92, 246, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* Giữ nút bấm clickable — glow không chặn events */
+.fx-tilt > * {
+    position: relative;
+    z-index: 2;
+}
+
+/* Product card: tilt override theme hover translate */
+body.fx-cyber-enabled .product-card.fx-tilt:hover {
+    transform: none;
+}
+
+body.fx-cyber-enabled .product-card.fx-tilt.is-hover .product-card-visual {
+    filter: drop-shadow(0 0 12px rgba(34, 211, 238, 0.35));
+}
+
+/* Dressroom item cards */
+body.fx-cyber-enabled .dr-item-card.fx-tilt.is-hover {
+    border-color: rgba(34, 211, 238, 0.5);
+}
+
+/* Section depth */
+body.fx-cyber-enabled .app-section {
+    perspective: 1200px;
+}
+
+body.fx-cyber-enabled .section-header.fx-reveal-done {
+    text-shadow: 0 0 24px rgba(6, 182, 212, 0.15);
+}
+
+/* Scanline subtle overlay on hero */
+body.fx-cyber-enabled .shop-hero .hero-float-layer {
+    opacity: 0.5;
+    filter: hue-rotate(15deg);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    #cyber-3d-canvas-host {
+        display: none !important;
+    }
+
+    .fx-reveal-pending {
+        opacity: 1;
+        transform: none;
+    }
+
+    .fx-tilt::after {
+        display: none;
+    }
+}
+
+/* Mobile: nhẹ hơn */
+@media (max-width: 768px) {
+    body.fx-cyber-enabled .shop-hero::before {
+        background: linear-gradient(
+            180deg,
+            rgba(240, 249, 255, 0.85) 0%,
+            rgba(224, 242, 254, 0.7) 100%
+        );
+    }
+}
