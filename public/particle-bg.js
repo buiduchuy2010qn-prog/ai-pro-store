@@ -1,84 +1,95 @@
 /**
- * Particle Background — cực nhẹ, 20fps, không line nối
+ * Particle Background — theo code user, bọc an toàn
  */
 (function (global) {
     'use strict';
 
     const reducedMotion = global.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const isMobile = global.matchMedia('(max-width: 768px)').matches;
-    const COUNT = isMobile ? 20 : 35;
-    const COLORS = ['#60a5fa', '#8b5cf6', '#3b82f6'];
+    const COUNT = isMobile ? 70 : 150;
+    const colors = ['#60a5fa', '#a5b4fc', '#c4b5fd', '#e0e7ff'];
 
-    let canvas, ctx, particles, running = false;
-    let w = 0, h = 0;
-    let lastTime = 0;
-    const INTERVAL = 50;
+    let canvas, ctx, particles = [], animId = 0, running = false;
 
-    function createParticles() {
-        return Array.from({ length: COUNT }, () => ({
-            x: Math.random() * w,
-            y: Math.random() * h,
-            r: 1 + Math.random() * 1.5,
-            vx: (Math.random() - 0.5) * 0.3,
-            vy: (Math.random() - 0.5) * 0.3,
-            color: COLORS[Math.floor(Math.random() * COLORS.length)],
-            a: 0.2 + Math.random() * 0.4,
-        }));
-    }
-
-    function resize() {
-        if (!canvas) return;
-        w = global.innerWidth;
-        h = global.innerHeight;
-        const dpr = Math.min(global.devicePixelRatio || 1, 1.25);
-        canvas.width = w * dpr;
-        canvas.height = h * dpr;
-        canvas.style.width = w + 'px';
-        canvas.style.height = h + 'px';
+    function resizeCanvas() {
+        if (!canvas || !ctx) return;
+        const dpr = Math.min(global.devicePixelRatio || 1, 1.5);
+        canvas.width = global.innerWidth * dpr;
+        canvas.height = global.innerHeight * dpr;
+        canvas.style.width = global.innerWidth + 'px';
+        canvas.style.height = global.innerHeight + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        particles = createParticles();
     }
 
-    function draw() {
-        ctx.clearRect(0, 0, w, h);
-        particles.forEach((p) => {
-            p.x += p.vx;
-            p.y += p.vy;
-            if (p.x < 0) p.x = w;
-            if (p.x > w) p.x = 0;
-            if (p.y < 0) p.y = h;
-            if (p.y > h) p.y = 0;
-            ctx.globalAlpha = p.a;
-            ctx.fillStyle = p.color;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        ctx.globalAlpha = 1;
+    function Particle() {
+        const w = global.innerWidth;
+        const h = global.innerHeight;
+        this.x = Math.random() * w;
+        this.y = Math.random() * h;
+        this.size = Math.random() * 3 + 1;
+        this.speedX = Math.random() * 0.5 - 0.25;
+        this.speedY = Math.random() * 0.5 - 0.25;
+        this.color = colors[Math.floor(Math.random() * colors.length)];
     }
 
-    function loop(now) {
-        if (!running) return;
-        if (now - lastTime >= INTERVAL) {
-            lastTime = now;
-            draw();
+    Particle.prototype.update = function () {
+        const w = global.innerWidth;
+        const h = global.innerHeight;
+        this.x += this.speedX;
+        this.y += this.speedY;
+        if (this.x < 0 || this.x > w) this.speedX *= -1;
+        if (this.y < 0 || this.y > h) this.speedY *= -1;
+    };
+
+    Particle.prototype.draw = function () {
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+    };
+
+    function initParticles() {
+        particles = [];
+        for (let i = 0; i < COUNT; i++) {
+            particles.push(new Particle());
         }
-        global.requestAnimationFrame(loop);
+    }
+
+    function animateParticles() {
+        if (!running || !ctx || !canvas) return;
+        const w = global.innerWidth;
+        const h = global.innerHeight;
+        ctx.clearRect(0, 0, w, h);
+        for (let i = 0; i < particles.length; i++) {
+            particles[i].update();
+            particles[i].draw();
+        }
+        animId = global.requestAnimationFrame(animateParticles);
     }
 
     function boot() {
         if (reducedMotion) return;
+
         canvas = document.getElementById('particle-canvas');
         if (!canvas) return;
+
         canvas.style.pointerEvents = 'none';
         ctx = canvas.getContext('2d', { alpha: true });
-        resize();
+
+        resizeCanvas();
+        initParticles();
         running = true;
-        global.requestAnimationFrame(loop);
-        global.addEventListener('resize', resize, { passive: true });
+        animateParticles();
+
+        global.addEventListener('resize', () => {
+            resizeCanvas();
+            initParticles();
+        }, { passive: true });
+
         global.addEventListener('visibilitychange', () => {
             running = !document.hidden;
-            if (running) global.requestAnimationFrame(loop);
+            if (running) animateParticles();
+            else global.cancelAnimationFrame(animId);
         });
     }
 
