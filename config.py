@@ -85,3 +85,10 @@ SECURITY = {
     'alert_webhook_url': os.getenv('SECURITY_ALERT_WEBHOOK', ''),
     'alert_cooldown_sec': int(os.getenv('ALERT_COOLDOWN_SEC', '300')),
 }
+
+# Google Drive — đồng bộ ảnh MXH (Service Account + folder ID)
+GOOGLE_DRIVE = {
+    'folder_id': os.getenv('GOOGLE_DRIVE_FOLDER_ID', '').strip(),
+    'service_account_json': os.getenv('GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON', '').strip(),
+    'service_account_file': os.getenv('GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE', '').strip(),
+}

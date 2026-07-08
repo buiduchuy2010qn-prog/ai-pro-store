@@ -1080,6 +1080,35 @@ body.app-light .app-main {
     border-color: var(--al-purple);
 }
 
+.social-drive-sync-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--al-ink);
+    cursor: pointer;
+    margin-top: 0.35rem;
+    line-height: 1.35;
+}
+
+.social-drive-sync-row input {
+    margin-top: 0.15rem;
+    accent-color: var(--al-purple);
+}
+
+.social-drive-sync-row.is-disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.social-drive-hint {
+    font-size: 0.72rem;
+    color: #b45309;
+    margin: 0.15rem 0 0;
+    line-height: 1.35;
+}
+
 .social-post-actions {
     display: flex;
     gap: 0.35rem;

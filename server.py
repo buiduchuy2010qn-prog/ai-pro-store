@@ -16,7 +16,7 @@ import database as db
 from config import (
     JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD, BANK, WEBHOOK_SECRET, CASSO,
     ZALO_PHONE, SITE_NAME, WELCOME_MSG, OTP_EXPIRE_MINUTES,
-    OTP_MAX_ATTEMPTS, OTP_RATE_LIMIT_PER_HOUR, PORT, SECURITY
+    OTP_MAX_ATTEMPTS, OTP_RATE_LIMIT_PER_HOUR, PORT, SECURITY, GOOGLE_DRIVE
 )
 from services import security as sec
 from services.email_service import send_otp_email
@@ -26,6 +26,7 @@ from services.bank_service import (
 )
 from services import avatar_service as av
 from services import decoration_service as deco
+from services import drive_service as drive
 BASE = Path(__file__).parent
 PUBLIC = BASE / 'public'
 app = Flask(__name__, static_folder=str(PUBLIC), static_url_path='')
@@ -2387,21 +2388,47 @@ def social_feed():
     return jsonify({'posts': posts})
 
 
+@app.route('/api/social/drive/status')
+@auth_required
+def social_drive_status():
+    return jsonify({
+        'configured': drive.is_configured(),
+        'folderId': GOOGLE_DRIVE.get('folder_id') or None,
+    })
+
+
 @app.route('/api/social/posts', methods=['POST'])
 @auth_required
 def social_create_post():
     d = request.get_json(silent=True) or {}
     caption = sec.sanitize_string(d.get('caption', ''), max_len=500)
     image = d.get('imageData') or d.get('image_data') or ''
+    sync_drive = bool(d.get('syncDrive') or d.get('sync_drive'))
     if not _valid_social_image(image):
         return jsonify({'error': 'Ảnh không hợp lệ hoặc quá lớn (tối đa ~500KB).'}), 400
     conn = db.get_conn()
     pid = db.insert_returning_id(conn,
         'INSERT INTO social_posts (user_id, caption, image_data) VALUES (?, ?, ?)',
         (request.user['id'], caption, image))
+    drive_file_id = None
+    drive_error = None
+    if sync_drive:
+        if drive.is_configured():
+            drive_file_id, drive_error = drive.upload_post_image(
+                image, request.user['email'], pid, caption)
+            if drive_file_id:
+                db.execute(conn, 'UPDATE social_posts SET drive_file_id = ? WHERE id = ?',
+                           (drive_file_id, pid))
+        else:
+            drive_error = 'Google Drive chưa cấu hình trên server'
     db.commit(conn)
     db.close(conn)
-    return jsonify({'ok': True, 'postId': pid}), 201
+    resp = {'ok': True, 'postId': pid, 'driveSynced': bool(drive_file_id)}
+    if drive_file_id:
+        resp['driveFileId'] = drive_file_id
+    if drive_error and sync_drive:
+        resp['driveWarning'] = drive_error
+    return jsonify(resp), 201
 
 
 @app.route('/api/social/posts/<int:pid>', methods=['DELETE'])

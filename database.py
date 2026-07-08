@@ -142,6 +142,10 @@ def migrate(conn):
         execute(conn, 'UPDATE orders SET order_code = ? WHERE id = ?', (f"DH{row['id']:06d}", row['id']))
     _ensure_security_tables(conn)
     _ensure_social_tables(conn)
+    if IS_PG:
+        _safe_alter(conn, 'ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS drive_file_id TEXT')
+    else:
+        _safe_alter(conn, 'ALTER TABLE social_posts ADD COLUMN drive_file_id TEXT')
     commit(conn)
 
 
