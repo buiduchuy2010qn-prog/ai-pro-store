@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/theme.css">
-    <link rel="stylesheet" href="/auth-light.css?v=locket-dio-desktop1">
+    <link rel="stylesheet" href="/auth-light.css?v=locket-history-grid1">
     <link rel="stylesheet" href="/sidebar-menu.css?v=1">
     <link rel="stylesheet" href="/post-composer.css?v=locket2">
     <script>
@@ -489,6 +489,7 @@
                                 <input id="social-caption-inline" type="text" maxlength="500" class="social-frame-caption-input" placeholder="Nhập tin nhắn..." autocomplete="off">
                             </div>
                         </div>
+                        <div id="social-history-grid" class="social-history-grid hidden" aria-label="Lịch sử ảnh"></div>
                         <p id="social-composer-status" class="social-composer-status social-studio-meta hidden" aria-hidden="true"></p>
                         <div class="social-locket-controls social-unified-actions">
                             <button type="button" id="social-unified-left" class="social-locket-side-btn social-locket-action-btn" title="Chọn ảnh từ máy">
@@ -501,9 +502,11 @@
                                 <i class="fas fa-arrows-rotate"></i>
                             </button>
                         </div>
-                        <button type="button" id="social-history-toggle" class="social-history-toggle social-capture-only">
-                            Lịch sử <i class="fas fa-chevron-down social-history-chevron"></i>
+                        <button type="button" id="social-history-toggle" class="social-history-toggle social-capture-only" title="Xem lịch sử ảnh">
+                            <span class="social-history-toggle-label">Lịch sử</span>
+                            <i class="fas fa-chevron-down social-history-chevron"></i>
                         </button>
+                        <p id="social-history-hint" class="social-history-hint hidden">Bấm nút tròn giữa để quay lại chụp ảnh</p>
                         <div id="social-history-panel" class="social-history-panel hidden">
                             <div id="social-feed-meta-row" class="locket-feed-meta hidden"></div>
                             <div id="social-feed-dots-row" class="locket-feed-dots hidden"></div>
@@ -1017,7 +1020,7 @@
 <script src="/security-client.js"></script>
 <link rel="stylesheet" href="/social-creative.css?v=1">
 <script src="/social-creative.js?v=1"></script>
-<script src="/social-feed.js?v=locket-dio-desktop1"></script>
+<script src="/social-feed.js?v=locket-history-grid1"></script>
 <script src="/shop-features.js?v=mxh1"></script>
 <script src="/sidebar-menu.js?v=1"></script>
 <script src="/post-composer.js?v=locket2"></script>

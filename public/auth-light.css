@@ -1633,6 +1633,23 @@ body.app-light .app-main {
     transform: rotate(180deg);
 }
 
+.social-history-toggle.is-open .social-history-toggle-label::after {
+    content: ' · đóng';
+    font-weight: 500;
+    color: #94a3b8;
+}
+
+.social-history-hint {
+    margin: 0.15rem 0 0;
+    font-size: 0.78rem;
+    color: #94a3b8;
+    text-align: center;
+}
+
+.social-locket-studio.is-history-open .social-history-hint:not(.hidden) {
+    display: block;
+}
+
 /* ─── Bảng tin ảnh — khung gộp chụp + đăng ─── */
 .social-page {
     max-width: 480px;
@@ -2032,7 +2049,115 @@ body.app-light .app-main {
 }
 
 .social-locket-studio.is-history-open .social-locket-frame {
-    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    display: none;
+}
+
+.social-history-grid {
+    display: none;
+    width: 100%;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+    padding: 0.15rem 0 0.5rem;
+    animation: historyGridIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.social-locket-studio.is-history-open .social-history-grid:not(.hidden) {
+    display: grid;
+}
+
+@keyframes historyGridIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.social-history-grid-item {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border: none;
+    padding: 0;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #e2e8f0;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.social-history-grid-item:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+    z-index: 1;
+}
+
+.social-history-grid-item img,
+.social-history-grid-item video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+}
+
+.social-history-grid-vid {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.28);
+    color: #fff;
+    font-size: 1.1rem;
+    pointer-events: none;
+}
+
+.social-history-grid-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: #94a3b8;
+    font-size: 0.88rem;
+}
+
+.social-history-grid-empty i {
+    display: block;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.4;
+}
+
+.social-locket-shutter.is-history-back .social-locket-shutter-ring {
+    border-color: #7c3aed;
+    animation: historyShutterPulse 2s ease-in-out infinite;
+}
+
+@keyframes historyShutterPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.25); }
+    50% { box-shadow: 0 0 0 6px rgba(124, 58, 237, 0.08); }
+}
+
+#view-social.social-page.is-history-view .social-page-main {
+    max-width: min(100%, 720px);
+}
+
+@media (min-width: 768px) {
+    .social-history-grid {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 4px;
+        padding: 0.25rem 0 0.65rem;
+    }
+
+    #view-social.social-page.is-history-view .social-page-main {
+        max-width: min(100%, 860px);
+    }
+
+    #view-social.social-page.is-history-view {
+        padding-top: 1.25rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .social-history-grid {
+        grid-template-columns: repeat(6, 1fr);
+    }
 }
 
 .social-recipient-strip {

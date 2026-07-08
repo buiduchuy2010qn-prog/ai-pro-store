@@ -749,9 +749,73 @@
 
     function getUnifiedSlotMode() {
         if (pendingImage || pendingVideoBlob) return 'preview';
-        if (historyPanelOpen && feedPostsCache.length) return 'feed';
+        if (historyPanelOpen) return 'history';
         if (cameraStream) return 'capture';
         return 'idle';
+    }
+
+    function setHistoryViewUi(open) {
+        const btn = document.getElementById('social-history-toggle');
+        const studio = document.querySelector('.social-locket-studio');
+        const page = document.getElementById('view-social');
+        const grid = document.getElementById('social-history-grid');
+        const hint = document.getElementById('social-history-hint');
+        btn?.classList.toggle('is-open', open);
+        studio?.classList.toggle('is-history-open', open);
+        page?.classList.toggle('is-history-view', open);
+        grid?.classList.toggle('hidden', !open);
+        hint?.classList.toggle('hidden', !open);
+    }
+
+    function renderHistoryGrid() {
+        const grid = document.getElementById('social-history-grid');
+        if (!grid) return;
+        if (!feedPostsCache.length) {
+            grid.innerHTML = '<div class="social-history-grid-empty"><i class="fas fa-images"></i><p>Chưa có ảnh — bấm nút tròn để chụp bài đầu tiên</p></div>';
+            return;
+        }
+        grid.innerHTML = feedPostsCache.map((post, i) => {
+            const src = post.mediaUrl || post.imageData || '';
+            const isVid = post.mediaType === 'video'
+                || String(src).startsWith('data:video/')
+                || !!post.mediaUrl;
+            const media = isVid
+                ? `<video src="${esc(src)}" muted playsinline preload="metadata"></video><span class="social-history-grid-vid"><i class="fas fa-play"></i></span>`
+                : `<img src="${esc(src)}" alt="" loading="lazy">`;
+            return `<button type="button" class="social-history-grid-item" data-history-index="${i}" aria-label="Ảnh ${i + 1}">${media}</button>`;
+        }).join('');
+        grid.querySelectorAll('[data-history-index]').forEach(btn => {
+            btn.addEventListener('click', () => openHistoryGridItem(Number(btn.dataset.historyIndex)));
+        });
+    }
+
+    function openHistoryGridItem(index) {
+        const post = feedPostsCache[index];
+        if (!post) return;
+        feedSlotIndex = index;
+        const src = post.mediaUrl || post.imageData || '';
+        const isVid = post.mediaType === 'video' || String(src).startsWith('data:video/') || !!post.mediaUrl;
+        if (isVid) {
+            window.open(src, '_blank', 'noopener');
+            return;
+        }
+        window.ShopFeatures?.openPhotoLightbox?.(src);
+    }
+
+    async function closeHistoryAndOpenCamera() {
+        if (!historyPanelOpen) return;
+        historyPanelOpen = false;
+        setHistoryViewUi(false);
+        stopFeedRotation();
+        document.getElementById('social-feed-layer')?.classList.add('hidden');
+        updateUnifiedSlotVisibility();
+        updateShutterState();
+        updateUnifiedActionButtons();
+        if (!pendingImage && !pendingVideoBlob) {
+            try {
+                await startCamera();
+            } catch (_) { /* quyền camera hoặc thiết bị */ }
+        }
     }
 
     function ensureShutterRing() {
@@ -851,6 +915,9 @@
             if (hasPreview) {
                 rightBtn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i>';
                 rightBtn.title = 'Tuỳ chỉnh';
+            } else if (historyPanelOpen) {
+                rightBtn.innerHTML = '<i class="fas fa-camera"></i>';
+                rightBtn.title = 'Quay lại chụp ảnh';
             } else if (cameraStream) {
                 rightBtn.innerHTML = '<i class="fas fa-arrows-rotate"></i>';
                 rightBtn.title = 'Đổi camera';
@@ -892,22 +959,21 @@
 
         const isPreview = mode === 'preview';
         const isCapture = mode === 'capture';
-        const isFeed = mode === 'feed';
+        const isHistory = mode === 'history';
 
-        frame?.classList.toggle('is-feed-mode', isFeed);
+        frame?.classList.toggle('is-feed-mode', false);
         frame?.classList.toggle('is-capture-mode', isCapture);
-        frame?.classList.toggle('is-history-mode', historyPanelOpen && !isPreview);
+        frame?.classList.toggle('is-history-mode', isHistory && !isPreview);
         frame?.classList.toggle('has-preview', isPreview);
         decorWidgets?.classList.toggle('hidden', !isCapture);
         decorWidgets?.setAttribute('aria-hidden', isCapture ? 'false' : 'true');
         if (isCapture) startDecorTimeTicker();
         else stopDecorTimeTicker();
-        feedLayer?.classList.toggle('hidden', !isFeed);
-        placeholder?.classList.toggle('hidden', isPreview || isCapture || isFeed);
-        modePicker?.classList.toggle('hidden', isPreview || isFeed);
-        const showHistoryFeed = historyPanelOpen && isFeed;
-        metaRow?.classList.toggle('hidden', !showHistoryFeed);
-        dotsRow?.classList.toggle('hidden', !showHistoryFeed || feedPostsCache.length <= 1);
+        feedLayer?.classList.add('hidden');
+        placeholder?.classList.toggle('hidden', isPreview || isCapture || isHistory);
+        modePicker?.classList.toggle('hidden', isPreview || isHistory);
+        metaRow?.classList.add('hidden');
+        dotsRow?.classList.add('hidden');
 
         document.getElementById('social-post-row')?.classList.toggle('is-preview-active', isPreview);
         document.getElementById('social-preview-play')?.classList.toggle('hidden', true);
@@ -921,7 +987,7 @@
         document.getElementById('social-capture-header')?.classList.toggle('hidden', isPreview);
         document.getElementById('social-send-header')?.classList.toggle('hidden', !isPreview);
         document.getElementById('social-frame-caption-bar')?.classList.toggle('hidden', !isPreview);
-        document.getElementById('social-history-panel')?.classList.toggle('hidden', isPreview || !historyPanelOpen);
+        document.getElementById('social-history-panel')?.classList.add('hidden');
 
         updateUnifiedActionButtons();
         updateShutterState();
@@ -931,33 +997,22 @@
             syncAudienceFromRecipient();
         }
 
-        if (isFeed) startFeedRotation();
-        else stopFeedRotation();
+        stopFeedRotation();
     }
 
     async function toggleHistoryPanel() {
-        historyPanelOpen = !historyPanelOpen;
-        const btn = document.getElementById('social-history-toggle');
-        const studio = document.querySelector('.social-locket-studio');
-        btn?.classList.toggle('is-open', historyPanelOpen);
-        studio?.classList.toggle('is-history-open', historyPanelOpen);
-
         if (historyPanelOpen) {
-            if (!feedPostsCache.length) await loadFeed();
-            if (feedPostsCache.length) {
-                if (cameraStream) await stopCamera();
-                showFeedSlot(feedSlotIndex, true);
-                startFeedRotation();
-            }
-        } else {
-            stopFeedRotation();
-            document.getElementById('social-feed-layer')?.classList.add('hidden');
-            updateUnifiedSlotVisibility();
-            if (!pendingImage && !pendingVideoBlob) {
-                scheduleAutoCameraStart(200);
-            }
+            await closeHistoryAndOpenCamera();
+            return;
         }
+        historyPanelOpen = true;
+        setHistoryViewUi(true);
+        if (!feedPostsCache.length) await loadFeed();
+        if (cameraStream) await stopCamera();
+        renderHistoryGrid();
         updateUnifiedSlotVisibility();
+        updateShutterState();
+        updateUnifiedActionButtons();
     }
 
     async function exitCameraToFeed() {
@@ -1070,11 +1125,19 @@
         const shutter = document.getElementById('social-shutter-btn');
         if (!shutter) return;
         const hasMedia = !!pendingImage || !!pendingVideoBlob;
-        shutter.classList.toggle('is-live', !!cameraStream && !hasMedia);
+        shutter.classList.toggle('is-live', !!cameraStream && !hasMedia && !historyPanelOpen);
         shutter.classList.toggle('is-send-mode', hasMedia);
+        shutter.classList.toggle('is-history-back', historyPanelOpen && !hasMedia);
         shutter.classList.toggle('is-captured', false);
         shutter.disabled = false;
+        if (historyPanelOpen && !hasMedia) {
+            shutter.setAttribute('aria-label', 'Quay lại chụp ảnh');
+            shutter.title = 'Quay lại chụp ảnh';
+            ensureShutterRing();
+            return;
+        }
         shutter.setAttribute('aria-label', hasMedia ? 'Đăng bài' : 'Chụp ảnh');
+        shutter.title = hasMedia ? 'Đăng bài' : 'Chụp ảnh';
         if (hasMedia) {
             shutter.innerHTML = '<span class="social-locket-send-circle"><i class="fas fa-paper-plane"></i></span>';
         } else {
@@ -1688,7 +1751,7 @@
                 window.toast?.('Đã đăng ' + posted + ' lên bảng tin!');
             }
             await loadFeed();
-            if (historyPanelOpen) showFeedSlot(0, true);
+            if (historyPanelOpen) renderHistoryGrid();
             else scheduleAutoCameraStart(400);
         } catch (err) {
             window.toast?.(err.message, true);
@@ -2087,10 +2150,12 @@
         }
 
         if (historyPanelOpen) {
-            renderLocketSlot(feedPostsCache[0], false);
-            startFeedRotation();
+            renderHistoryGrid();
+            setHistoryViewUi(true);
         } else {
             document.getElementById('social-feed-layer')?.classList.add('hidden');
+            document.getElementById('social-history-grid')?.classList.add('hidden');
+            document.getElementById('view-social')?.classList.remove('is-history-view');
             updateUnifiedSlotVisibility();
         }
     }
@@ -2257,6 +2322,10 @@
     }
 
     async function onShutterClick() {
+        if (historyPanelOpen) {
+            await closeHistoryAndOpenCamera();
+            return;
+        }
         if (pendingImage || pendingVideoBlob) {
             await publishPost();
             return;
@@ -2726,9 +2795,13 @@
         document.getElementById('social-flip-camera')?.addEventListener('click', flipCamera);
         document.getElementById('social-post-btn')?.addEventListener('click', publishPost);
         document.getElementById('social-save-btn')?.addEventListener('click', onSavePreviewClick);
-        document.getElementById('social-unified-right')?.addEventListener('click', () => {
+        document.getElementById('social-unified-right')?.addEventListener('click', async () => {
             if (pendingImage || pendingVideoBlob) {
                 openSocialDrawer(null, 'capture');
+                return;
+            }
+            if (historyPanelOpen) {
+                await closeHistoryAndOpenCamera();
                 return;
             }
             if (cameraStream) {
@@ -2760,7 +2833,7 @@
         updateUserAvatar();
         recipientSelection = 'all';
         historyPanelOpen = false;
-        document.getElementById('social-history-toggle')?.classList.remove('is-open');
+        setHistoryViewUi(false);
         await Promise.all([loadFriendsPanel(), loadDriveStatus()]);
         await loadFeed();
         scheduleAutoCameraStart(500);
@@ -2769,6 +2842,9 @@
     function leaveView() {
         closeSocialDrawer();
         stopFeedRotation();
+        stopDecorTimeTicker();
+        historyPanelOpen = false;
+        setHistoryViewUi(false);
         stopCamera();
         clearPreview();
     }
