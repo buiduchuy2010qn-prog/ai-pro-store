@@ -1,8 +1,9 @@
-"""Sao lưu ảnh MXH lên Google Drive admin (OAuth hoặc Service Account)."""
+"""Sao lưu ảnh/video MXH lên Google Drive admin (OAuth hoặc Service Account)."""
 import base64
 import json
 import os
 import re
+import threading
 import time
 from io import BytesIO
 
@@ -20,8 +21,21 @@ DRIVE_SCOPES = [
 DRIVE_OAUTH_KEYS = ('drive_oauth_client_id', 'drive_oauth_client_secret')
 DRIVE_FOLDER_SETTING = 'drive_backup_folder_id'
 DRIVE_FOLDER_NAME_KEY = 'drive_backup_folder_name'
-DEFAULT_FOLDER_NAME = 'Shop Đức Hi - Ảnh MXH'
+DRIVE_ROOT_FOLDER_SETTING = 'drive_backup_root_folder_id'
+DRIVE_ROOT_FOLDER_NAME_KEY = 'drive_backup_root_folder_name'
+DRIVE_PHOTO_FOLDER_SETTING = 'drive_backup_photo_folder_id'
+DRIVE_PHOTO_FOLDER_NAME_KEY = 'drive_backup_photo_folder_name'
+DRIVE_VIDEO_FOLDER_SETTING = 'drive_backup_video_folder_id'
+DRIVE_VIDEO_FOLDER_NAME_KEY = 'drive_backup_video_folder_name'
+DRIVE_AUTO_SYNC_LAST_KEY = 'drive_auto_sync_last_at'
+DRIVE_AUTO_SYNC_RESULT_KEY = 'drive_auto_sync_last_result'
+DEFAULT_ROOT_FOLDER_NAME = 'Shop Đức Hi - MXH'
+DEFAULT_PHOTO_FOLDER_NAME = 'Ảnh'
+DEFAULT_VIDEO_FOLDER_NAME = 'Video'
+DEFAULT_FOLDER_NAME = DEFAULT_ROOT_FOLDER_NAME
 DRIVE_REF_PREFIX = 'drive:'
+_auto_sync_started = False
+_auto_sync_lock = threading.Lock()
 
 
 def _cfg():
@@ -361,8 +375,8 @@ def handle_oauth_callback(code, state, authorization_response=None):
     folder_info = setup_backup_folder_for_admin(conn)
     close(conn)
     if folder_info:
-        import threading
         threading.Thread(target=sync_posts_without_drive, daemon=True).start()
+        start_auto_sync_worker()
     return google_email
 
 
@@ -380,63 +394,137 @@ def _settings_set(conn, key, value):
         execute(conn, 'INSERT INTO ai_settings (key, value) VALUES (?, ?)', (key, value))
 
 
-def get_backup_folder_info(conn=None):
-    """Thông tin thư mục Drive dùng lưu ảnh MXH."""
-    own = conn is None
-    if own:
-        from database import get_conn
-        conn = get_conn()
-    name = _settings_get(conn, DRIVE_FOLDER_NAME_KEY) or DEFAULT_FOLDER_NAME
-    folder_id = _settings_get(conn, DRIVE_FOLDER_SETTING) or (_cfg().get('folder_id') or '').strip()
-    if own:
-        from database import close
-        close(conn)
-    return {'folderId': folder_id, 'folderName': name}
+def _folder_valid(service, folder_id):
+    if not folder_id:
+        return False
+    try:
+        meta = service.files().get(fileId=folder_id, fields='id,name,trashed').execute()
+        return not meta.get('trashed')
+    except Exception:
+        return False
 
 
-def ensure_backup_folder(service, conn):
-    """
-    Tạo / tìm một thư mục Drive duy nhất để lưu mọi ảnh MXH.
-    Trả về (folder_id, folder_name).
-    """
-    env_folder = (_cfg().get('folder_id') or '').strip()
-    if env_folder:
-        return env_folder, DEFAULT_FOLDER_NAME
+def _escape_drive_query(val):
+    return (val or '').replace("'", "\\'")
 
-    stored = _settings_get(conn, DRIVE_FOLDER_SETTING)
-    if stored:
-        try:
-            meta = service.files().get(fileId=stored, fields='id,name,trashed').execute()
-            if not meta.get('trashed'):
-                return stored, meta.get('name') or DEFAULT_FOLDER_NAME
-        except Exception as e:
-            print(f'[Drive] stored folder invalid: {e}')
 
-    name = DEFAULT_FOLDER_NAME
-    safe_name = name.replace("'", "\\'")
+def _find_folder_by_name(service, name, parent_id=None):
+    safe_name = _escape_drive_query(name)
+    q = f"mimeType='application/vnd.google-apps.folder' and name='{safe_name}' and trashed=false"
+    if parent_id:
+        q += f" and '{parent_id}' in parents"
+    else:
+        q += " and 'root' in parents"
     found = service.files().list(
-        q=f"mimeType='application/vnd.google-apps.folder' and name='{safe_name}' and trashed=false",
+        q=q,
         spaces='drive',
         fields='files(id,name)',
         pageSize=5,
     ).execute().get('files', [])
     if found:
-        folder_id = found[0]['id']
-        folder_name = found[0].get('name') or name
-    else:
-        created = service.files().create(
-            body={'name': name, 'mimeType': 'application/vnd.google-apps.folder'},
-            fields='id,name,webViewLink',
-        ).execute()
-        folder_id = created['id']
-        folder_name = created.get('name') or name
-        print(f'[Drive] created backup folder: {folder_name} ({folder_id})')
+        return found[0]['id'], found[0].get('name') or name
+    return None, None
 
-    _settings_set(conn, DRIVE_FOLDER_SETTING, folder_id)
-    _settings_set(conn, DRIVE_FOLDER_NAME_KEY, folder_name)
+
+def _create_folder(service, name, parent_id=None):
+    body = {'name': name, 'mimeType': 'application/vnd.google-apps.folder'}
+    if parent_id:
+        body['parents'] = [parent_id]
+    created = service.files().create(body=body, fields='id,name').execute()
+    return created['id'], created.get('name') or name
+
+
+def _find_or_create_folder(service, name, parent_id=None):
+    folder_id, folder_name = _find_folder_by_name(service, name, parent_id=parent_id)
+    if folder_id:
+        return folder_id, folder_name
+    folder_id, folder_name = _create_folder(service, name, parent_id=parent_id)
+    print(f'[Drive] created folder: {folder_name} ({folder_id}) parent={parent_id or "root"}')
+    return folder_id, folder_name
+
+
+def get_backup_folder_info(conn=None):
+    """Thông tin thư mục Drive — gốc + Ảnh + Video."""
+    own = conn is None
+    if own:
+        from database import get_conn
+        conn = get_conn()
+    info = {
+        'folderId': _settings_get(conn, DRIVE_ROOT_FOLDER_SETTING) or _settings_get(conn, DRIVE_FOLDER_SETTING),
+        'folderName': _settings_get(conn, DRIVE_ROOT_FOLDER_NAME_KEY) or DEFAULT_ROOT_FOLDER_NAME,
+        'rootFolderId': _settings_get(conn, DRIVE_ROOT_FOLDER_SETTING),
+        'rootFolderName': _settings_get(conn, DRIVE_ROOT_FOLDER_NAME_KEY) or DEFAULT_ROOT_FOLDER_NAME,
+        'photoFolderId': _settings_get(conn, DRIVE_PHOTO_FOLDER_SETTING),
+        'photoFolderName': _settings_get(conn, DRIVE_PHOTO_FOLDER_NAME_KEY) or DEFAULT_PHOTO_FOLDER_NAME,
+        'videoFolderId': _settings_get(conn, DRIVE_VIDEO_FOLDER_SETTING),
+        'videoFolderName': _settings_get(conn, DRIVE_VIDEO_FOLDER_NAME_KEY) or DEFAULT_VIDEO_FOLDER_NAME,
+    }
+    if own:
+        from database import close
+        close(conn)
+    return info
+
+
+def ensure_backup_folders(service, conn):
+    """
+    Tạo / tìm thư mục gốc và hai thư mục con: Ảnh, Video.
+    Trả về dict thông tin thư mục.
+    """
+    env_folder = (_cfg().get('folder_id') or '').strip()
+    if env_folder:
+        root_id = env_folder
+        root_name = DEFAULT_ROOT_FOLDER_NAME
+    else:
+        root_id = _settings_get(conn, DRIVE_ROOT_FOLDER_SETTING)
+        legacy_id = _settings_get(conn, DRIVE_FOLDER_SETTING)
+        if not root_id and legacy_id and _folder_valid(service, legacy_id):
+            root_id = legacy_id
+            root_name = _settings_get(conn, DRIVE_FOLDER_NAME_KEY) or DEFAULT_ROOT_FOLDER_NAME
+        elif root_id and _folder_valid(service, root_id):
+            root_name = _settings_get(conn, DRIVE_ROOT_FOLDER_NAME_KEY) or DEFAULT_ROOT_FOLDER_NAME
+        else:
+            root_id, root_name = _find_or_create_folder(service, DEFAULT_ROOT_FOLDER_NAME, parent_id=None)
+
+    photo_id = _settings_get(conn, DRIVE_PHOTO_FOLDER_SETTING)
+    if not photo_id or not _folder_valid(service, photo_id):
+        photo_id, photo_name = _find_or_create_folder(service, DEFAULT_PHOTO_FOLDER_NAME, parent_id=root_id)
+    else:
+        photo_name = _settings_get(conn, DRIVE_PHOTO_FOLDER_NAME_KEY) or DEFAULT_PHOTO_FOLDER_NAME
+
+    video_id = _settings_get(conn, DRIVE_VIDEO_FOLDER_SETTING)
+    if not video_id or not _folder_valid(service, video_id):
+        video_id, video_name = _find_or_create_folder(service, DEFAULT_VIDEO_FOLDER_NAME, parent_id=root_id)
+    else:
+        video_name = _settings_get(conn, DRIVE_VIDEO_FOLDER_NAME_KEY) or DEFAULT_VIDEO_FOLDER_NAME
+
+    _settings_set(conn, DRIVE_ROOT_FOLDER_SETTING, root_id)
+    _settings_set(conn, DRIVE_ROOT_FOLDER_NAME_KEY, root_name)
+    _settings_set(conn, DRIVE_PHOTO_FOLDER_SETTING, photo_id)
+    _settings_set(conn, DRIVE_PHOTO_FOLDER_NAME_KEY, photo_name)
+    _settings_set(conn, DRIVE_VIDEO_FOLDER_SETTING, video_id)
+    _settings_set(conn, DRIVE_VIDEO_FOLDER_NAME_KEY, video_name)
+    _settings_set(conn, DRIVE_FOLDER_SETTING, root_id)
+    _settings_set(conn, DRIVE_FOLDER_NAME_KEY, root_name)
     from database import commit
     commit(conn)
-    return folder_id, folder_name
+    return {
+        'rootFolderId': root_id,
+        'rootFolderName': root_name,
+        'photoFolderId': photo_id,
+        'photoFolderName': photo_name,
+        'videoFolderId': video_id,
+        'videoFolderName': video_name,
+        'folderId': root_id,
+        'folderName': root_name,
+    }
+
+
+def ensure_backup_folder(service, conn, is_video=False):
+    """Tương thích cũ — trả về (folder_id, folder_name) theo loại media."""
+    folders = ensure_backup_folders(service, conn)
+    if is_video:
+        return folders['videoFolderId'], folders['videoFolderName']
+    return folders['photoFolderId'], folders['photoFolderName']
 
 
 def _build_drive_service(creds):
@@ -445,7 +533,7 @@ def _build_drive_service(creds):
 
 
 def setup_backup_folder_for_admin(conn=None):
-    """Sau khi OAuth — tạo thư mục sao lưu trên Drive admin."""
+    """Sau khi OAuth — tạo thư mục gốc + Ảnh + Video trên Drive admin."""
     own = conn is None
     if own:
         from database import get_conn
@@ -459,11 +547,11 @@ def setup_backup_folder_for_admin(conn=None):
     try:
         creds = _load_oauth_credentials(admin)
         service = _build_drive_service(creds)
-        folder_id, folder_name = ensure_backup_folder(service, conn)
+        folders = ensure_backup_folders(service, conn)
         if own:
             from database import close
             close(conn)
-        return {'folderId': folder_id, 'folderName': folder_name}
+        return folders
     except Exception as e:
         print(f'[Drive] setup folder failed: {e}')
         if own:
@@ -472,8 +560,34 @@ def setup_backup_folder_for_admin(conn=None):
         return None
 
 
-def sync_posts_without_drive(conn=None, limit=100):
-    """Đồng bộ ảnh cũ (chưa có drive_file_id) lên thư mục Drive."""
+def get_auto_sync_status(conn=None):
+    own = conn is None
+    if own:
+        from database import get_conn
+        conn = get_conn()
+    last_raw = _settings_get(conn, DRIVE_AUTO_SYNC_LAST_KEY)
+    result_raw = _settings_get(conn, DRIVE_AUTO_SYNC_RESULT_KEY)
+    try:
+        last_result = json.loads(result_raw) if result_raw else {}
+    except Exception:
+        last_result = {}
+    interval = int(_cfg().get('auto_sync_interval_sec') or 120)
+    status = {
+        'enabled': True,
+        'running': _auto_sync_started,
+        'intervalSec': interval,
+        'lastSyncAt': int(last_raw) if last_raw.isdigit() else None,
+        'lastSynced': int(last_result.get('synced') or 0),
+        'lastErrors': int(last_result.get('errors') or 0),
+    }
+    if own:
+        from database import close
+        close(conn)
+    return status
+
+
+def sync_posts_without_drive(conn=None, limit=None):
+    """Đồng bộ ảnh/video chưa có drive_file_id lên đúng thư mục Drive."""
     from database import get_conn, fetchall, close, commit
     own = conn is None
     if own:
@@ -481,10 +595,22 @@ def sync_posts_without_drive(conn=None, limit=100):
     if not is_configured(conn):
         if own:
             close(conn)
-        return {'ok': False, 'synced': 0, 'message': 'Drive chưa kết nối'}
+        return {'ok': False, 'synced': 0, 'photos': 0, 'videos': 0, 'message': 'Drive chưa kết nối'}
+
+    if limit is None:
+        limit = int(_cfg().get('auto_sync_batch_size') or 40)
+
+    admin = get_oauth_admin(conn)
+    if admin:
+        try:
+            creds = _load_oauth_credentials(admin)
+            service = _build_drive_service(creds)
+            ensure_backup_folders(service, conn)
+        except Exception as e:
+            print(f'[Drive] ensure folders before sync failed: {e}')
 
     rows = fetchall(conn, '''
-        SELECT p.id, p.image_data, p.caption, u.email
+        SELECT p.id, p.image_data, p.caption, p.media_type, u.email
         FROM social_posts p
         JOIN users u ON u.id = p.user_id
         WHERE p.drive_file_id IS NULL OR p.drive_file_id = ''
@@ -492,6 +618,8 @@ def sync_posts_without_drive(conn=None, limit=100):
         LIMIT ?
     ''', (limit,))
     synced = 0
+    photos = 0
+    videos = 0
     errors = 0
     for r in rows:
         if is_drive_reference(r['image_data']):
@@ -500,20 +628,75 @@ def sync_posts_without_drive(conn=None, limit=100):
                 from database import execute
                 execute(conn, 'UPDATE social_posts SET drive_file_id = ? WHERE id = ?', (fid, r['id']))
                 synced += 1
+                if (r.get('media_type') or '') == 'video':
+                    videos += 1
+                else:
+                    photos += 1
             continue
+        media_type = r.get('media_type') or ''
         fid, err = upload_post_image(
-            r['image_data'], r['email'], r['id'], r.get('caption') or '', conn=conn)
+            r['image_data'], r['email'], r['id'], r.get('caption') or '',
+            conn=conn, media_type=media_type)
         if fid:
             from database import execute
             execute(conn, 'UPDATE social_posts SET drive_file_id = ? WHERE id = ?', (fid, r['id']))
             synced += 1
+            if media_type == 'video' or str(r['image_data']).startswith('data:video/'):
+                videos += 1
+            else:
+                photos += 1
         else:
             errors += 1
             print(f'[Drive] sync post {r["id"]} failed: {err}')
     commit(conn)
     if own:
         close(conn)
-    return {'ok': True, 'synced': synced, 'errors': errors, 'total': len(rows)}
+    return {
+        'ok': True,
+        'synced': synced,
+        'photos': photos,
+        'videos': videos,
+        'errors': errors,
+        'total': len(rows),
+    }
+
+
+def _auto_sync_tick():
+    from database import get_conn, close, commit
+    conn = get_conn()
+    try:
+        if not is_configured(conn):
+            return
+        result = sync_posts_without_drive(conn)
+        _settings_set(conn, DRIVE_AUTO_SYNC_LAST_KEY, str(int(time.time())))
+        _settings_set(conn, DRIVE_AUTO_SYNC_RESULT_KEY, json.dumps(result))
+        commit(conn)
+        if result.get('synced'):
+            print(f'[Drive] auto-sync: +{result["synced"]} (ảnh {result.get("photos", 0)}, video {result.get("videos", 0)})')
+    except Exception as e:
+        print(f'[Drive] auto-sync error: {e}')
+    finally:
+        close(conn)
+
+
+def auto_sync_loop():
+    """Chạy nền 24/7 — tự đồng bộ ảnh/video lên Drive."""
+    interval = max(30, int(_cfg().get('auto_sync_interval_sec') or 120))
+    print(f'[Drive] auto-sync loop every {interval}s')
+    time.sleep(5)
+    while True:
+        _auto_sync_tick()
+        time.sleep(interval)
+
+
+def start_auto_sync_worker():
+    global _auto_sync_started
+    with _auto_sync_lock:
+        if _auto_sync_started:
+            return
+        _auto_sync_started = True
+        threading.Thread(target=auto_sync_loop, daemon=True, name='drive-auto-sync').start()
+        print('[Drive] auto-sync worker started (24/7)')
 
 
 def disconnect_oauth(user_id):
@@ -658,7 +841,7 @@ def upload_media_bytes(raw, mime, ext, user_email, post_id, caption='', conn=Non
 
     try:
         service = _build_drive_service(creds)
-        folder_id, folder_name = ensure_backup_folder(service, conn)
+        folder_id, folder_name = ensure_backup_folder(service, conn, is_video=is_video)
         meta = {
             'name': filename,
             'parents': [folder_id],

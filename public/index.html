@@ -462,9 +462,9 @@
                                     <option value="both">Lưu cả khi chụp và đăng</option>
                                 </select>
                                 <p id="social-drive-info" class="social-drive-info hidden">
-                                    <i class="fab fa-google-drive mr-1"></i>Ảnh đăng được sao lưu tự động lên <strong>Drive admin</strong> để quản lý.
+                                    <i class="fab fa-google-drive mr-1"></i>Ảnh/video tự động lên <strong>Drive admin</strong> (thư mục Ảnh &amp; Video riêng).
                                 </p>
-                                <p id="social-drive-hint" class="social-drive-hint hidden">Drive admin chưa cấu hình — ảnh chỉ lưu trên web.</p>
+                                <p id="social-drive-hint" class="social-drive-hint hidden">Drive admin chưa cấu hình — video cần Drive để đăng.</p>
                             </div>
                             <button type="button" id="social-history-toggle" class="social-history-toggle">
                                 Lịch sử <i class="fas fa-chevron-down social-history-chevron"></i>
@@ -497,7 +497,7 @@
                     </div>
                     <div id="social-drive-connect-card" class="glass-card padded social-friends-card social-drive-card hidden">
                         <h2 class="social-side-title"><i class="fab fa-google-drive text-blue-500 mr-1"></i>Liên kết Google Drive</h2>
-                        <p class="text-sm text-slate-500 mb-3">Sao lưu ảnh MXH vào Drive Google của admin</p>
+                        <p class="text-sm text-slate-500 mb-3">Sao lưu ảnh &amp; video MXH vào Drive Google của admin</p>
                         <div id="social-drive-connected" class="social-drive-connected hidden">
                             <p class="social-drive-linked-email">
                                 <i class="fas fa-check-circle text-emerald-500 mr-1"></i>
@@ -505,8 +505,12 @@
                             </p>
                             <p id="social-drive-connected-at" class="social-drive-linked-at"></p>
                             <p id="social-drive-folder-name" class="social-drive-folder-name"></p>
+                            <p id="social-drive-auto-sync" class="social-drive-auto-sync hidden">
+                                <i class="fas fa-sync fa-spin mr-1"></i>
+                                <span id="social-drive-auto-sync-text">Tự động đồng bộ 24/7</span>
+                            </p>
                             <button type="button" id="social-drive-sync-old" class="social-drive-sync-btn">
-                                <i class="fas fa-cloud-upload-alt mr-1"></i>Đồng bộ ảnh cũ vào thư mục
+                                <i class="fas fa-cloud-upload-alt mr-1"></i>Đồng bộ ảnh/video cũ ngay
                             </button>
                             <button type="button" id="social-drive-disconnect" class="social-drive-disconnect-btn">
                                 <i class="fas fa-unlink mr-1"></i>Ngắt kết nối

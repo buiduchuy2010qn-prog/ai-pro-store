@@ -1124,11 +1124,35 @@
             atEl.classList.toggle('hidden', !data.connectedAt);
         }
         if (folderEl) {
-            const fname = data.folderName;
-            folderEl.textContent = fname
-                ? '📁 Mọi ảnh lưu trong thư mục: ' + fname
-                : '';
-            folderEl.classList.toggle('hidden', !connected || !fname);
+            const root = data.folderName || '';
+            const photo = data.photoFolderName || 'Ảnh';
+            const video = data.videoFolderName || 'Video';
+            if (root) {
+                folderEl.innerHTML = '📁 <strong>' + esc(root) + '</strong>'
+                    + '<br><span class="social-drive-subfolder"><i class="fas fa-image text-violet-500"></i> ' + esc(photo) + '</span>'
+                    + ' · <span class="social-drive-subfolder"><i class="fas fa-video text-rose-500"></i> ' + esc(video) + '</span>';
+            } else {
+                folderEl.textContent = '';
+            }
+            folderEl.classList.toggle('hidden', !connected || !root);
+        }
+        const autoSyncEl = document.getElementById('social-drive-auto-sync');
+        const autoSyncText = document.getElementById('social-drive-auto-sync-text');
+        const auto = data.autoSync || {};
+        if (autoSyncEl && connected) {
+            autoSyncEl.classList.remove('hidden');
+            const intervalMin = Math.max(1, Math.round((auto.intervalSec || 120) / 60));
+            let msg = 'Tự động đồng bộ 24/7 — mỗi ~' + intervalMin + ' phút';
+            if (auto.lastSyncAt) {
+                const last = fmtTime(new Date(auto.lastSyncAt * 1000).toISOString());
+                const synced = auto.lastSynced || 0;
+                msg += synced > 0
+                    ? ' · Lần cuối: +' + synced + ' file (' + last + ')'
+                    : ' · Lần cuối: ' + last;
+            }
+            if (autoSyncText) autoSyncText.textContent = msg;
+        } else if (autoSyncEl) {
+            autoSyncEl.classList.add('hidden');
         }
         if (setupBox) setupBox.classList.toggle('hidden', oauthReady);
         if (readyHint) readyHint.classList.toggle('hidden', !oauthReady);
@@ -1217,11 +1241,14 @@
             driveAdminBackup = !!data.configured;
             renderDriveConnectCard(data, setup);
             const driveEmail = data.googleEmail || data.backupGoogleEmail;
-            const folderLabel = data.folderName ? esc(data.folderName) : 'Drive admin';
+            const photoLabel = data.photoFolderName ? esc(data.photoFolderName) : 'Ảnh';
+            const videoLabel = data.videoFolderName ? esc(data.videoFolderName) : 'Video';
             if (info && data.method === 'oauth' && driveEmail) {
-                info.innerHTML = '<i class="fab fa-google-drive mr-1"></i>Ảnh đăng tự động vào thư mục <strong>' + folderLabel + '</strong> trên Drive.';
+                info.innerHTML = '<i class="fab fa-google-drive mr-1"></i>Ảnh → <strong>' + photoLabel
+                    + '</strong> · Video → <strong>' + videoLabel + '</strong> (tự động 24/7).';
             } else if (info) {
-                info.innerHTML = '<i class="fab fa-google-drive mr-1"></i>Ảnh đăng tự động vào thư mục <strong>' + folderLabel + '</strong>.';
+                info.innerHTML = '<i class="fab fa-google-drive mr-1"></i>Ảnh → <strong>' + photoLabel
+                    + '</strong> · Video → <strong>' + videoLabel + '</strong> (tự động 24/7).';
             }
         } catch (_) {
             driveAdminBackup = false;
@@ -1308,7 +1335,11 @@
         if (btn) btn.disabled = true;
         try {
             const res = await socialApi('/social/drive/sync', { method: 'POST', body: '{}' });
-            window.toast?.('Đã đồng bộ ' + (res.synced || 0) + ' ảnh vào thư mục Drive!');
+            const parts = [];
+            if (res.photos) parts.push(res.photos + ' ảnh');
+            if (res.videos) parts.push(res.videos + ' video');
+            const detail = parts.length ? ' (' + parts.join(', ') + ')' : '';
+            window.toast?.('Đã đồng bộ ' + (res.synced || 0) + ' file lên Drive' + detail + '!');
             await loadDriveStatus();
         } catch (err) {
             window.toast?.(err.message || 'Không đồng bộ được ảnh cũ', true);

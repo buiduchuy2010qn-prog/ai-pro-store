@@ -1300,6 +1300,22 @@ body.app-light .app-main {
     line-height: 1.4;
 }
 
+.social-drive-subfolder {
+    font-size: 0.74rem;
+    color: #475569;
+}
+
+.social-drive-auto-sync {
+    font-size: 0.74rem;
+    color: #0f766e;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 10px;
+    padding: 0.45rem 0.65rem;
+    margin: 0 0 0.65rem;
+    line-height: 1.45;
+}
+
 .social-drive-sync-btn {
     width: 100%;
     margin-bottom: 0.45rem;

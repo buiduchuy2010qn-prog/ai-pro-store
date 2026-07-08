@@ -340,6 +340,7 @@ def _ensure_ready():
             print(f'[Init] Lần {attempt + 1} thất bại: {e}')
             time.sleep(min(3 * (attempt + 1), 15))
     threading.Thread(target=bank_loop, daemon=True).start()
+    drive.start_auto_sync_worker()
 
 
 # ─── Meta ───
@@ -2503,12 +2504,24 @@ def social_drive_status():
         resp['connected'] = bool(row and row.get('google_drive_refresh_token'))
         resp['googleEmail'] = row.get('google_drive_email') if row else None
         resp['connectedAt'] = format_dt_vn(row.get('google_drive_connected_at')) if row else None
-        if resp['connected'] and not folder.get('folderId'):
+        if resp['connected'] and not folder.get('photoFolderId'):
             setup = drive.setup_backup_folder_for_admin(conn)
             if setup:
-                folder = setup
-        resp['folderName'] = folder.get('folderName') or drive.DEFAULT_FOLDER_NAME
-        resp['folderId'] = folder.get('folderId') or ''
+                folder = {**folder, **setup}
+        resp['folderName'] = folder.get('rootFolderName') or folder.get('folderName') or drive.DEFAULT_ROOT_FOLDER_NAME
+        resp['folderId'] = folder.get('rootFolderId') or folder.get('folderId') or ''
+        resp['photoFolderName'] = folder.get('photoFolderName') or drive.DEFAULT_PHOTO_FOLDER_NAME
+        resp['videoFolderName'] = folder.get('videoFolderName') or drive.DEFAULT_VIDEO_FOLDER_NAME
+        resp['photoFolderId'] = folder.get('photoFolderId') or ''
+        resp['videoFolderId'] = folder.get('videoFolderId') or ''
+        resp['autoSync'] = drive.get_auto_sync_status(conn)
+    else:
+        auto = drive.get_auto_sync_status()
+        resp['autoSync'] = {
+            'enabled': True,
+            'running': auto.get('running'),
+            'intervalSec': auto.get('intervalSec'),
+        }
     db.close(conn)
     return jsonify(resp)
 
@@ -2575,7 +2588,7 @@ def social_drive_callback():
 @app.route('/api/social/drive/sync', methods=['POST'])
 @admin_required
 def social_drive_sync():
-    """Đồng bộ ảnh cũ vào thư mục Drive duy nhất."""
+    """Đồng bộ ảnh/video cũ vào thư mục Drive (Ảnh / Video)."""
     conn = db.get_conn()
     drive.setup_backup_folder_for_admin(conn)
     result = drive.sync_posts_without_drive(conn)

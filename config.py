@@ -97,4 +97,6 @@ GOOGLE_DRIVE = {
         'GOOGLE_OAUTH_REDIRECT_URI',
         'https://ai-pro-store.onrender.com/api/social/drive/callback',
     ).strip(),
+    'auto_sync_interval_sec': int(os.getenv('DRIVE_AUTO_SYNC_INTERVAL_SECONDS', '120')),
+    'auto_sync_batch_size': int(os.getenv('DRIVE_AUTO_SYNC_BATCH_SIZE', '40')),
 }
