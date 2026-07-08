@@ -1,185 +1,253 @@
 /**
- * post-composer.js — Đăng bài (Post Composer) độc lập
- * Lưu bài viết vào localStorage, hiển thị feed lịch sử
+ * post-composer.js — Đăng bài kiểu Locket Dio
  */
 (function () {
     'use strict';
 
     const STORAGE_KEY = 'shop_user_posts';
-    const MAX_CHARS = 2000;
+    const MAX_CAPTION = 500;
     const MAX_IMAGE_MB = 2;
     const MAX_VIDEO_MB = 4;
 
-    const TAGS = [
-        { id: 'gemini', label: 'Gemini', icon: 'fa-wand-magic-sparkles' },
-        { id: 'chatgpt', label: 'ChatGPT', icon: 'fa-robot' },
-        { id: 'claude', label: 'Claude', icon: 'fa-brain' },
-        { id: 'grok', label: 'Grok', icon: 'fa-bolt' },
-        { id: 'promo', label: 'Khuyến mãi', icon: 'fa-tags' },
-        { id: 'news', label: 'Tin tức', icon: 'fa-newspaper' },
-        { id: 'qa', label: 'Hỏi đáp', icon: 'fa-circle-question' },
+    const STUDIO_SECTIONS = [
+        {
+            id: 'general',
+            title: 'General',
+            isNew: true,
+            pills: [
+                { id: 'text', label: 'Aa Văn bản', cls: 'pill-gray', icon: 'fa-font' },
+                { id: 'color', label: 'Màu sắc', cls: 'pill-purple', icon: 'fa-palette' },
+                { id: 'spotify', label: 'Spotify', cls: 'pill-green', icon: 'fa-spotify' },
+                { id: 'music', label: 'Apple Music', cls: 'pill-pink', icon: 'fa-apple' },
+                { id: 'weather', label: '31°C', cls: 'pill-blue', icon: 'fa-cloud-sun' },
+                { id: 'review', label: 'Review', cls: 'pill-yellow', icon: 'fa-star' },
+                { id: 'time', label: '', cls: 'pill-gray', icon: 'fa-clock', dynamic: 'time' },
+                { id: 'streak', label: '🔥 1', cls: 'pill-orange' },
+                { id: 'poll', label: 'Bình chọn', cls: 'pill-purple' },
+                { id: 'location', label: 'Vị trí', cls: 'pill-teal', icon: 'fa-location-dot' },
+            ],
+        },
+        {
+            id: 'caption-season',
+            title: 'Caption Season',
+            isNew: true,
+            pills: [
+                { id: 'cap1', label: 'GEM AI', cls: 'pill-brown' },
+                { id: 'cap2', label: 'GPT PRO', cls: 'pill-green' },
+                { id: 'cap3', label: 'CLAUDE', cls: 'pill-orange' },
+                { id: 'cap4', label: 'GROK', cls: 'pill-red' },
+                { id: 'cap5', label: 'SALE 50%', cls: 'pill-pink' },
+                { id: 'cap6', label: 'VIP', cls: 'pill-indigo' },
+            ],
+        },
+        {
+            id: 'suggest',
+            title: 'Suggest Caption',
+            pills: [
+                { id: 's1', label: 'Caption', cls: 'pill-purple', caption: 'Trải nghiệm AI tuyệt vời ✨' },
+                { id: 's2', label: 'Caption', cls: 'pill-orange', caption: 'Mua tài khoản chính hãng 🚀' },
+                { id: 's3', label: 'Caption', cls: 'pill-red', caption: 'Khuyến mãi hôm nay 🔥' },
+                { id: 's4', label: 'Caption', cls: 'pill-teal', caption: 'Gemini · ChatGPT · Claude' },
+                { id: 's5', label: 'Caption', cls: 'pill-pink', caption: 'Shop Đức Hi — uy tín 💯' },
+                { id: 's6', label: 'Caption', cls: 'pill-blue', caption: 'Nạp nhanh VietQR ⚡' },
+            ],
+        },
+        {
+            id: 'decorative',
+            title: 'Decorative by Locket',
+            pills: [
+                { id: 'd1', label: 'PRIDE', cls: 'pill-purple' },
+                { id: 'd2', label: 'Good morning ☀️', cls: 'pill-orange' },
+                { id: 'd3', label: 'Goodnight 🌙', cls: 'pill-indigo' },
+                { id: 'd4', label: 'Miss you', cls: 'pill-red' },
+                { id: 'd5', label: 'Party Time!', cls: 'pill-green' },
+                { id: 'd6', label: 'OOTD', cls: 'pill-pink' },
+                { id: 'd7', label: 'Gemini 💎', cls: 'pill-blue' },
+                { id: 'd8', label: 'ChatGPT 🤖', cls: 'pill-teal' },
+            ],
+        },
     ];
 
-    const EMOJIS = ['😀', '😂', '❤️', '🔥', '👍', '🎉', '✨', '💯', '🚀', '💡', '📸', '🎬', '💬', '⭐', '🙏', '😍'];
-
     let state = {
-        tags: new Set(),
+        caption: '',
         mediaFile: null,
         mediaPreviewUrl: null,
         mediaType: null,
-        activeTab: 'compose',
+        cameraStream: null,
+        visibility: 'all',
+        selectedFriendIds: new Set(),
+        studioPills: new Set(),
+        studioMeta: {},
+        friends: [],
     };
 
     function $(id) { return document.getElementById(id); }
 
+    function escapeHtml(s) {
+        return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
     function getPosts() {
         try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            return raw ? JSON.parse(raw) : [];
+            return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
         } catch (_) {
             return [];
         }
     }
 
     function savePosts(posts) {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
-        } catch (err) {
-            window.toast?.('Không lưu được — bộ nhớ đầy, thử xóa bài cũ', true);
-            throw err;
-        }
-    }
-
-    function escapeHtml(s) {
-        return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
-
-    function renderContent(text) {
-        let html = escapeHtml(text);
-        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-        html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-        return html;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
     }
 
     function formatTime(iso) {
         if (typeof window.formatDateTimeVN === 'function') return window.formatDateTimeVN(iso);
-        const d = new Date(iso);
-        return d.toLocaleString('vi-VN', {
-            day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit',
-        });
+        return new Date(iso).toLocaleString('vi-VN');
     }
 
-    function wrapSelection(textarea, before, after) {
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const val = textarea.value;
-        const selected = val.slice(start, end);
-        const wrapped = before + (selected || 'văn bản') + after;
-        textarea.value = val.slice(0, start) + wrapped + val.slice(end);
-        const pos = start + before.length + (selected || 'văn bản').length + after.length;
-        textarea.focus();
-        textarea.setSelectionRange(pos, pos);
-        updateCharCount();
+    function currentClock() {
+        return new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     }
 
-    function updateCharCount() {
-        const ta = $('post-compose-text');
-        const counter = $('post-char-count');
-        if (!ta || !counter) return;
-        const len = ta.value.length;
-        counter.textContent = `${len} / ${MAX_CHARS}`;
-        counter.classList.toggle('is-warn', len > MAX_CHARS * 0.9 && len <= MAX_CHARS);
-        counter.classList.toggle('is-over', len > MAX_CHARS);
-    }
+    function buildShell() {
+        if ($('locket-post-overlay')) return;
 
-    function buildModal() {
-        if ($('post-composer-overlay')) return;
-
-        const tagChips = TAGS.map(t =>
-            `<button type="button" class="post-tag-chip" data-tag="${t.id}"><i class="fas ${t.icon} mr-1"></i>${t.label}</button>`
-        ).join('');
-
-        const emojiBtns = EMOJIS.map(e =>
-            `<button type="button" class="post-emoji-btn" data-emoji="${e}">${e}</button>`
-        ).join('');
-
-        const html = `
-<div id="post-composer-overlay" class="post-composer-overlay" aria-hidden="true">
-    <div class="post-composer-modal" role="dialog" aria-labelledby="post-composer-title" aria-modal="true">
-        <div class="post-composer-header">
-            <h2 id="post-composer-title" class="post-composer-title"><i class="fas fa-pen-to-square mr-1"></i> Đăng bài</h2>
-            <button type="button" id="post-composer-close" class="post-composer-close" aria-label="Đóng">&times;</button>
-        </div>
-        <div class="post-composer-tabs">
-            <button type="button" class="post-composer-tab is-active" data-pc-tab="compose"><i class="fas fa-edit mr-1"></i>Soạn bài</button>
-            <button type="button" class="post-composer-tab" data-pc-tab="feed"><i class="fas fa-list mr-1"></i>Bài đã đăng <span id="post-feed-count"></span></button>
-        </div>
-        <div class="post-composer-body">
-            <div id="post-panel-compose" class="post-composer-panel is-active">
-                <div class="post-compose-toolbar" style="position:relative">
-                    <button type="button" class="post-format-btn" data-format="bold" title="In đậm"><i class="fas fa-bold"></i></button>
-                    <button type="button" class="post-format-btn" data-format="italic" title="In nghiêng"><i class="fas fa-italic"></i></button>
-                    <button type="button" class="post-emoji-trigger" id="post-emoji-trigger" title="Emoji"><i class="far fa-smile"></i></button>
-                    <div id="post-emoji-popover" class="post-emoji-popover">${emojiBtns}</div>
+        const studioSections = STUDIO_SECTIONS.map(sec => {
+            const pills = sec.pills.map(p => {
+                const label = p.dynamic === 'time' ? currentClock() : p.label;
+                let iconHtml = '';
+                if (p.icon === 'fa-spotify') iconHtml = '<i class="fab fa-spotify mr-1"></i>';
+                else if (p.icon === 'fa-apple') iconHtml = '<i class="fab fa-apple mr-1"></i>';
+                else if (p.icon) iconHtml = `<i class="fas ${p.icon} mr-1"></i>`;
+                return `<button type="button" class="locket-studio-pill ${p.cls}" data-studio-pill="${p.id}" data-caption="${escapeHtml(p.caption || '')}">${iconHtml}${escapeHtml(label)}</button>`;
+            }).join('');
+            return `<section class="locket-studio-section" data-section="${sec.id}">
+                <div class="locket-studio-section-head">
+                    <span class="locket-studio-section-title">${sec.title}</span>
+                    ${sec.isNew ? '<span class="locket-studio-new">New</span>' : ''}
                 </div>
-                <textarea id="post-compose-text" class="post-compose-textarea" maxlength="${MAX_CHARS}" placeholder="Chia sẻ trải nghiệm AI, mẹo dùng Gemini/ChatGPT, khuyến mãi..."></textarea>
-                <div id="post-char-count" class="post-char-count">0 / ${MAX_CHARS}</div>
-                <input type="file" id="post-media-input" accept="image/*,video/*" class="hidden">
-                <div id="post-media-zone" class="post-media-zone" tabindex="0" role="button" aria-label="Thêm ảnh hoặc video">
-                    <i class="fas fa-image"></i>
-                    <p>Thêm ảnh hoặc video — kéo thả hoặc bấm để chọn</p>
+                <div class="locket-studio-pills">${pills}</div>
+            </section>`;
+        }).join('');
+
+        document.body.insertAdjacentHTML('beforeend', `
+<div id="locket-post-overlay" class="locket-post-overlay" aria-hidden="true">
+    <div class="locket-compose">
+        <header class="locket-header">
+            <span class="locket-header-title" id="locket-send-to-label">Gửi đến...</span>
+            <button type="button" class="locket-header-btn" id="locket-history-btn" title="Bài đã đăng"><i class="fas fa-clock-rotate-left"></i></button>
+        </header>
+        <div class="locket-preview-wrap">
+            <div class="locket-preview" id="locket-preview">
+                <video id="locket-preview-video" class="locket-preview-media" autoplay playsinline muted></video>
+                <img id="locket-preview-img" class="locket-preview-media" alt="">
+                <div id="locket-preview-placeholder" class="locket-preview-placeholder">
+                    <i class="fas fa-camera"></i>
+                    <span>Chạm để chụp / chọn ảnh</span>
                 </div>
-                <div id="post-media-preview" class="post-media-preview">
-                    <button type="button" id="post-media-remove" class="post-media-remove" aria-label="Xóa media"><i class="fas fa-times"></i></button>
-                    <div id="post-media-preview-inner"></div>
-                </div>
-                <div class="post-tags-section">
-                    <div class="post-tags-label"><i class="fas fa-hashtag"></i> Chủ đề / Tag</div>
-                    <div class="post-tags-list">${tagChips}</div>
+                <button type="button" id="locket-camera-btn" class="locket-preview-camera-btn" title="Bật camera"><i class="fas fa-camera"></i></button>
+                <div id="locket-deco-overlay" class="locket-deco-overlay"></div>
+                <div class="locket-caption-pill">
+                    <input type="text" id="locket-caption" class="locket-caption-input" maxlength="${MAX_CAPTION}" placeholder="Nhập tin nhắn..." autocomplete="off">
                 </div>
             </div>
-            <div id="post-panel-feed" class="post-composer-panel">
-                <div id="post-feed-list" class="post-feed-list"></div>
-            </div>
         </div>
-        <div id="post-compose-footer" class="post-compose-footer">
-            <button type="button" id="post-submit-btn" class="post-submit-btn">
-                <i class="fas fa-paper-plane"></i> Đăng bài
-            </button>
+        <div class="locket-actions">
+            <button type="button" class="locket-action-x" id="locket-close" aria-label="Đóng"><i class="fas fa-times"></i></button>
+            <button type="button" class="locket-action-send" id="locket-send" aria-label="Gửi"><i class="fas fa-paper-plane"></i></button>
+            <button type="button" class="locket-action-fx" id="locket-studio-open" aria-label="Tuỳ chỉnh"><i class="fas fa-wand-magic-sparkles"></i></button>
+        </div>
+        <div class="locket-recipients">
+            <div class="locket-recipients-scroll" id="locket-recipients-scroll"></div>
         </div>
     </div>
-</div>`;
+    <input type="file" id="locket-media-input" accept="image/*,video/*" class="hidden">
+</div>
+<div id="locket-studio-backdrop" class="locket-studio-backdrop" aria-hidden="true"></div>
+<aside id="locket-studio" class="locket-studio" aria-hidden="true">
+    <div class="locket-studio-header">
+        <div class="locket-studio-logo"><i class="fas fa-wand-magic-sparkles"></i></div>
+        <span class="locket-studio-title">CUSTOMIZE STUDIO</span>
+        <span class="locket-studio-badge">Free</span>
+        <button type="button" class="locket-studio-close" id="locket-studio-close">&times;</button>
+    </div>
+    <div class="locket-studio-body">${studioSections}</div>
+</aside>
+<div id="locket-history-sheet" class="locket-history-sheet" aria-hidden="true">
+    <div class="locket-history-panel">
+        <div class="locket-history-head">
+            <h3><i class="fas fa-list mr-1"></i> Bài đã đăng</h3>
+            <button type="button" class="locket-studio-close" id="locket-history-close">&times;</button>
+        </div>
+        <div id="locket-history-list" class="locket-history-list"></div>
+    </div>
+</div>`);
 
-        document.body.insertAdjacentHTML('beforeend', html);
         bindEvents();
     }
 
-    function setTab(tab) {
-        state.activeTab = tab;
-        document.querySelectorAll('.post-composer-tab').forEach(btn => {
-            btn.classList.toggle('is-active', btn.dataset.pcTab === tab);
-        });
-        $('post-panel-compose')?.classList.toggle('is-active', tab === 'compose');
-        $('post-panel-feed')?.classList.toggle('is-active', tab === 'feed');
-        $('post-compose-footer')?.classList.toggle('hidden', tab !== 'compose');
-        if (tab === 'feed') renderFeed();
+    function stopCamera() {
+        if (state.cameraStream) {
+            state.cameraStream.getTracks().forEach(t => t.stop());
+            state.cameraStream = null;
+        }
+        const vid = $('locket-preview-video');
+        if (vid) {
+            vid.pause();
+            vid.srcObject = null;
+            vid.classList.remove('is-visible');
+        }
     }
 
     function clearMedia() {
-        if (state.mediaPreviewUrl) URL.revokeObjectURL(state.mediaPreviewUrl);
+        stopCamera();
+        if (state.mediaPreviewUrl && state.mediaType !== 'camera') {
+            URL.revokeObjectURL(state.mediaPreviewUrl);
+        }
         state.mediaFile = null;
         state.mediaPreviewUrl = null;
         state.mediaType = null;
-        const preview = $('post-media-preview');
-        const inner = $('post-media-preview-inner');
-        if (inner) inner.innerHTML = '';
-        preview?.classList.remove('is-visible');
-        const input = $('post-media-input');
+        $('locket-preview-img')?.classList.remove('is-visible');
+        $('locket-preview-video')?.classList.remove('is-visible');
+        $('locket-preview-placeholder')?.classList.remove('is-hidden');
+        const input = $('locket-media-input');
         if (input) input.value = '';
     }
 
-    function setMedia(file) {
+    function showMediaPreview(type) {
+        $('locket-preview-placeholder')?.classList.add('is-hidden');
+        if (type === 'image') {
+            $('locket-preview-img')?.classList.add('is-visible');
+        } else {
+            $('locket-preview-video')?.classList.add('is-visible');
+        }
+    }
+
+    async function startCamera() {
+        if (!navigator.mediaDevices?.getUserMedia) {
+            $('locket-media-input')?.click();
+            return;
+        }
+        try {
+            clearMedia();
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user' },
+                audio: false,
+            });
+            state.cameraStream = stream;
+            state.mediaType = 'camera';
+            const vid = $('locket-preview-video');
+            if (vid) {
+                vid.srcObject = stream;
+                vid.muted = true;
+                await vid.play();
+                showMediaPreview('video');
+            }
+        } catch (_) {
+            $('locket-media-input')?.click();
+        }
+    }
+
+    function setMediaFile(file) {
         if (!file) return;
         const isImg = file.type.startsWith('image/');
         const isVid = file.type.startsWith('video/');
@@ -187,30 +255,52 @@
             window.toast?.('Chỉ hỗ trợ ảnh hoặc video', true);
             return;
         }
-        const maxMb = isImg ? MAX_IMAGE_MB : MAX_VIDEO_MB;
-        if (file.size > maxMb * 1024 * 1024) {
-            window.toast?.(`File quá lớn — tối đa ${maxMb}MB`, true);
+        const max = isImg ? MAX_IMAGE_MB : MAX_VIDEO_MB;
+        if (file.size > max * 1024 * 1024) {
+            window.toast?.(`File tối đa ${max}MB`, true);
             return;
         }
         clearMedia();
         state.mediaFile = file;
         state.mediaType = isImg ? 'image' : 'video';
         state.mediaPreviewUrl = URL.createObjectURL(file);
-        const inner = $('post-media-preview-inner');
-        if (inner) {
-            inner.innerHTML = isImg
-                ? `<img src="${state.mediaPreviewUrl}" alt="Preview">`
-                : `<video src="${state.mediaPreviewUrl}" controls playsinline></video>`;
+        if (isImg) {
+            const img = $('locket-preview-img');
+            if (img) img.src = state.mediaPreviewUrl;
+            showMediaPreview('image');
+        } else {
+            const vid = $('locket-preview-video');
+            if (vid) {
+                vid.srcObject = null;
+                vid.src = state.mediaPreviewUrl;
+                vid.controls = true;
+                vid.muted = false;
+            }
+            showMediaPreview('video');
         }
-        $('post-media-preview')?.classList.add('is-visible');
     }
 
-    function readFileAsDataUrl(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = () => reject(new Error('Không đọc được file'));
-            reader.readAsDataURL(file);
+    async function captureCameraFrame() {
+        const vid = $('locket-preview-video');
+        if (!vid?.videoWidth) return null;
+        const canvas = document.createElement('canvas');
+        canvas.width = vid.videoWidth;
+        canvas.height = vid.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(vid, 0, 0);
+        return new Promise(resolve => {
+            canvas.toBlob(b => resolve(b), 'image/jpeg', 0.82);
+        });
+    }
+
+    async function readFileAsDataUrl(file) {
+        return new Promise((res, rej) => {
+            const r = new FileReader();
+            r.onload = () => res(r.result);
+            r.onerror = () => rej(new Error('Lỗi đọc file'));
+            r.readAsDataURL(file);
         });
     }
 
@@ -219,71 +309,187 @@
             const img = new Image();
             const url = URL.createObjectURL(file);
             img.onload = () => {
-                const maxW = 960;
-                let w = img.width;
-                let h = img.height;
-                if (w > maxW) {
-                    h = Math.round(h * maxW / w);
-                    w = maxW;
-                }
-                const canvas = document.createElement('canvas');
-                canvas.width = w;
-                canvas.height = h;
-                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                const maxW = 800;
+                let w = img.width, h = img.height;
+                if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+                const c = document.createElement('canvas');
+                c.width = w; c.height = h;
+                c.getContext('2d').drawImage(img, 0, 0, w, h);
                 URL.revokeObjectURL(url);
-                resolve(canvas.toDataURL('image/jpeg', 0.78));
+                resolve(c.toDataURL('image/jpeg', 0.78));
             };
-            img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Ảnh lỗi')); };
+            img.onerror = () => reject(new Error('Ảnh lỗi'));
             img.src = url;
         });
     }
 
-    async function resetCompose() {
-        const ta = $('post-compose-text');
-        if (ta) ta.value = '';
-        state.tags.clear();
-        document.querySelectorAll('.post-tag-chip').forEach(c => c.classList.remove('is-selected'));
-        clearMedia();
-        updateCharCount();
+    function renderRecipients() {
+        const scroll = $('locket-recipients-scroll');
+        if (!scroll) return;
+
+        const items = [
+            { id: 'private', type: 'visibility', label: 'Riêng tư', icon: 'fa-lock', selected: state.visibility === 'private' },
+            { id: 'all', type: 'visibility', label: 'Tất cả', icon: 'fa-user-group', selected: state.visibility === 'all' },
+        ];
+
+        state.friends.forEach(f => {
+            const id = f.id || f.userId;
+            items.push({
+                id: String(id),
+                type: 'friend',
+                label: (f.fullName || f.name || f.email || 'Bạn').split(' ')[0],
+                avatar: f.avatarUrl,
+                selected: state.visibility === 'selected' && state.selectedFriendIds.has(id),
+            });
+        });
+
+        scroll.innerHTML = items.map(item => {
+            const avatar = item.avatar
+                ? `<img src="${escapeHtml(item.avatar)}" alt="">`
+                : `<i class="fas ${item.icon || 'fa-user'}"></i>`;
+            return `<button type="button" class="locket-recipient${item.selected ? ' is-selected' : ''}" data-recipient-type="${item.type}" data-recipient-id="${escapeHtml(item.id)}">
+                <div class="locket-recipient-ring"><div class="locket-recipient-avatar">${avatar}</div></div>
+                <span class="locket-recipient-name">${escapeHtml(item.label)}</span>
+            </button>`;
+        }).join('');
+
+        updateSendToLabel();
+    }
+
+    function updateSendToLabel() {
+        const el = $('locket-send-to-label');
+        if (!el) return;
+        if (state.visibility === 'private') el.textContent = 'Gửi riêng tư';
+        else if (state.visibility === 'all') el.textContent = 'Gửi đến tất cả';
+        else if (state.selectedFriendIds.size === 1) {
+            const f = state.friends.find(x => (x.id || x.userId) === [...state.selectedFriendIds][0]);
+            el.textContent = 'Gửi đến ' + (f?.fullName || f?.name || 'bạn bè');
+        } else if (state.selectedFriendIds.size > 1) {
+            el.textContent = `Gửi đến ${state.selectedFriendIds.size} người`;
+        } else el.textContent = 'Gửi đến...';
+    }
+
+    async function loadFriends() {
+        state.friends = [];
+        try {
+            if (typeof window.api === 'function') {
+                const data = await window.api('/social/friends');
+                state.friends = (data.friends || []).map(item => ({
+                    id: item.user?.id,
+                    fullName: item.user?.fullName,
+                    name: item.user?.fullName,
+                    email: item.user?.email,
+                })).filter(f => f.id);
+            }
+        } catch (_) { /* no friends API */ }
+        renderRecipients();
+    }
+
+    function renderDecoOverlay() {
+        const box = $('locket-deco-overlay');
+        if (!box) return;
+        const chips = [];
+        state.studioPills.forEach(pid => {
+            STUDIO_SECTIONS.forEach(sec => {
+                const p = sec.pills.find(x => x.id === pid);
+                if (p) {
+                    const label = p.dynamic === 'time' ? currentClock() : (p.label || p.caption || pid);
+                    chips.push(`<span class="locket-deco-chip ${p.cls}">${escapeHtml(label)}</span>`);
+                }
+            });
+        });
+        box.innerHTML = chips.join('');
+    }
+
+    function openStudio() {
+        $('locket-studio-backdrop')?.classList.add('is-open');
+        $('locket-studio')?.classList.add('is-open');
+        $('locket-studio')?.setAttribute('aria-hidden', 'false');
+        const timePill = document.querySelector('[data-studio-pill][data-studio-pill="time"], [data-studio-pill="time"]');
+        if (timePill) timePill.textContent = '';
+        document.querySelectorAll('[data-studio-pill="time"]').forEach(el => {
+            el.innerHTML = `<i class="fas fa-clock mr-1"></i>${currentClock()}`;
+        });
+    }
+
+    function closeStudio() {
+        $('locket-studio-backdrop')?.classList.remove('is-open');
+        $('locket-studio')?.classList.remove('is-open');
+        $('locket-studio')?.setAttribute('aria-hidden', 'true');
+    }
+
+    function renderHistory() {
+        const list = $('locket-history-list');
+        if (!list) return;
+        const posts = getPosts();
+        if (!posts.length) {
+            list.innerHTML = '<div class="locket-history-empty">Chưa có bài nào</div>';
+            return;
+        }
+        list.innerHTML = posts.map(p => {
+            const vis = p.visibility === 'private' ? 'Riêng tư' : p.visibility === 'all' ? 'Tất cả' : 'Bạn chọn';
+            return `<div class="locket-history-card">
+                <p>${escapeHtml(p.caption || '(Không có chữ)')}</p>
+                <div class="locket-history-meta">${escapeHtml(formatTime(p.createdAt))} · ${vis}${p.decorations?.length ? ' · ' + p.decorations.length + ' sticker' : ''}</div>
+            </div>`;
+        }).join('');
+    }
+
+    function openHistory() {
+        renderHistory();
+        $('locket-history-sheet')?.classList.add('is-open');
+        $('locket-history-sheet')?.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeHistory() {
+        $('locket-history-sheet')?.classList.remove('is-open');
+        $('locket-history-sheet')?.setAttribute('aria-hidden', 'true');
     }
 
     async function submitPost() {
-        const text = ($('post-compose-text')?.value || '').trim();
-        if (!text && !state.mediaFile) {
-            window.toast?.('Nhập nội dung hoặc thêm ảnh/video', true);
-            return;
-        }
-        if (text.length > MAX_CHARS) {
-            window.toast?.(`Nội dung tối đa ${MAX_CHARS} ký tự`, true);
+        const caption = ($('locket-caption')?.value || '').trim();
+        const hasMedia = state.mediaFile || state.mediaType === 'camera';
+        if (!caption && !hasMedia) {
+            window.toast?.('Thêm ảnh hoặc nhập tin nhắn', true);
             return;
         }
 
-        const btn = $('post-submit-btn');
+        const btn = $('locket-send');
         if (btn) btn.disabled = true;
 
         try {
             let mediaData = null;
             let mediaMime = null;
-            if (state.mediaFile) {
+            let finalType = state.mediaType;
+
+            if (state.mediaType === 'camera') {
+                const blob = await captureCameraFrame();
+                if (blob) {
+                    mediaData = await readFileAsDataUrl(blob);
+                    mediaMime = 'image/jpeg';
+                    finalType = 'image';
+                }
+            } else if (state.mediaFile) {
                 if (state.mediaType === 'image') {
                     mediaData = await compressImage(state.mediaFile);
                     mediaMime = 'image/jpeg';
                 } else {
                     mediaData = await readFileAsDataUrl(state.mediaFile);
-                    mediaMime = state.mediaFile.type || 'video/mp4';
+                    mediaMime = state.mediaFile.type;
                 }
             }
 
             const user = window.currentUser;
             const post = {
-                id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-                content: text,
-                tags: [...state.tags],
-                mediaType: state.mediaType,
+                id: 'lp_' + Date.now(),
+                caption,
+                mediaType: finalType,
                 mediaData,
                 mediaMime,
-                authorName: user?.fullName || user?.name || user?.email || 'Bạn',
-                authorId: user?.id || null,
+                visibility: state.visibility,
+                audienceIds: state.visibility === 'selected' ? [...state.selectedFriendIds] : [],
+                decorations: [...state.studioPills],
+                authorName: user?.fullName || user?.email || 'Bạn',
                 createdAt: new Date().toISOString(),
             };
 
@@ -291,64 +497,27 @@
             posts.unshift(post);
             savePosts(posts);
 
-            await resetCompose();
-            updateFeedCount();
-            window.toast?.('Đã đăng bài thành công!');
-            setTab('feed');
+            window.toast?.('Đã gửi bài thành công! ✨');
+            resetComposer();
+            close();
         } catch (err) {
-            window.toast?.(err.message || 'Không đăng được bài', true);
+            window.toast?.(err.message || 'Không gửi được', true);
         } finally {
             if (btn) btn.disabled = false;
         }
     }
 
-    function deletePost(id) {
-        if (!confirm('Xóa bài viết này?')) return;
-        const posts = getPosts().filter(p => p.id !== id);
-        savePosts(posts);
-        renderFeed();
-        updateFeedCount();
-        window.toast?.('Đã xóa bài viết');
-    }
-
-    function renderFeed() {
-        const list = $('post-feed-list');
-        if (!list) return;
-        const posts = getPosts();
-        if (!posts.length) {
-            list.innerHTML = `<div class="post-feed-empty"><i class="fas fa-inbox"></i><p>Chưa có bài nào — hãy soạn và đăng bài đầu tiên!</p></div>`;
-            return;
-        }
-        list.innerHTML = posts.map(p => {
-            const tagLabels = (p.tags || []).map(tid => {
-                const t = TAGS.find(x => x.id === tid);
-                return t ? `<span class="post-feed-tag">${escapeHtml(t.label)}</span>` : '';
-            }).join('');
-            const mediaHtml = p.mediaData
-                ? `<div class="post-feed-media">${p.mediaType === 'video'
-                    ? `<video src="${p.mediaData}" controls playsinline></video>`
-                    : `<img src="${p.mediaData}" alt="Ảnh bài đăng">`}</div>`
-                : '';
-            return `<article class="post-feed-card" data-post-id="${p.id}">
-                <div class="post-feed-card-header">
-                    <span class="post-feed-author"><i class="fas fa-user-circle mr-1"></i>${escapeHtml(p.authorName)}</span>
-                    <span class="post-feed-time">${escapeHtml(formatTime(p.createdAt))}</span>
-                </div>
-                ${tagLabels ? `<div class="post-feed-tags">${tagLabels}</div>` : ''}
-                ${p.content ? `<div class="post-feed-content">${renderContent(p.content)}</div>` : ''}
-                ${mediaHtml}
-                <div class="post-feed-actions">
-                    <button type="button" class="post-feed-delete" data-delete-post="${p.id}"><i class="fas fa-trash-alt mr-1"></i>Xóa</button>
-                </div>
-            </article>`;
-        }).join('');
-    }
-
-    function updateFeedCount() {
-        const el = $('post-feed-count');
-        if (!el) return;
-        const n = getPosts().length;
-        el.textContent = n ? `(${n})` : '';
+    function resetComposer() {
+        $('locket-caption').value = '';
+        state.caption = '';
+        state.visibility = 'all';
+        state.selectedFriendIds.clear();
+        state.studioPills.clear();
+        state.studioMeta = {};
+        document.querySelectorAll('.locket-studio-pill.is-selected').forEach(p => p.classList.remove('is-selected'));
+        clearMedia();
+        renderDecoOverlay();
+        renderRecipients();
     }
 
     function open() {
@@ -356,118 +525,101 @@
             window.toast?.('Đăng nhập để đăng bài', true);
             return;
         }
-        buildModal();
-        updateFeedCount();
-        const overlay = $('post-composer-overlay');
+        buildShell();
+        resetComposer();
+        loadFriends();
+        const overlay = $('locket-post-overlay');
         overlay?.classList.add('is-open');
         overlay?.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
-        setTab('compose');
-        $('post-compose-text')?.focus();
+        setTimeout(() => startCamera().catch(() => {}), 300);
     }
 
     function close() {
-        const overlay = $('post-composer-overlay');
-        overlay?.classList.remove('is-open');
-        overlay?.setAttribute('aria-hidden', 'true');
+        closeStudio();
+        closeHistory();
+        clearMedia();
+        $('locket-post-overlay')?.classList.remove('is-open');
+        $('locket-post-overlay')?.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = '';
-        $('post-emoji-popover')?.classList.remove('is-open');
     }
 
     function bindEvents() {
-        $('post-composer-close')?.addEventListener('click', close);
-        $('post-composer-overlay')?.addEventListener('click', e => {
-            if (e.target.id === 'post-composer-overlay') close();
-        });
-        document.addEventListener('keydown', e => {
-            if (e.key === 'Escape' && $('post-composer-overlay')?.classList.contains('is-open')) close();
-        });
-
-        document.querySelectorAll('.post-composer-tab').forEach(btn => {
-            btn.addEventListener('click', () => setTab(btn.dataset.pcTab));
-        });
-
-        $('post-compose-text')?.addEventListener('input', updateCharCount);
-
-        document.querySelectorAll('.post-format-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const ta = $('post-compose-text');
-                if (!ta) return;
-                if (btn.dataset.format === 'bold') wrapSelection(ta, '**', '**');
-                else wrapSelection(ta, '*', '*');
-            });
+        $('locket-close')?.addEventListener('click', close);
+        $('locket-send')?.addEventListener('click', submitPost);
+        $('locket-studio-open')?.addEventListener('click', openStudio);
+        $('locket-studio-close')?.addEventListener('click', closeStudio);
+        $('locket-studio-backdrop')?.addEventListener('click', closeStudio);
+        $('locket-history-btn')?.addEventListener('click', openHistory);
+        $('locket-history-close')?.addEventListener('click', closeHistory);
+        $('locket-history-sheet')?.addEventListener('click', e => {
+            if (e.target.id === 'locket-history-sheet') closeHistory();
         });
 
-        $('post-emoji-trigger')?.addEventListener('click', e => {
+        $('locket-preview-placeholder')?.addEventListener('click', () => $('locket-media-input')?.click());
+        $('locket-camera-btn')?.addEventListener('click', e => {
             e.stopPropagation();
-            $('post-emoji-popover')?.classList.toggle('is-open');
+            startCamera();
         });
-        document.addEventListener('click', () => $('post-emoji-popover')?.classList.remove('is-open'));
-        $('post-emoji-popover')?.addEventListener('click', e => {
-            const btn = e.target.closest('.post-emoji-btn');
+        $('locket-media-input')?.addEventListener('change', e => {
+            const f = e.target.files?.[0];
+            if (f) setMediaFile(f);
+        });
+
+        $('locket-recipients-scroll')?.addEventListener('click', e => {
+            const btn = e.target.closest('.locket-recipient');
             if (!btn) return;
-            const ta = $('post-compose-text');
-            if (ta) {
-                const emoji = btn.dataset.emoji;
-                const pos = ta.selectionStart;
-                ta.value = ta.value.slice(0, pos) + emoji + ta.value.slice(pos);
-                ta.focus();
-                ta.selectionStart = ta.selectionEnd = pos + emoji.length;
-                updateCharCount();
+            const type = btn.dataset.recipientType;
+            const id = btn.dataset.recipientId;
+
+            if (type === 'visibility') {
+                state.visibility = id;
+                state.selectedFriendIds.clear();
+            } else if (type === 'friend') {
+                const fid = Number(id);
+                state.visibility = 'selected';
+                if (state.selectedFriendIds.has(fid)) state.selectedFriendIds.delete(fid);
+                else state.selectedFriendIds.add(fid);
+                if (!state.selectedFriendIds.size) state.visibility = 'all';
             }
-            $('post-emoji-popover')?.classList.remove('is-open');
+            renderRecipients();
         });
 
-        $('post-media-zone')?.addEventListener('click', () => $('post-media-input')?.click());
-        $('post-media-zone')?.addEventListener('keydown', e => {
-            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('post-media-input')?.click(); }
-        });
-        $('post-media-input')?.addEventListener('change', e => {
-            const file = e.target.files?.[0];
-            if (file) setMedia(file);
-        });
-        $('post-media-zone')?.addEventListener('dragover', e => {
-            e.preventDefault();
-            e.currentTarget.classList.add('is-dragover');
-        });
-        $('post-media-zone')?.addEventListener('dragleave', e => e.currentTarget.classList.remove('is-dragover'));
-        $('post-media-zone')?.addEventListener('drop', e => {
-            e.preventDefault();
-            e.currentTarget.classList.remove('is-dragover');
-            const file = e.dataTransfer?.files?.[0];
-            if (file) setMedia(file);
-        });
-        $('post-media-remove')?.addEventListener('click', clearMedia);
-
-        document.querySelectorAll('.post-tag-chip').forEach(chip => {
-            chip.addEventListener('click', () => {
-                const id = chip.dataset.tag;
-                if (state.tags.has(id)) {
-                    state.tags.delete(id);
-                    chip.classList.remove('is-selected');
-                } else {
-                    state.tags.add(id);
-                    chip.classList.add('is-selected');
+        document.querySelectorAll('[data-studio-pill]').forEach(pill => {
+            pill.addEventListener('click', () => {
+                const id = pill.dataset.studioPill;
+                const caption = pill.dataset.caption;
+                if (caption) {
+                    const input = $('locket-caption');
+                    if (input) input.value = caption;
                 }
+                if (state.studioPills.has(id)) {
+                    state.studioPills.delete(id);
+                    pill.classList.remove('is-selected');
+                } else {
+                    state.studioPills.add(id);
+                    pill.classList.add('is-selected');
+                }
+                renderDecoOverlay();
             });
         });
 
-        $('post-submit-btn')?.addEventListener('click', submitPost);
-
-        $('post-feed-list')?.addEventListener('click', e => {
-            const btn = e.target.closest('[data-delete-post]');
-            if (btn) deletePost(btn.dataset.deletePost);
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                if ($('locket-studio')?.classList.contains('is-open')) closeStudio();
+                else if ($('locket-history-sheet')?.classList.contains('is-open')) closeHistory();
+                else if ($('locket-post-overlay')?.classList.contains('is-open')) close();
+            }
         });
     }
 
     function init() {
-        buildModal();
-        updateFeedCount();
+        buildShell();
         $('nav-post-composer-btn')?.addEventListener('click', open);
         $('nav-post-composer-btn-mobile')?.addEventListener('click', open);
     }
 
-    window.PostComposer = { open, close, getPosts, renderFeed };
+    window.PostComposer = { open, close, getPosts };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);

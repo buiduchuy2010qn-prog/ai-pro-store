@@ -1,523 +1,560 @@
-/* ═══ Post Composer — Đăng bài ═══ */
-.post-composer-overlay {
+/* ═══ Locket Dio — Đăng bài ═══ */
+.locket-post-overlay {
     position: fixed;
     inset: 0;
-    z-index: 180;
-    background: rgba(2, 8, 23, 0.55);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    z-index: 190;
+    background: #fafafa;
     display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    padding: 0;
+    flex-direction: column;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition: opacity 0.28s ease, visibility 0.28s ease;
 }
 
-.post-composer-overlay.is-open {
+.locket-post-overlay.is-open {
     opacity: 1;
     visibility: visible;
 }
 
-.post-composer-modal {
-    width: 100%;
-    max-width: 640px;
-    max-height: 92vh;
-    max-height: 92dvh;
-    background: linear-gradient(165deg, #ffffff 0%, #f8fafc 45%, #eff6ff 100%);
-    border-radius: 24px 24px 0 0;
-    box-shadow: 0 -8px 48px rgba(37, 99, 235, 0.18), 0 0 0 1px rgba(56, 189, 248, 0.12);
+/* ─── Main compose (Ảnh 1) ─── */
+.locket-compose {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    transform: translateY(100%);
-    transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
-    overflow: hidden;
+    min-height: 0;
+    max-width: 520px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 1rem;
 }
 
-.post-composer-overlay.is-open .post-composer-modal {
-    transform: translateY(0);
-}
-
-@media (min-width: 640px) {
-    .post-composer-overlay {
-        align-items: center;
-        padding: 1.5rem;
-    }
-    .post-composer-modal {
-        border-radius: 22px;
-        max-height: 88vh;
-        transform: translateY(24px) scale(0.96);
-        opacity: 0;
-    }
-    .post-composer-overlay.is-open .post-composer-modal {
-        transform: translateY(0) scale(1);
-        opacity: 1;
-    }
-}
-
-.post-composer-header {
+.locket-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 1rem 1.15rem 0.65rem;
-    border-bottom: 1px solid rgba(56, 189, 248, 0.12);
+    justify-content: center;
+    position: relative;
+    padding: 0.85rem 0 0.65rem;
     flex-shrink: 0;
 }
 
-.post-composer-title {
-    font-size: 1.1rem;
-    font-weight: 800;
-    background: linear-gradient(135deg, #0284c7, #6366f1);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+.locket-header-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: -0.01em;
 }
 
-.post-composer-close {
+.locket-header-btn {
+    position: absolute;
+    right: 0;
     width: 36px;
     height: 36px;
-    border-radius: 12px;
     border: none;
-    background: rgba(148, 163, 184, 0.12);
-    color: #64748b;
-    font-size: 1.4rem;
-    line-height: 1;
-    cursor: pointer;
-    transition: background 0.2s, color 0.2s;
-}
-
-.post-composer-close:hover {
-    background: rgba(239, 68, 68, 0.12);
-    color: #ef4444;
-}
-
-.post-composer-tabs {
-    display: flex;
-    gap: 0.35rem;
-    padding: 0.55rem 1rem 0;
-    flex-shrink: 0;
-}
-
-.post-composer-tab {
-    flex: 1;
-    padding: 0.55rem 0.75rem;
-    border-radius: 12px;
-    border: 1.5px solid transparent;
     background: transparent;
-    color: #64748b;
-    font-size: 0.82rem;
-    font-weight: 700;
+    color: #334155;
+    font-size: 1rem;
     cursor: pointer;
-    transition: all 0.2s;
+    border-radius: 10px;
+    transition: background 0.2s;
 }
 
-.post-composer-tab.is-active {
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(99, 102, 241, 0.08));
-    border-color: rgba(56, 189, 248, 0.25);
-    color: #2563eb;
-}
+.locket-header-btn:hover { background: rgba(0, 0, 0, 0.05); }
 
-.post-composer-body {
+.locket-preview-wrap {
     flex: 1;
-    overflow-y: auto;
-    padding: 0.85rem 1rem 1rem;
-    scrollbar-width: thin;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    padding: 0.5rem 0;
 }
 
-.post-composer-panel { display: none; }
-.post-composer-panel.is-active { display: block; }
+.locket-preview {
+    position: relative;
+    width: 100%;
+    max-width: 340px;
+    aspect-ratio: 3 / 4;
+    border-radius: 28px;
+    overflow: hidden;
+    background: #e2e8f0;
+    box-shadow:
+        0 8px 32px rgba(15, 23, 42, 0.12),
+        0 0 0 1px rgba(0, 0, 0, 0.04);
+}
 
-/* ─── Compose panel ─── */
-.post-compose-toolbar {
+.locket-preview-media {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+}
+
+.locket-preview-media.is-visible { display: block; }
+
+.locket-preview-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: #94a3b8;
+    cursor: pointer;
+    background: linear-gradient(180deg, #f1f5f9, #e2e8f0);
+    transition: background 0.2s;
+}
+
+.locket-preview-placeholder:hover { background: #e2e8f0; }
+.locket-preview-placeholder.is-hidden { display: none; }
+
+.locket-preview-placeholder i {
+    font-size: 2.2rem;
+    color: #cbd5e1;
+}
+
+.locket-preview-placeholder span {
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.locket-preview-camera-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(15, 23, 42, 0.55);
+    color: #fff;
+    font-size: 0.85rem;
+    cursor: pointer;
+    z-index: 3;
+    backdrop-filter: blur(6px);
+}
+
+.locket-caption-pill {
+    position: absolute;
+    left: 50%;
+    bottom: 14px;
+    transform: translateX(-50%);
+    width: calc(100% - 28px);
+    z-index: 4;
+}
+
+.locket-caption-input {
+    width: 100%;
+    padding: 0.65rem 1rem;
+    border: none;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(10px);
+    font-size: 0.88rem;
+    color: #1e293b;
+    text-align: center;
+    outline: none;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.locket-caption-input::placeholder { color: #94a3b8; }
+
+.locket-deco-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
     display: flex;
     flex-wrap: wrap;
+    align-content: flex-start;
     gap: 0.35rem;
-    margin-bottom: 0.65rem;
+    padding: 12px;
 }
 
-.post-format-btn,
-.post-emoji-trigger {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    border: 1px solid rgba(148, 163, 184, 0.25);
-    background: #fff;
-    color: #475569;
-    font-size: 0.85rem;
+.locket-deco-chip {
+    padding: 0.28rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Action row (Ảnh 1 & 3) */
+.locket-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2.5rem;
+    padding: 0.85rem 0 0.65rem;
+    flex-shrink: 0;
+}
+
+.locket-action-x,
+.locket-action-fx {
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: transparent;
+    color: #0f172a;
+    font-size: 1.35rem;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    transition: transform 0.2s, opacity 0.2s;
 }
 
-.post-format-btn:hover,
-.post-emoji-trigger:hover {
-    border-color: rgba(56, 189, 248, 0.4);
-    color: #2563eb;
-    background: #f0f9ff;
-}
+.locket-action-x:hover,
+.locket-action-fx:hover { transform: scale(1.08); opacity: 0.75; }
 
-.post-format-btn.is-active {
-    background: linear-gradient(135deg, #2563eb, #6366f1);
-    color: #fff;
-    border-color: transparent;
-}
-
-.post-emoji-popover {
-    position: absolute;
-    z-index: 10;
-    display: none;
-    grid-template-columns: repeat(8, 1fr);
-    gap: 0.2rem;
-    padding: 0.55rem;
+.locket-action-send {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
     background: #fff;
-    border: 1px solid rgba(56, 189, 248, 0.2);
-    border-radius: 14px;
-    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12);
-    max-width: 280px;
+    color: #0f172a;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.post-emoji-popover.is-open { display: grid; }
+.locket-action-send:hover {
+    transform: scale(1.06);
+    box-shadow: 0 6px 24px rgba(15, 23, 42, 0.2);
+}
 
-.post-emoji-btn {
+.locket-action-send:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Recipients (Ảnh 1 & 3) */
+.locket-recipients {
+    flex-shrink: 0;
+    padding: 0.5rem 0 1rem;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.locket-recipients-scroll {
+    display: flex;
+    gap: 0.65rem;
+    overflow-x: auto;
+    padding: 0.35rem 0.25rem 0.5rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.locket-recipients-scroll::-webkit-scrollbar { display: none; }
+
+.locket-recipient {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    width: 62px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+}
+
+.locket-recipient-ring {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    padding: 3px;
+    background: transparent;
+    transition: background 0.2s, box-shadow 0.2s;
+}
+
+.locket-recipient.is-selected .locket-recipient-ring {
+    background: linear-gradient(135deg, #facc15, #f59e0b);
+    box-shadow: 0 0 0 2px #fbbf24;
+}
+
+.locket-recipient-avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-size: 1rem;
+    color: #64748b;
+}
+
+.locket-recipient-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.locket-recipient-name {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #475569;
+    max-width: 62px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.locket-recipient.is-selected .locket-recipient-name { color: #0f172a; }
+
+/* ─── Customize Studio (Ảnh 2) ─── */
+.locket-studio {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(420px, 100%);
+    z-index: 210;
+    background: #fff;
+    box-shadow: -8px 0 40px rgba(15, 23, 42, 0.12);
+    transform: translateX(100%);
+    transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.locket-studio.is-open { transform: translateX(0); }
+
+.locket-studio-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 205;
+    background: rgba(15, 23, 42, 0.25);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.locket-studio-backdrop.is-open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.locket-studio-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 1rem 0.75rem;
+    border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
+}
+
+.locket-studio-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+}
+
+.locket-studio-title {
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: #1e293b;
+    flex: 1;
+}
+
+.locket-studio-badge {
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.locket-studio-close {
     width: 32px;
     height: 32px;
     border: none;
     background: transparent;
-    border-radius: 8px;
-    font-size: 1.15rem;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-
-.post-emoji-btn:hover { background: #f0f9ff; }
-
-.post-compose-textarea {
-    width: 100%;
-    min-height: 140px;
-    max-height: 220px;
-    padding: 0.9rem 1rem;
-    border: 1.5px solid rgba(56, 189, 248, 0.2);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.9);
-    font-size: 0.95rem;
-    line-height: 1.55;
-    color: #1e293b;
-    resize: vertical;
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.post-compose-textarea:focus {
-    border-color: #38bdf8;
-    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
-}
-
-.post-compose-textarea::placeholder { color: #94a3b8; }
-
-.post-char-count {
-    text-align: right;
-    font-size: 0.72rem;
-    color: #94a3b8;
-    margin-top: 0.35rem;
-}
-
-.post-char-count.is-warn { color: #f59e0b; }
-.post-char-count.is-over { color: #ef4444; font-weight: 700; }
-
-/* Media upload */
-.post-media-zone {
-    margin-top: 0.85rem;
-    border: 2px dashed rgba(56, 189, 248, 0.3);
-    border-radius: 16px;
-    padding: 1rem;
-    text-align: center;
-    background: rgba(240, 249, 255, 0.5);
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-}
-
-.post-media-zone:hover,
-.post-media-zone.is-dragover {
-    border-color: #38bdf8;
-    background: rgba(224, 242, 254, 0.7);
-}
-
-.post-media-zone i {
-    font-size: 1.6rem;
-    color: #38bdf8;
-    margin-bottom: 0.35rem;
-}
-
-.post-media-zone p {
-    font-size: 0.82rem;
+    font-size: 1.25rem;
     color: #64748b;
-    margin: 0;
-}
-
-.post-media-preview {
-    position: relative;
-    margin-top: 0.75rem;
-    border-radius: 14px;
-    overflow: hidden;
-    background: #0f172a;
-    display: none;
-}
-
-.post-media-preview.is-visible { display: block; }
-
-.post-media-preview img,
-.post-media-preview video {
-    width: 100%;
-    max-height: 220px;
-    object-fit: contain;
-    display: block;
-}
-
-.post-media-remove {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
-    border: none;
-    background: rgba(15, 23, 42, 0.72);
-    color: #fff;
     cursor: pointer;
-    font-size: 0.9rem;
-    transition: background 0.2s;
 }
 
-.post-media-remove:hover { background: rgba(239, 68, 68, 0.85); }
-
-/* Tags */
-.post-tags-section {
-    margin-top: 0.9rem;
+.locket-studio-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem 1rem 1.5rem;
+    scrollbar-width: thin;
 }
 
-.post-tags-label {
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: #64748b;
-    margin-bottom: 0.45rem;
+.locket-studio-section {
+    margin-bottom: 1.15rem;
+}
+
+.locket-studio-section-head {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
+    justify-content: space-between;
+    margin-bottom: 0.55rem;
 }
 
-.post-tags-label i { color: #8b5cf6; }
+.locket-studio-section-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #1e293b;
+}
 
-.post-tags-list {
+.locket-studio-new {
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: #ec4899;
+    text-transform: uppercase;
+}
+
+.locket-studio-pills {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
 }
 
-.post-tag-chip {
-    padding: 0.38rem 0.75rem;
+.locket-studio-pill {
+    padding: 0.42rem 0.7rem;
     border-radius: 999px;
-    border: 1.5px solid rgba(148, 163, 184, 0.3);
-    background: #fff;
-    color: #475569;
-    font-size: 0.78rem;
-    font-weight: 600;
+    border: 1.5px solid transparent;
+    font-size: 0.75rem;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    white-space: nowrap;
 }
 
-.post-tag-chip:hover {
-    border-color: rgba(99, 102, 241, 0.35);
-    color: #4f46e5;
+.locket-studio-pill:hover { transform: translateY(-1px); }
+
+.locket-studio-pill.is-selected {
+    box-shadow: 0 0 0 2px #0f172a;
+    transform: scale(1.03);
 }
 
-.post-tag-chip.is-selected {
-    background: linear-gradient(135deg, #2563eb, #6366f1);
-    border-color: transparent;
-    color: #fff;
-    box-shadow: 0 3px 12px rgba(37, 99, 235, 0.28);
-}
+.locket-studio-pill.pill-gray { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+.locket-studio-pill.pill-purple { background: linear-gradient(135deg, #a78bfa, #8b5cf6); color: #fff; }
+.locket-studio-pill.pill-orange { background: linear-gradient(135deg, #fb923c, #f97316); color: #fff; }
+.locket-studio-pill.pill-red { background: linear-gradient(135deg, #f87171, #ef4444); color: #fff; }
+.locket-studio-pill.pill-teal { background: linear-gradient(135deg, #2dd4bf, #14b8a6); color: #fff; }
+.locket-studio-pill.pill-pink { background: linear-gradient(135deg, #f472b6, #ec4899); color: #fff; }
+.locket-studio-pill.pill-blue { background: linear-gradient(135deg, #60a5fa, #3b82f6); color: #fff; }
+.locket-studio-pill.pill-green { background: linear-gradient(135deg, #4ade80, #22c55e); color: #fff; }
+.locket-studio-pill.pill-brown { background: linear-gradient(135deg, #a16207, #854d0e); color: #fff; }
+.locket-studio-pill.pill-indigo { background: linear-gradient(135deg, #818cf8, #6366f1); color: #fff; }
+.locket-studio-pill.pill-yellow { background: linear-gradient(135deg, #fde047, #facc15); color: #713f12; }
 
-/* Submit */
-.post-compose-footer {
-    padding: 0.75rem 1rem 1.15rem;
-    padding-bottom: max(1.15rem, env(safe-area-inset-bottom));
-    border-top: 1px solid rgba(56, 189, 248, 0.1);
-    flex-shrink: 0;
-}
-
-.post-submit-btn {
-    width: 100%;
-    padding: 0.88rem 1.25rem;
-    border: none;
-    border-radius: 16px;
-    background: linear-gradient(135deg, #0284c7 0%, #2563eb 45%, #6366f1 100%);
-    color: #fff;
-    font-size: 0.95rem;
-    font-weight: 800;
-    cursor: pointer;
+/* History sheet */
+.locket-history-sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 220;
+    background: rgba(15, 23, 42, 0.4);
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
-    gap: 0.5rem;
-    box-shadow: 0 6px 24px rgba(37, 99, 235, 0.35);
-    transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
 }
 
-.post-submit-btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(37, 99, 235, 0.42);
+.locket-history-sheet.is-open {
+    opacity: 1;
+    visibility: visible;
 }
 
-.post-submit-btn:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-}
-
-/* ─── Feed panel ─── */
-.post-feed-empty {
-    text-align: center;
-    padding: 2.5rem 1rem;
-    color: #94a3b8;
-}
-
-.post-feed-empty i {
-    font-size: 2.5rem;
-    margin-bottom: 0.65rem;
-    opacity: 0.4;
-    display: block;
-}
-
-.post-feed-list {
+.locket-history-panel {
+    width: 100%;
+    max-width: 520px;
+    max-height: 75vh;
+    background: #fff;
+    border-radius: 22px 22px 0 0;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    overflow: hidden;
 }
 
-.post-feed-card {
-    background: #fff;
-    border: 1px solid rgba(56, 189, 248, 0.15);
-    border-radius: 16px;
-    padding: 0.9rem 1rem;
-    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
-    animation: postCardIn 0.35s ease;
+.locket-history-sheet.is-open .locket-history-panel {
+    transform: translateY(0);
 }
 
-@keyframes postCardIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.post-feed-card-header {
+.locket-history-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 0.5rem;
+    padding: 1rem 1.15rem;
+    border-bottom: 1px solid #f1f5f9;
 }
 
-.post-feed-author {
-    font-size: 0.82rem;
-    font-weight: 700;
+.locket-history-head h3 {
+    font-size: 1rem;
+    font-weight: 800;
     color: #1e293b;
 }
 
-.post-feed-time {
+.locket-history-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem 1rem 1.5rem;
+}
+
+.locket-history-card {
+    background: #f8fafc;
+    border-radius: 16px;
+    padding: 0.85rem;
+    margin-bottom: 0.65rem;
+    border: 1px solid #e2e8f0;
+}
+
+.locket-history-card p {
+    font-size: 0.88rem;
+    color: #334155;
+    margin: 0 0 0.35rem;
+    line-height: 1.45;
+}
+
+.locket-history-meta {
     font-size: 0.72rem;
     color: #94a3b8;
 }
 
-.post-feed-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.3rem;
-    margin-bottom: 0.5rem;
+.locket-history-empty {
+    text-align: center;
+    padding: 2rem;
+    color: #94a3b8;
+    font-size: 0.88rem;
 }
 
-.post-feed-tag {
-    font-size: 0.68rem;
-    font-weight: 700;
-    padding: 0.15rem 0.5rem;
-    border-radius: 6px;
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(99, 102, 241, 0.08));
-    color: #4f46e5;
+@media (min-width: 768px) {
+    .locket-studio {
+        width: min(440px, 42vw);
+    }
 }
 
-.post-feed-content {
-    font-size: 0.9rem;
-    line-height: 1.55;
-    color: #334155;
-    word-break: break-word;
-    white-space: pre-wrap;
-}
-
-.post-feed-content strong { font-weight: 800; color: #1e293b; }
-.post-feed-content em { font-style: italic; color: #475569; }
-
-.post-feed-media {
-    margin-top: 0.65rem;
-    border-radius: 12px;
-    overflow: hidden;
-    background: #0f172a;
-}
-
-.post-feed-media img,
-.post-feed-media video {
-    width: 100%;
-    max-height: 280px;
-    object-fit: contain;
-    display: block;
-}
-
-.post-feed-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.6rem;
-    padding-top: 0.55rem;
-    border-top: 1px solid rgba(148, 163, 184, 0.15);
-}
-
-.post-feed-delete {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #ef4444;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0.25rem 0.5rem;
-    border-radius: 8px;
-    transition: background 0.2s;
-}
-
-.post-feed-delete:hover { background: rgba(239, 68, 68, 0.08); }
-
-/* Nav button accent */
-.nav-post-btn {
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(99, 102, 241, 0.08)) !important;
-    border: 1px solid rgba(56, 189, 248, 0.25) !important;
-    color: #2563eb !important;
-    font-weight: 700 !important;
-}
-
-.nav-post-btn:hover {
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(99, 102, 241, 0.12)) !important;
-    box-shadow: 0 3px 14px rgba(37, 99, 235, 0.15);
-}
-
-body.app-dark .post-composer-modal {
-    background: linear-gradient(165deg, #1e293b 0%, #0f172a 100%);
-}
-
-body.app-dark .post-compose-textarea,
-body.app-dark .post-format-btn,
-body.app-dark .post-emoji-trigger,
-body.app-dark .post-tag-chip,
-body.app-dark .post-feed-card {
-    background: rgba(30, 41, 59, 0.8);
-    color: #e2e8f0;
-    border-color: rgba(99, 102, 241, 0.25);
-}
-
-body.app-dark .post-feed-content { color: #cbd5e1; }
-body.app-dark .post-feed-author { color: #f1f5f9; }
+body.app-dark .locket-post-overlay { background: #0f172a; }
+body.app-dark .locket-header-title,
+body.app-dark .locket-studio-title { color: #f1f5f9; }
+body.app-dark .locket-studio { background: #1e293b; }
+body.app-dark .locket-preview { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35); }
