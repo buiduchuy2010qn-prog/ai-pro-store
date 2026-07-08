@@ -7,6 +7,7 @@
     const PHOTO_MAX_W = 640;
     const PHOTO_QUALITY = 0.55;
     const MAX_IMAGE_CHARS = 520000;
+    const LS_SAVE_MODE = 'social_save_mode';
 
     let cameraStream = null;
     let pendingImage = null;
@@ -120,6 +121,32 @@
         if (controls) controls.classList.toggle('hidden', hasPreview);
     }
 
+    function getSaveMode() {
+        return localStorage.getItem(LS_SAVE_MODE) || 'off';
+    }
+
+    function shouldSaveWhen(when) {
+        const mode = getSaveMode();
+        if (mode === 'off') return false;
+        if (mode === 'both') return true;
+        return mode === when;
+    }
+
+    function saveImageToDevice(dataUrl, label) {
+        if (!dataUrl) return;
+        try {
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = `shop-anh-${label || 'luu'}-${Date.now()}.jpg`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.toast?.('Đã lưu ảnh vào máy');
+        } catch (_) {
+            window.toast?.('Không lưu được ảnh — thử giữ ảnh để tải thủ công', true);
+        }
+    }
+
     function showPreview(src) {
         pendingImage = src;
         const preview = document.getElementById('social-preview');
@@ -133,7 +160,10 @@
         updateShutterState();
         updateCameraUi();
         updateComposerMode();
-        setComposerStatus('Sẵn sàng đăng — thêm chú thích rồi bấm Gửi ảnh', 'ok');
+        setComposerStatus('Bấm Đăng ảnh hoặc Hủy nếu không muốn đăng', 'ok');
+        if (shouldSaveWhen('capture')) {
+            saveImageToDevice(src, 'chup');
+        }
     }
 
     function clearPreview() {
@@ -307,17 +337,24 @@
             window.toast?.('Ảnh quá lớn — bấm Chụp lại hoặc chọn ảnh khác', true);
             return;
         }
+        if (!confirm('Đăng ảnh này lên bảng tin?\nBạn bè đã kết bạn sẽ xem được.')) {
+            return;
+        }
         const caption = document.getElementById('social-caption')?.value.trim() || '';
+        const imageToPost = pendingImage;
         const btn = document.getElementById('social-post-btn');
         if (btn) btn.disabled = true;
         try {
             await socialApi('/social/posts', {
                 method: 'POST',
-                body: JSON.stringify({ caption, imageData: pendingImage }),
+                body: JSON.stringify({ caption, imageData: imageToPost }),
             });
+            if (shouldSaveWhen('post')) {
+                saveImageToDevice(imageToPost, 'dang');
+            }
             document.getElementById('social-caption').value = '';
             clearPreview();
-            window.toast?.('Đã gửi ảnh cho bạn bè!');
+            window.toast?.('Đã đăng ảnh lên bảng tin!');
             const panel = document.getElementById('social-feed-panel');
             const histBtn = document.getElementById('social-history-toggle');
             if (panel?.classList.contains('hidden')) {
@@ -335,10 +372,10 @@
     }
 
     async function deletePost(postId) {
-        if (!confirm('Xóa bài đăng này?')) return;
+        if (!confirm('Hủy đăng ảnh này?\nBạn bè sẽ không xem được nữa.')) return;
         try {
             await socialApi('/social/posts/' + postId, { method: 'DELETE' });
-            window.toast?.('Đã xóa bài đăng');
+            window.toast?.('Đã hủy đăng ảnh');
             await loadFeed();
         } catch (err) {
             window.toast?.(err.message, true);
@@ -363,7 +400,10 @@
                         <div class="social-post-author">${esc(name)}</div>
                         <div class="social-post-time">${esc(fmtTime(p.createdAt))}</div>
                     </div>
-                    ${p.isMine ? `<button type="button" class="social-delete-btn" data-delete-post="${p.id}" title="Xóa"><i class="fas fa-trash-alt"></i></button>` : ''}
+                    <div class="social-post-actions">
+                        <button type="button" class="social-save-post-btn" data-save-post="${p.id}" title="Lưu ảnh vào máy"><i class="fas fa-download"></i></button>
+                        ${p.isMine ? `<button type="button" class="social-delete-btn" data-delete-post="${p.id}" title="Hủy đăng"><i class="fas fa-times-circle mr-1"></i>Hủy đăng</button>` : ''}
+                    </div>
                 </div>
                 ${p.caption ? `<p class="social-post-caption">${esc(p.caption)}</p>` : ''}
                 <img src="${p.imageData}" class="social-post-img" data-lightbox="1" alt="Ảnh bài đăng">
@@ -372,6 +412,13 @@
 
         el.querySelectorAll('[data-delete-post]').forEach(btn => {
             btn.addEventListener('click', () => deletePost(Number(btn.dataset.deletePost)));
+        });
+        el.querySelectorAll('[data-save-post]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const card = btn.closest('[data-post-id]');
+                const img = card?.querySelector('.social-post-img');
+                if (img?.src) saveImageToDevice(img.src, 'bai');
+            });
         });
         el.querySelectorAll('.social-post-img[data-lightbox]').forEach(img => {
             img.addEventListener('click', () => window.ShopFeatures?.openPhotoLightbox?.(img.src));
@@ -547,6 +594,31 @@
         await startCamera();
     }
 
+    async function cancelPreview() {
+        if (!pendingImage) return;
+        if (!confirm('Hủy ảnh này?\nSẽ không đăng lên bảng tin.')) return;
+        clearPreview();
+        await stopCamera();
+        await startCamera();
+        window.toast?.('Đã hủy ảnh');
+    }
+
+    function initSaveMode() {
+        const sel = document.getElementById('social-save-mode');
+        if (!sel) return;
+        sel.value = getSaveMode();
+        sel.addEventListener('change', () => {
+            localStorage.setItem(LS_SAVE_MODE, sel.value);
+            const labels = {
+                off: 'Không tự lưu ảnh vào máy',
+                capture: 'Sẽ lưu khi chụp/chọn ảnh',
+                post: 'Sẽ lưu khi đăng thành công',
+                both: 'Sẽ lưu khi chụp và khi đăng',
+            };
+            window.toast?.(labels[sel.value] || 'Đã đổi chế độ lưu ảnh', false, 2800);
+        });
+    }
+
     function toggleHistoryPanel() {
         const panel = document.getElementById('social-feed-panel');
         const btn = document.getElementById('social-history-toggle');
@@ -582,6 +654,7 @@
         document.getElementById('social-shutter-btn')?.addEventListener('click', onShutterClick);
         document.getElementById('social-retake-btn')?.addEventListener('click', onRetakeClick);
         document.getElementById('social-retake-inline')?.addEventListener('click', onRetakeClick);
+        document.getElementById('social-cancel-preview')?.addEventListener('click', cancelPreview);
         document.getElementById('social-flip-camera')?.addEventListener('click', flipCamera);
         document.getElementById('social-post-btn')?.addEventListener('click', publishPost);
         document.getElementById('social-history-toggle')?.addEventListener('click', toggleHistoryPanel);
@@ -615,6 +688,7 @@
 
     function init() {
         initFabButton();
+        initSaveMode();
         initComposerEvents();
     }
 

@@ -991,19 +991,108 @@ body.app-light .app-main {
     transform: translateY(-1px);
 }
 
-.social-retake-link {
+.social-preview-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    align-items: center;
+}
+
+.social-retake-link,
+.social-cancel-btn {
     background: none;
     border: none;
-    color: #64748b;
     font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
-    padding: 0.35rem;
+    padding: 0.4rem 0.65rem;
     text-align: center;
+    border-radius: 10px;
+    transition: color 0.15s, background 0.15s;
+}
+
+.social-retake-link {
+    color: #64748b;
 }
 
 .social-retake-link:hover {
     color: var(--al-purple);
+    background: #faf5ff;
+}
+
+.social-cancel-btn {
+    color: #dc2626;
+}
+
+.social-cancel-btn:hover {
+    background: #fef2f2;
+}
+
+.social-save-settings {
+    width: 100%;
+    max-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.social-save-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.social-save-select {
+    width: 100%;
+    border: 1.5px solid var(--al-border);
+    border-radius: 12px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.8rem;
+    background: #fff;
+    color: var(--al-ink);
+}
+
+.social-save-select:focus {
+    outline: none;
+    border-color: var(--al-purple);
+}
+
+.social-post-actions {
+    display: flex;
+    gap: 0.35rem;
+    flex-shrink: 0;
+}
+
+.social-save-post-btn {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    padding: 0.35rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+}
+
+.social-save-post-btn:hover {
+    color: var(--al-blue);
+    background: #eff6ff;
+}
+
+.social-delete-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0.35rem 0.5rem;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.social-delete-btn:hover {
+    color: #dc2626;
+    background: #fef2f2;
 }
 
 .social-history-toggle {
@@ -1137,20 +1226,6 @@ body.app-light .app-main {
 .social-post-time {
     font-size: 0.75rem;
     color: var(--al-muted);
-}
-
-.social-delete-btn {
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    cursor: pointer;
-    padding: 0.35rem;
-    border-radius: 8px;
-}
-
-.social-delete-btn:hover {
-    color: #dc2626;
-    background: #fef2f2;
 }
 
 .social-post-caption {
