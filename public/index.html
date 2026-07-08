@@ -306,7 +306,26 @@
                     <p id="purchase-product-name" class="text-sm text-slate-500 mt-1"></p>
                 </div>
                 <div class="p-5 space-y-4">
-                    <p id="purchase-product-price" class="text-xl font-bold gradient-text"></p>
+                    <div class="flex items-center justify-between gap-3 bg-slate-50 rounded-xl p-3 border border-sky-100">
+                        <div>
+                            <p class="text-xs text-slate-500">Đơn giá</p>
+                            <p id="purchase-unit-price" class="font-semibold text-brand-600"></p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-slate-500">Tổng thanh toán</p>
+                            <p id="purchase-total-price" class="text-xl font-bold gradient-text"></p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-600 block mb-2">Số lượng</label>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="purchase-qty-minus" class="w-10 h-10 rounded-xl border border-sky-200 bg-white text-lg font-bold text-slate-600 hover:bg-sky-50">−</button>
+                            <input id="purchase-quantity" type="number" min="1" max="99" value="1"
+                                   class="flex-1 text-center border border-sky-200 rounded-xl px-3 py-2.5 font-mono text-lg font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400">
+                            <button type="button" id="purchase-qty-plus" class="w-10 h-10 rounded-xl border border-sky-200 bg-white text-lg font-bold text-slate-600 hover:bg-sky-50">+</button>
+                        </div>
+                        <p id="purchase-stock-hint" class="text-xs text-slate-500 mt-1.5"></p>
+                    </div>
                     <p id="purchase-contact-hint" class="hidden text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2"></p>
                     <div id="purchase-email-wrap" class="hidden">
                         <label class="text-sm font-medium text-slate-600 block mb-1">Email nâng gói *</label>
@@ -914,7 +933,10 @@ async function loadProducts() {
                     <div class="product-card-desc">${escapeHtml(p.desc)}</div>
                     ${contactModeBadge(mode)}
                     <div class="product-card-footer">
-                        <span class="product-card-price">${formatMoney(p.price)}</span>
+                        <div>
+                            <span class="product-card-price">${formatMoney(p.price)}</span>
+                            <span class="text-xs text-slate-400 block mt-0.5">Còn ${p.stock ?? 0}</span>
+                        </div>
                         <button data-buy="${p.id}" data-contact-mode="${escapeHtml(mode)}"
                                 class="product-card-buy" title="Mua ngay">
                             <i class="fas fa-arrow-right"></i>
@@ -928,13 +950,40 @@ async function loadProducts() {
     }
 }
 
+function getPurchaseQty() {
+    const el = document.getElementById('purchase-quantity');
+    let q = parseInt(el.value, 10);
+    if (!Number.isFinite(q) || q < 1) q = 1;
+    const max = parseInt(el.max, 10) || 99;
+    if (q > max) q = max;
+    el.value = q;
+    return q;
+}
+
+function updatePurchaseTotal() {
+    const p = productsCache[pendingPurchaseId];
+    if (!p) return;
+    const qty = getPurchaseQty();
+    document.getElementById('purchase-unit-price').textContent = formatMoney(p.price);
+    document.getElementById('purchase-total-price').textContent = formatMoney(p.price * qty);
+}
+
 function openPurchaseModal(id, contactMode) {
     const p = productsCache[id];
     if (!p) return;
     pendingPurchaseId = id;
     const mode = contactMode || p.contactMode || 'none';
+    const stock = Math.max(0, parseInt(p.stock, 10) || 0);
+    const maxQty = Math.min(99, stock || 99);
     document.getElementById('purchase-product-name').textContent = p.name;
-    document.getElementById('purchase-product-price').textContent = formatMoney(p.price);
+    const qtyEl = document.getElementById('purchase-quantity');
+    qtyEl.min = 1;
+    qtyEl.max = maxQty;
+    qtyEl.value = 1;
+    document.getElementById('purchase-stock-hint').textContent = stock > 0
+        ? `Tối đa ${maxQty} sản phẩm/lần · Còn ${stock} trong kho`
+        : 'Hết hàng';
+    updatePurchaseTotal();
 
     const needEmail = mode === 'email' || mode === 'both';
     const needPhone = mode === 'zalo' || mode === 'both';
@@ -960,16 +1009,22 @@ function closePurchaseModal() {
 }
 
 async function submitPurchase(id, contact = {}) {
-    const body = { productId: id };
+    const qty = getPurchaseQty();
+    const p = productsCache[id];
+    if (p && qty > (p.stock || 0)) {
+        throw new Error(`Chỉ còn ${p.stock} sản phẩm trong kho.`);
+    }
+    const body = { productId: id, quantity: qty };
     if (contact.email) body.contactEmail = contact.email;
     if (contact.phone) body.contactPhone = contact.phone;
     const r = await api('/orders/create', { method: 'POST', body: JSON.stringify(body) });
     currentUser.balance = r.balance;
     updateHeader();
     closePurchaseModal();
+    const qtyText = r.quantity > 1 ? ` (${r.quantity} sản phẩm)` : '';
     const code = r.orderCode ? ` Mã đơn: ${r.orderCode}.` : '';
     toast(
-        `Đặt hàng thành công!${code} Admin đã nhận được yêu cầu hỗ trợ và sẽ hỗ trợ nâng cấp tài khoản cho bạn. Cần gấp? Liên hệ Zalo: 0944255413`,
+        `Đặt hàng thành công${qtyText}!${code} Admin đã nhận được yêu cầu hỗ trợ và sẽ hỗ trợ nâng cấp tài khoản cho bạn. Cần gấp? Liên hệ Zalo: 0944255413`,
         false,
         7000
     );
@@ -990,17 +1045,10 @@ function confirmPurchase() {
 }
 
 async function buyProduct(id, contactMode = 'none') {
-    const mode = contactMode || productsCache[id]?.contactMode || 'none';
-    if (mode !== 'none') {
-        openPurchaseModal(id, mode);
-        return;
-    }
-    if (!confirm('Xác nhận mua sản phẩm này?')) return;
-    try {
-        await submitPurchase(id);
-    } catch (e) {
-        toast(e.message, true);
-    }
+    const p = productsCache[id];
+    if (!p) return;
+    if ((p.stock || 0) < 1) return toast('Sản phẩm đã hết hàng.', true);
+    openPurchaseModal(id, contactMode || p.contactMode || 'none');
 }
 
 /* ─── Wallet ─── */
@@ -1104,7 +1152,11 @@ async function openOrderDetail(id) {
                         <div class="font-semibold">${escapeHtml(order.product)}</div>
                     </div>
                     <div class="bg-slate-50 rounded-xl p-3 border">
-                        <div class="text-slate-500 text-xs mb-1">Giá</div>
+                        <div class="text-slate-500 text-xs mb-1">Số lượng</div>
+                        <div class="font-semibold">${order.quantity > 1 ? order.quantity + ' sản phẩm' : '1 sản phẩm'}</div>
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-3 border">
+                        <div class="text-slate-500 text-xs mb-1">Tổng tiền</div>
                         <div class="font-bold text-brand-600">${formatMoney(order.price)}</div>
                     </div>
                     <div class="bg-slate-50 rounded-xl p-3 border">
@@ -1166,7 +1218,7 @@ async function loadMyOrders() {
         el.innerHTML = orders.map(o => `
             <div class="glass-card padded hover-lift flex justify-between cursor-pointer" data-view-order="${o.id}">
                 <div>
-                    <div class="font-semibold">${escapeHtml(o.product)}</div>
+                    <div class="font-semibold">${escapeHtml(o.product)}${o.quantity > 1 ? ` <span class="text-slate-500 font-normal">×${o.quantity}</span>` : ''}</div>
                     <div class="text-sm mt-1">${orderCodeBtn(o)}</div>
                     <div class="text-sm text-slate-500">${escapeHtml(o.date)}</div>
                     ${o.support ? `<div class="mt-2 flex items-center gap-2 text-xs">
@@ -1814,7 +1866,7 @@ async function loadAdminOrders() {
             return `
             <div class="bg-white rounded-xl border p-4 flex justify-between shadow-sm hover:border-brand-300 transition cursor-pointer" data-view-order="${o.id}">
                 <div>
-                    <div class="font-semibold">${escapeHtml(o.product)}</div>
+                    <div class="font-semibold">${escapeHtml(o.product)}${o.quantity > 1 ? ` <span class="text-slate-500 font-normal">×${o.quantity}</span>` : ''}</div>
                     <div class="text-sm mt-1">${orderCodeBtn(o)}</div>
                     <div class="text-sm text-slate-500">${escapeHtml(o.date)} • ${escapeHtml(o.email || o.customerName || '')}</div>
                     ${contactBits ? `<div class="text-xs text-amber-700 mt-1">${contactBits}</div>` : ''}
@@ -2016,6 +2068,18 @@ document.getElementById('products-grid').onclick = e => {
 };
 document.getElementById('purchase-confirm-btn').onclick = confirmPurchase;
 document.getElementById('purchase-cancel-btn').onclick = closePurchaseModal;
+document.getElementById('purchase-quantity').oninput = updatePurchaseTotal;
+document.getElementById('purchase-qty-minus').onclick = () => {
+    const el = document.getElementById('purchase-quantity');
+    el.value = Math.max(1, getPurchaseQty() - 1);
+    updatePurchaseTotal();
+};
+document.getElementById('purchase-qty-plus').onclick = () => {
+    const el = document.getElementById('purchase-quantity');
+    const max = parseInt(el.max, 10) || 99;
+    el.value = Math.min(max, getPurchaseQty() + 1);
+    updatePurchaseTotal();
+};
 document.getElementById('purchase-modal').onclick = e => {
     if (e.target.id === 'purchase-modal') closePurchaseModal();
 };

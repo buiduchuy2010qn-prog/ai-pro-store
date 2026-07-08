@@ -67,9 +67,15 @@ def _select_sql():
     '''
 
 
-def create_for_order(conn, user, order_id, product, contact_email='', contact_phone=''):
+def create_for_order(conn, user, order_id, product, contact_email='', contact_phone='',
+                     quantity=1, total_price=None):
     """Tạo thông báo hỗ trợ từ dữ liệu user/order trong DB (không tin frontend)."""
     cust_email = (contact_email or user['email'] or '').strip()
+    qty = max(1, int(quantity or 1))
+    price = int(total_price if total_price is not None else product['price'])
+    msg = DEFAULT_MESSAGE
+    if qty > 1:
+        msg = f'Khách đã mua {qty} sản phẩm ({product["name"]}), vui lòng hỗ trợ nâng cấp/kích hoạt tài khoản.'
     nid = db.insert_returning_id(conn, '''
         INSERT INTO support_notifications
             (user_id, order_id, product_id, customer_name, customer_email,
@@ -77,7 +83,7 @@ def create_for_order(conn, user, order_id, product, contact_email='', contact_ph
         VALUES (?,?,?,?,?,?,?,?,?)
     ''', (
         user['id'], order_id, product['id'], user['name'], cust_email,
-        product['name'], product['price'], DEFAULT_MESSAGE, 'pending',
+        product['name'], price, msg, 'pending',
     ))
     return nid
 

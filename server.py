@@ -119,12 +119,14 @@ def gen_tx_code(tid):
 
 
 def fmt_order_row(row, extra=None):
+    qty = int(row.get('quantity') or 1)
     item = {
         'id': row['id'],
         'orderCode': row.get('order_code') or gen_order_code(row['id']),
         'product': row.get('product') or row.get('product_name'),
         'productId': row.get('product_id'),
         'price': row['price'],
+        'quantity': qty,
         'status': row['status'],
         'date': str(row.get('date') or row.get('created_at', '')),
     }
@@ -784,7 +786,7 @@ def user_transactions():
 def user_orders():
     conn = db.get_conn()
     rows = db.fetchall(conn,
-        'SELECT id,product_id,product_name AS product,price,status,order_code,created_at AS date FROM orders WHERE user_id = ? ORDER BY id DESC',
+        'SELECT id,product_id,product_name AS product,price,quantity,status,order_code,created_at AS date FROM orders WHERE user_id = ? ORDER BY id DESC',
         (request.user['id'],))
     from services.support_notification_service import map_by_order_ids
     support_map = map_by_order_ids(conn, [r['id'] for r in rows], request.user['id'])
@@ -815,39 +817,62 @@ def products_list():
 def order_create():
     body = request.get_json() or {}
     pid = int(body.get('productId', 0))
+    try:
+        qty = int(body.get('quantity', 1))
+    except (TypeError, ValueError):
+        qty = 1
+    if qty < 1:
+        return jsonify({'error': 'Số lượng tối thiểu là 1.'}), 400
+    if qty > 99:
+        return jsonify({'error': 'Số lượng tối đa là 99/lần mua.'}), 400
+
     conn = db.get_conn()
     product = db.fetchone(conn, 'SELECT * FROM products WHERE id = ? AND stock > 0', (pid,))
     if not product:
         db.close(conn)
         return jsonify({'error': 'Sản phẩm không tồn tại hoặc hết hàng.'}), 404
+    stock = int(product.get('stock') or 0)
+    if qty > stock:
+        db.close(conn)
+        return jsonify({'error': f'Chỉ còn {stock} sản phẩm trong kho.'}), 400
+
     contact = validate_order_contact(product, body)
     if contact[0] is None:
         db.close(conn)
         return jsonify({'error': contact[1]}), 400
     contact_email, contact_phone = contact
+
+    unit_price = int(product['price'])
+    total_price = unit_price * qty
     user = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (request.user['id'],))
-    if user['balance'] < product['price']:
+    if user['balance'] < total_price:
         db.close(conn)
-        return jsonify({'error': 'Số dư không đủ. Vui lòng nạp thêm tiền.'}), 400
-    db.execute(conn, 'UPDATE users SET balance = balance - ? WHERE id = ?', (product['price'], user['id']))
-    db.execute(conn, 'UPDATE products SET stock = stock - 1 WHERE id = ?', (pid,))
+        need = f'{total_price:,}'.replace(',', '.')
+        have = f'{user["balance"]:,}'.replace(',', '.')
+        return jsonify({'error': f'Số dư không đủ. Cần {need}đ, bạn có {have}đ.'}), 400
+
+    db.execute(conn, 'UPDATE users SET balance = balance - ? WHERE id = ?', (total_price, user['id']))
+    db.execute(conn, 'UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?', (qty, pid, qty))
     oid = db.insert_returning_id(conn,
-        'INSERT INTO orders (user_id,product_id,product_name,price,status,contact_email,contact_phone) VALUES (?,?,?,?,?,?,?)',
-        (user['id'], pid, product['name'], product['price'], 'completed', contact_email or None, contact_phone or None))
+        'INSERT INTO orders (user_id,product_id,product_name,price,quantity,status,contact_email,contact_phone) VALUES (?,?,?,?,?,?,?,?)',
+        (user['id'], pid, product['name'], total_price, qty, 'completed', contact_email or None, contact_phone or None))
     order_code = gen_order_code(oid)
     db.execute(conn, 'UPDATE orders SET order_code = ? WHERE id = ?', (order_code, oid))
+    tx_desc = f"Mua {qty}x {product['name']}" if qty > 1 else f"Mua {product['name']}"
     txid = db.insert_returning_id(conn,
         'INSERT INTO transactions (user_id,type,amount,description,status,order_id) VALUES (?,?,?,?,?,?)',
-        (user['id'], 'purchase', product['price'], f"Mua {product['name']}", 'success', oid))
+        (user['id'], 'purchase', total_price, tx_desc, 'success', oid))
     from services.support_notification_service import create_for_order
-    support_nid = create_for_order(conn, user, oid, product, contact_email, contact_phone)
+    support_nid = create_for_order(conn, user, oid, product, contact_email, contact_phone,
+                                   quantity=qty, total_price=total_price)
     db.commit(conn)
     bal = db.fetchone(conn, 'SELECT balance FROM users WHERE id = ?', (user['id'],))['balance']
     db.close(conn)
     from services.support_notification_service import USER_STATUS_LABELS, USER_STATUS_HINTS
     return jsonify({
         'orderId': oid, 'orderCode': order_code, 'transactionCode': gen_tx_code(txid),
-        'product': product['name'], 'price': product['price'], 'balance': bal,
+        'product': product['name'], 'price': total_price, 'quantity': qty, 'unitPrice': unit_price,
+        'balance': bal,
         'supportNotificationId': support_nid,
         'support': {
             'id': support_nid,
@@ -1931,7 +1956,7 @@ def admin_user_delete(uid):
 def admin_orders():
     conn = db.get_conn()
     rows = db.fetchall(conn, '''
-        SELECT o.id,o.product_id,o.product_name AS product,o.price,o.status,o.order_code,o.created_at AS date,
+        SELECT o.id,o.product_id,o.product_name AS product,o.price,o.quantity,o.status,o.order_code,o.created_at AS date,
                o.contact_email,o.contact_phone,u.email,u.name AS customer_name
         FROM orders o JOIN users u ON u.id=o.user_id ORDER BY o.id DESC''')
     from services.support_notification_service import map_by_order_ids, STATUS_LABELS
