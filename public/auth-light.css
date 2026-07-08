@@ -1,0 +1,304 @@
+/**
+ * Auth Light + App sáng — không carousel
+ */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+    --al-bg: #f0f6ff;
+    --al-white: #ffffff;
+    --al-ink: #1e293b;
+    --al-muted: #64748b;
+    --al-blue: #2563eb;
+    --al-blue-light: #93c5fd;
+    --al-purple: #7c3aed;
+    --al-border: #bfdbfe;
+    --al-shadow: 0 8px 32px rgba(37, 99, 235, 0.1);
+}
+
+#particle-canvas {
+    position: fixed !important;
+    inset: 0 !important;
+    pointer-events: none !important;
+    z-index: 0 !important;
+    opacity: 0.35;
+}
+
+body.app-light {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    background: linear-gradient(160deg, #ffffff 0%, var(--al-bg) 45%, #e8f0fe 100%) !important;
+    color: var(--al-ink);
+}
+
+body.app-light::before,
+body.app-light::after {
+    display: none !important;
+}
+
+#app {
+    position: relative;
+    z-index: 2;
+}
+
+/* ─── Login Modal (sáng) ─── */
+.login-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(240, 246, 255, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.login-modal-panel {
+    width: 100%;
+    max-width: 420px;
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 2rem 1.75rem;
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(191, 219, 254, 0.8);
+    box-shadow: var(--al-shadow), 0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+    position: relative;
+}
+
+.login-modal-glow {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.06), rgba(124, 58, 237, 0.05)) !important;
+    border-radius: inherit;
+}
+
+.login-modal-brand-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    color: var(--al-blue);
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    border: 1px solid var(--al-border);
+    margin-bottom: 0.75rem;
+}
+
+.login-modal-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--al-ink);
+    letter-spacing: -0.03em;
+}
+
+.login-modal-title span {
+    color: var(--al-blue);
+}
+
+.login-modal-subtitle {
+    font-size: 0.875rem;
+    color: var(--al-muted);
+    margin-top: 0.25rem;
+}
+
+/* Tabs */
+.login-modal-tabs {
+    display: flex;
+    gap: 0.5rem;
+    background: #f1f5f9;
+    border-radius: 14px;
+    padding: 4px;
+    border: none !important;
+    margin-bottom: 1.5rem !important;
+}
+
+.auth-tab {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 11px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--al-muted);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.22s ease;
+}
+
+.auth-tab:hover {
+    color: var(--al-ink);
+}
+
+.auth-tab-active {
+    background: var(--al-white) !important;
+    color: var(--al-blue) !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+}
+
+/* Input + icon */
+.auth-field {
+    position: relative;
+}
+
+.auth-field-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--al-blue);
+    opacity: 0.55;
+    font-size: 0.95rem;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.auth-input {
+    width: 100%;
+    padding: 0.9rem 1rem 0.9rem 2.75rem;
+    border-radius: 14px;
+    border: 1.5px solid #dbeafe;
+    background: #f8fafc;
+    color: var(--al-ink);
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.auth-input::placeholder {
+    color: #94a3b8;
+}
+
+.auth-input:focus {
+    border-color: var(--al-blue);
+    background: var(--al-white);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.auth-input-center {
+    padding-left: 1rem;
+    text-align: center;
+    letter-spacing: 0.25em;
+    font-family: ui-monospace, monospace;
+    font-size: 1.5rem;
+}
+
+.auth-submit {
+    width: 100%;
+    padding: 0.95rem 1rem;
+    border: none;
+    border-radius: 14px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--al-blue), var(--al-purple));
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.auth-submit:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 28px rgba(37, 99, 235, 0.38);
+}
+
+.auth-submit:active {
+    transform: scale(0.98);
+}
+
+.auth-link {
+    font-size: 0.875rem;
+    color: var(--al-blue);
+    font-weight: 500;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.auth-link:hover {
+    color: var(--al-purple);
+    text-decoration: underline;
+}
+
+.auth-error {
+    color: #dc2626;
+    font-size: 0.875rem;
+}
+
+.auth-forgot-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--al-ink);
+}
+
+.auth-forgot-desc {
+    font-size: 0.875rem;
+    color: var(--al-muted);
+}
+
+/* ─── App chrome sáng ─── */
+body.app-light .site-header {
+    background: rgba(255, 255, 255, 0.9) !important;
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+body.app-light .glass-card {
+    background: var(--al-white) !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06) !important;
+}
+
+body.app-light .page-title {
+    color: var(--al-ink) !important;
+}
+
+body.app-light .btn-primary {
+    background: linear-gradient(135deg, var(--al-blue), var(--al-purple)) !important;
+    border: none !important;
+    color: #fff !important;
+}
+
+body.app-light .product-card {
+    background: var(--al-white) !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 20px !important;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.06) !important;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+body.app-light .product-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.12) !important;
+}
+
+body.app-light .shop-hero,
+body.app-light .carousel-hero {
+    background: linear-gradient(135deg, #ffffff, #eff6ff) !important;
+    border: 1px solid var(--al-border) !important;
+    border-radius: 24px !important;
+}
+
+body.app-light .carousel-hero-title,
+body.app-light .shop-wordmark {
+    color: var(--al-ink) !important;
+}
+
+body.app-light .app-main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem 1rem 3rem;
+}
+
+@media (max-width: 480px) {
+    .login-modal-panel {
+        padding: 1.5rem 1.25rem;
+        border-radius: 22px;
+    }
+    .auth-tab {
+        font-size: 0.875rem;
+        padding: 0.65rem 0.5rem;
+    }
+}

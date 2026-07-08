@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/theme.css">
-    <link rel="stylesheet" href="/shop-carousel.css">
+    <link rel="stylesheet" href="/auth-light.css">
     <script>
         tailwind.config = {
             theme: {
@@ -24,97 +24,104 @@
         };
     </script>
 </head>
-<body class="app-bg min-h-screen">
+<body class="app-bg min-h-screen app-light">
 
 <!-- Particle Background -->
 <canvas id="particle-canvas" aria-hidden="true"></canvas>
 
-<!-- ═══ Modal Đăng nhập / Đăng ký (giữ id auth-screen + logic cũ) ═══ -->
-<div id="auth-screen" class="login-modal-overlay hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-xl p-4">
-    <div class="login-modal-panel bg-gradient-to-br from-zinc-900 to-zinc-950 border border-zinc-700 rounded-3xl w-full max-w-md p-8 shadow-2xl relative overflow-hidden">
-        <div class="login-modal-glow absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 pointer-events-none"></div>
+<!-- ═══ Modal Đăng nhập / Đăng ký — sáng, glassmorphism ═══ -->
+<div id="auth-screen" class="login-modal-overlay hidden">
+    <div class="login-modal-panel relative overflow-hidden">
+        <div class="login-modal-glow absolute inset-0 pointer-events-none"></div>
 
         <div class="relative z-10 text-center mb-6">
-            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-400 text-xl mb-3">
-                <i class="fas fa-store"></i>
-            </div>
-            <h1 class="text-xl font-bold text-white">Shop<span class="text-blue-400">.</span> Đức Hi</h1>
-            <p class="text-sm text-zinc-400 mt-1">Nạp tiền tự động qua QR VietQR</p>
+            <div class="login-modal-brand-icon"><i class="fas fa-store"></i></div>
+            <h1 class="login-modal-title">Shop<span>.</span> Đức Hi</h1>
+            <p class="login-modal-subtitle">Nạp tiền tự động qua QR VietQR</p>
         </div>
 
-        <div id="auth-tabs" class="login-modal-tabs flex border-b border-zinc-700 mb-8 relative z-10">
-            <button type="button" id="tab-login" class="login-modal-tab login-modal-tab-active flex-1 py-4 font-semibold text-lg text-white border-b-4 border-blue-500">Đăng nhập</button>
-            <button type="button" id="tab-register" class="login-modal-tab flex-1 py-4 font-semibold text-lg text-zinc-400">Đăng ký</button>
+        <div id="auth-tabs" class="login-modal-tabs relative z-10">
+            <button type="button" id="tab-login" class="auth-tab auth-tab-active">Đăng nhập</button>
+            <button type="button" id="tab-register" class="auth-tab">Đăng ký</button>
         </div>
 
-        <div class="relative z-10">
-            <form id="login-form" class="space-y-5">
-                <input id="login-email" type="email" required autocomplete="email" placeholder="Email"
-                       class="login-modal-input w-full bg-zinc-900 border border-zinc-700 focus:border-blue-500 rounded-2xl px-5 py-4 outline-none transition-all text-white placeholder-zinc-500">
-                <input id="login-password" type="password" required autocomplete="current-password" placeholder="Mật khẩu"
-                       class="login-modal-input w-full bg-zinc-900 border border-zinc-700 focus:border-blue-500 rounded-2xl px-5 py-4 outline-none transition-all text-white placeholder-zinc-500">
-                <div class="text-right">
-                    <button type="button" id="forgot-link" class="text-sm text-blue-400 hover:text-blue-300 font-medium">Quên mật khẩu</button>
+        <div class="relative z-10 space-y-4">
+            <form id="login-form" class="space-y-4">
+                <div class="auth-field">
+                    <i class="fas fa-envelope auth-field-icon"></i>
+                    <input id="login-email" type="email" required autocomplete="email" placeholder="Email" class="auth-input">
                 </div>
-                <div id="turnstile-login" class="flex justify-center my-2"></div>
-                <p id="login-error" class="text-red-400 text-sm hidden"></p>
-                <button type="submit" class="login-modal-submit w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 py-4 rounded-2xl font-bold text-lg shadow-lg shadow-blue-500/30 transition-all text-white">
-                    Đăng nhập
-                </button>
+                <div class="auth-field">
+                    <i class="fas fa-lock auth-field-icon"></i>
+                    <input id="login-password" type="password" required autocomplete="current-password" placeholder="Mật khẩu" class="auth-input">
+                </div>
+                <div class="text-right">
+                    <button type="button" id="forgot-link" class="auth-link">Quên mật khẩu</button>
+                </div>
+                <div id="turnstile-login" class="flex justify-center my-1"></div>
+                <p id="login-error" class="auth-error hidden"></p>
+                <button type="submit" class="auth-submit"><i class="fas fa-sign-in-alt mr-2"></i>Đăng nhập</button>
             </form>
 
-            <form id="register-form" class="space-y-5 hidden">
-                <input id="register-fullName" type="text" required autocomplete="name" placeholder="Họ và tên"
-                       class="login-modal-input w-full bg-zinc-900 border border-zinc-700 focus:border-blue-500 rounded-2xl px-5 py-4 outline-none text-white placeholder-zinc-500">
-                <input id="register-email" type="email" required autocomplete="email" placeholder="Email"
-                       class="login-modal-input w-full bg-zinc-900 border border-zinc-700 focus:border-blue-500 rounded-2xl px-5 py-4 outline-none text-white placeholder-zinc-500">
-                <input id="register-password" type="password" required minlength="8" autocomplete="new-password" placeholder="Mật khẩu"
-                       class="login-modal-input w-full bg-zinc-900 border border-zinc-700 focus:border-blue-500 rounded-2xl px-5 py-4 outline-none text-white placeholder-zinc-500">
-                <input id="register-confirmPassword" type="password" required minlength="8" autocomplete="new-password" placeholder="Nhập lại mật khẩu"
-                       class="login-modal-input w-full bg-zinc-900 border border-zinc-700 focus:border-blue-500 rounded-2xl px-5 py-4 outline-none text-white placeholder-zinc-500">
-                <div id="turnstile-register" class="flex justify-center my-2"></div>
-                <p id="register-error" class="text-red-400 text-sm hidden"></p>
-                <button type="submit" class="login-modal-submit w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 py-4 rounded-2xl font-bold text-lg shadow-lg shadow-blue-500/30 transition-all text-white">
-                    Tạo tài khoản
-                </button>
+            <form id="register-form" class="space-y-4 hidden">
+                <div class="auth-field">
+                    <i class="fas fa-user auth-field-icon"></i>
+                    <input id="register-fullName" type="text" required autocomplete="name" placeholder="Họ và tên" class="auth-input">
+                </div>
+                <div class="auth-field">
+                    <i class="fas fa-envelope auth-field-icon"></i>
+                    <input id="register-email" type="email" required autocomplete="email" placeholder="Email" class="auth-input">
+                </div>
+                <div class="auth-field">
+                    <i class="fas fa-lock auth-field-icon"></i>
+                    <input id="register-password" type="password" required minlength="8" autocomplete="new-password" placeholder="Mật khẩu" class="auth-input">
+                </div>
+                <div class="auth-field">
+                    <i class="fas fa-lock auth-field-icon"></i>
+                    <input id="register-confirmPassword" type="password" required minlength="8" autocomplete="new-password" placeholder="Nhập lại mật khẩu" class="auth-input">
+                </div>
+                <div id="turnstile-register" class="flex justify-center my-1"></div>
+                <p id="register-error" class="auth-error hidden"></p>
+                <button type="submit" class="auth-submit"><i class="fas fa-user-plus mr-2"></i>Tạo tài khoản</button>
             </form>
 
-            <div id="forgot-panel" class="hidden space-y-5">
-                <button type="button" id="forgot-back" class="text-sm text-zinc-400 hover:text-blue-400 mb-2">
-                    <i class="fas fa-arrow-left mr-1"></i> Quay lại đăng nhập
-                </button>
+            <div id="forgot-panel" class="hidden space-y-4">
+                <button type="button" id="forgot-back" class="auth-link"><i class="fas fa-arrow-left mr-1"></i>Quay lại đăng nhập</button>
 
-                <form id="forgot-step1" class="space-y-5">
-                    <div class="text-center mb-2">
-                        <h3 class="font-semibold text-lg text-white">Quên mật khẩu</h3>
-                        <p class="text-sm text-zinc-400">Nhập email để nhận mã OTP</p>
+                <form id="forgot-step1" class="space-y-4">
+                    <div class="text-center">
+                        <h3 class="auth-forgot-title">Quên mật khẩu</h3>
+                        <p class="auth-forgot-desc">Nhập email để nhận mã OTP</p>
                     </div>
-                    <input id="forgot-email" type="email" required placeholder="Email"
-                           class="login-modal-input w-full bg-zinc-900 border border-zinc-700 focus:border-blue-500 rounded-2xl px-5 py-4 outline-none text-white placeholder-zinc-500">
-                    <p id="forgot-step1-error" class="text-red-400 text-sm hidden"></p>
-                    <button type="submit" class="login-modal-submit w-full bg-gradient-to-r from-blue-600 to-purple-600 py-4 rounded-2xl font-bold text-lg text-white">Gửi mã OTP</button>
+                    <div class="auth-field">
+                        <i class="fas fa-envelope auth-field-icon"></i>
+                        <input id="forgot-email" type="email" required placeholder="Email" class="auth-input">
+                    </div>
+                    <p id="forgot-step1-error" class="auth-error hidden"></p>
+                    <button type="submit" class="auth-submit">Gửi mã OTP</button>
                 </form>
 
-                <form id="forgot-step2" class="space-y-5 hidden">
-                    <div class="text-center mb-2">
-                        <h3 class="font-semibold text-lg text-white">Xác nhận OTP</h3>
-                        <p class="text-sm text-zinc-400">Nhập mã 6 số đã gửi đến email</p>
+                <form id="forgot-step2" class="space-y-4 hidden">
+                    <div class="text-center">
+                        <h3 class="auth-forgot-title">Xác nhận OTP</h3>
+                        <p class="auth-forgot-desc">Nhập mã 6 số đã gửi đến email</p>
                     </div>
-                    <input id="forgot-otp" type="text" required maxlength="6" pattern="[0-9]{6}" inputmode="numeric" placeholder="000000"
-                           class="login-modal-input w-full bg-zinc-900 border border-zinc-700 focus:border-blue-500 rounded-2xl px-5 py-4 outline-none text-white text-center text-2xl tracking-widest font-mono">
-                    <p id="forgot-step2-error" class="text-red-400 text-sm hidden"></p>
-                    <button type="submit" class="login-modal-submit w-full bg-gradient-to-r from-blue-600 to-purple-600 py-4 rounded-2xl font-bold text-lg text-white">Xác nhận OTP</button>
+                    <input id="forgot-otp" type="text" required maxlength="6" pattern="[0-9]{6}" inputmode="numeric" placeholder="000000" class="auth-input auth-input-center">
+                    <p id="forgot-step2-error" class="auth-error hidden"></p>
+                    <button type="submit" class="auth-submit">Xác nhận OTP</button>
                 </form>
 
-                <form id="forgot-step3" class="space-y-5 hidden">
-                    <div class="text-center mb-2">
-                        <h3 class="font-semibold text-lg text-white">Đặt mật khẩu mới</h3>
-                        <p class="text-sm text-zinc-400">Nhập mật khẩu mới cho tài khoản</p>
+                <form id="forgot-step3" class="space-y-4 hidden">
+                    <div class="text-center">
+                        <h3 class="auth-forgot-title">Đặt mật khẩu mới</h3>
+                        <p class="auth-forgot-desc">Nhập mật khẩu mới cho tài khoản</p>
                     </div>
-                    <input id="forgot-newPassword" type="password" required minlength="8" placeholder="Mật khẩu mới"
-                           class="login-modal-input w-full bg-zinc-900 border border-zinc-700 focus:border-blue-500 rounded-2xl px-5 py-4 outline-none text-white placeholder-zinc-500">
-                    <p id="forgot-step3-error" class="text-red-400 text-sm hidden"></p>
-                    <button type="submit" class="login-modal-submit w-full bg-gradient-to-r from-blue-600 to-purple-600 py-4 rounded-2xl font-bold text-lg text-white">Đổi mật khẩu</button>
+                    <div class="auth-field">
+                        <i class="fas fa-lock auth-field-icon"></i>
+                        <input id="forgot-newPassword" type="password" required minlength="8" placeholder="Mật khẩu mới" class="auth-input">
+                    </div>
+                    <p id="forgot-step3-error" class="auth-error hidden"></p>
+                    <button type="submit" class="auth-submit">Đổi mật khẩu</button>
                 </form>
             </div>
         </div>
@@ -168,7 +175,7 @@
                 <div class="carousel-hero-badge"><i class="fas fa-bolt"></i> AI Premium Store</div>
                 <h1 class="carousel-hero-title">Tài khoản AI <span>Chính Hãng</span></h1>
                 <p class="carousel-hero-sub">Gemini · ChatGPT · Claude · Grok — Mua nhanh, giao tự động, thanh toán VietQR</p>
-                <button type="button" data-view="wallet" class="carousel-cta-btn category-pill-nav">
+                <button type="button" data-view="wallet" class="btn-primary px-6 py-3 rounded-2xl font-semibold shadow-lg">
                     <i class="fas fa-rocket"></i> Nạp tiền &amp; Mua ngay
                 </button>
                 <div class="category-row relative z-10">
@@ -178,16 +185,11 @@
                     <button type="button" data-view="orders" class="category-pill"><span class="pill-icon"><i class="fas fa-shopping-bag"></i></span>Đơn hàng</button>
                 </div>
             </div>
-            <div class="carousel-section">
-                <div class="section-header carousel-section-header">
-                    <h2 class="page-title">Sản phẩm đang bán</h2>
-                    <i class="fas fa-chevron-right text-sm"></i>
-                </div>
-                <div id="products-carousel-viewport" class="carousel-viewport">
-                    <div id="products-grid"></div>
-                </div>
-                <p class="carousel-hint"><i class="fas fa-hand-pointer"></i> Vuốt hoặc kéo ngang để xem sản phẩm</p>
+            <div class="section-header">
+                <h2 class="page-title">Sản phẩm đang bán</h2>
+                <i class="fas fa-chevron-right text-sm text-slate-400"></i>
             </div>
+            <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
         </section>
 
         <!-- Wallet -->
@@ -753,12 +755,8 @@ function orderContactBlock(o) {
 /* ─── Auth UI ─── */
 function showAuthTab(tab) {
     const isLogin = tab === 'login';
-    document.getElementById('tab-login').className = isLogin
-        ? 'login-modal-tab login-modal-tab-active flex-1 py-4 font-semibold text-lg text-white border-b-4 border-blue-500'
-        : 'login-modal-tab flex-1 py-4 font-semibold text-lg text-zinc-400';
-    document.getElementById('tab-register').className = !isLogin
-        ? 'login-modal-tab login-modal-tab-active flex-1 py-4 font-semibold text-lg text-white border-b-4 border-blue-500'
-        : 'login-modal-tab flex-1 py-4 font-semibold text-lg text-zinc-400';
+    document.getElementById('tab-login').className = 'auth-tab' + (isLogin ? ' auth-tab-active' : '');
+    document.getElementById('tab-register').className = 'auth-tab' + (!isLogin ? ' auth-tab-active' : '');
     document.getElementById('login-form').classList.toggle('hidden', !isLogin);
     document.getElementById('register-form').classList.toggle('hidden', isLogin);
     document.getElementById('forgot-panel').classList.add('hidden');
@@ -2019,7 +2017,7 @@ document.getElementById('forgot-step3').onsubmit = async e => {
 
 document.getElementById('logout-btn').onclick = () => { clearToken(); stopPolling(); stopSupportPolling(); showAuth(); toast('Đã đăng xuất.'); };
 document.getElementById('brand-btn').onclick = () => navigateTo('products');
-document.querySelectorAll('.nav-btn, .mobile-nav-btn, .category-pill[data-view], .carousel-cta-btn[data-view]').forEach(b => {
+document.querySelectorAll('.nav-btn, .mobile-nav-btn, .category-pill[data-view], [data-view].btn-primary').forEach(b => {
     b.onclick = () => navigateTo(b.dataset.view);
 });
 document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('mobile-menu').classList.toggle('hidden');
@@ -2180,7 +2178,6 @@ document.getElementById('mock-transfer-btn').onclick = async () => {
 })();
 </script>
 <script src="/particle-bg.js" defer></script>
-<script src="/shop-carousel.js" defer></script>
 <script src="/ai-assistant.js"></script>
 <script src="/dressroom-render.js"></script>
 <script src="/decoration.js"></script>
