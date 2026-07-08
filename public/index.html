@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/theme.css">
-    <link rel="stylesheet" href="/auth-light.css?v=locket-unified1">
+    <link rel="stylesheet" href="/auth-light.css?v=locket-square1">
     <link rel="stylesheet" href="/sidebar-menu.css?v=1">
     <link rel="stylesheet" href="/post-composer.css?v=locket2">
     <script>
@@ -444,11 +444,17 @@
                         </div>
                     </div>
                     <div class="social-locket-studio">
-                        <div class="social-friends-count">
+                        <div id="social-send-header" class="social-send-header hidden">
+                            <span>Gửi đến <strong id="social-send-audience">tất cả</strong></span>
+                            <button type="button" id="social-send-audience-btn" class="social-send-audience-btn" title="Chọn người nhận">
+                                <i class="fas fa-rotate"></i>
+                            </button>
+                        </div>
+                        <div class="social-friends-count social-studio-meta">
                             <i class="fas fa-user-friends"></i>
                             <span id="social-friend-count-num">0</span> người bạn
                         </div>
-                        <div class="social-locket-frame" id="social-unified-frame">
+                        <div class="social-locket-frame social-locket-square" id="social-unified-frame">
                             <div id="social-feed-layer" class="social-feed-layer hidden" data-feed-slot-id="">
                                 <div id="social-feed-media-wrap" class="locket-feed-media-wrap"></div>
                                 <div id="social-feed-badges" class="locket-feed-badges"></div>
@@ -482,16 +488,19 @@
                                 <i class="fas fa-arrows-rotate"></i>
                             </button>
                             <div id="social-caption-overlay" class="social-caption-overlay pos-bottom style-classic hidden" aria-hidden="true"></div>
+                            <div id="social-frame-caption-bar" class="social-frame-caption-bar hidden">
+                                <input id="social-caption-inline" type="text" maxlength="500" class="social-frame-caption-input" placeholder="Nhập tin nhắn..." autocomplete="off">
+                            </div>
                         </div>
-                        <p id="social-composer-status" class="social-composer-status">Bấm nút tròn để chụp ảnh hoặc xem bài đăng</p>
+                        <p id="social-composer-status" class="social-composer-status social-studio-meta">Bấm nút tròn để chụp ảnh hoặc xem bài đăng</p>
                         <div class="social-locket-controls social-unified-actions">
-                            <button type="button" id="social-unified-left" class="social-locket-side-btn" title="Chọn ảnh/video từ máy">
+                            <button type="button" id="social-unified-left" class="social-locket-side-btn social-locket-action-btn" title="Chọn ảnh/video từ máy">
                                 <i class="fas fa-image"></i>
                             </button>
                             <button type="button" id="social-shutter-btn" class="social-locket-shutter" aria-label="Chụp ảnh">
                                 <span class="social-locket-shutter-ring"></span>
                             </button>
-                            <button type="button" id="social-unified-studio" class="social-locket-side-btn" title="Tuỳ chỉnh &amp; chi tiết">
+                            <button type="button" id="social-unified-studio" class="social-locket-side-btn social-locket-action-btn" title="Tuỳ chỉnh &amp; chi tiết">
                                 <i class="fas fa-wand-magic-sparkles"></i>
                             </button>
                         </div>
@@ -1003,7 +1012,7 @@
 <script src="/security-client.js"></script>
 <link rel="stylesheet" href="/social-creative.css?v=1">
 <script src="/social-creative.js?v=1"></script>
-<script src="/social-feed.js?v=locket-unified1"></script>
+<script src="/social-feed.js?v=locket-square1"></script>
 <script src="/shop-features.js?v=mxh1"></script>
 <script src="/sidebar-menu.js?v=1"></script>
 <script src="/post-composer.js?v=locket2"></script>

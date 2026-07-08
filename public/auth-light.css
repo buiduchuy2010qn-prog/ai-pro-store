@@ -774,21 +774,22 @@ body.app-light .app-main {
     color: var(--al-purple);
 }
 
-.social-locket-frame {
+.social-locket-frame,
+.social-locket-square {
     position: relative;
-    width: min(100%, 300px);
-    aspect-ratio: 3 / 4;
-    border-radius: 28px;
+    width: min(100%, 360px);
+    aspect-ratio: 1 / 1;
+    border-radius: 16px;
     overflow: hidden;
-    background: linear-gradient(160deg, #f1f5f9, #e2e8f0);
-    box-shadow: 0 12px 40px rgba(99, 102, 241, 0.14), 0 2px 8px rgba(15, 23, 42, 0.06);
-    border: 2px solid rgba(255, 255, 255, 0.9);
+    background: #e2e8f0;
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.1);
+    border: none;
     transition: box-shadow 0.25s, border-color 0.25s;
 }
 
 .social-locket-frame.has-preview {
-    border-color: #a78bfa;
-    box-shadow: 0 12px 36px rgba(139, 92, 246, 0.22), 0 0 0 3px rgba(139, 92, 246, 0.12);
+    border: none;
+    box-shadow: 0 10px 32px rgba(15, 23, 42, 0.12);
 }
 
 .social-locket-media {
@@ -840,8 +841,10 @@ body.app-light .app-main {
 }
 
 .social-locket-frame.has-preview .social-frame-mode-picker,
-.social-locket-frame.has-preview .social-rec-badge {
-    display: none;
+.social-locket-frame.has-preview .social-rec-badge,
+.social-locket-frame.has-preview .social-media-info,
+.social-locket-frame.has-preview .social-flip-camera-btn {
+    display: none !important;
 }
 
 .social-locket-frame.has-preview .social-media-info {
@@ -1116,10 +1119,10 @@ body.app-light .app-main {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 2.25rem;
+    gap: 2.75rem;
     width: 100%;
-    max-width: 320px;
-    padding: 0.25rem 0;
+    max-width: 360px;
+    padding: 0.75rem 0 0.35rem;
 }
 
 .social-locket-side-btn {
@@ -1618,7 +1621,153 @@ body.app-light .app-main {
 }
 
 .social-locket-unified .social-locket-studio {
-    padding: 0.85rem 1rem 1.15rem;
+    padding: 1rem 1rem 1.25rem;
+    background: #fff;
+}
+
+.social-locket-unified.is-post-view .social-unified-toolbar {
+    display: none;
+}
+
+.social-send-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    width: 100%;
+    max-width: 360px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1e293b;
+    padding: 0.15rem 0 0.35rem;
+}
+
+.social-send-header strong {
+    font-weight: 800;
+}
+
+.social-send-audience-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 0.82rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.2s, color 0.2s;
+}
+
+.social-send-audience-btn:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+.social-frame-caption-bar {
+    position: absolute;
+    left: 50%;
+    bottom: 14px;
+    transform: translateX(-50%);
+    width: calc(100% - 28px);
+    z-index: 8;
+    pointer-events: auto;
+}
+
+.social-frame-caption-input {
+    width: 100%;
+    border: none;
+    border-radius: 999px;
+    padding: 0.62rem 1rem;
+    font-size: 0.88rem;
+    color: #334155;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.12);
+}
+
+.social-frame-caption-input::placeholder {
+    color: #94a3b8;
+}
+
+.social-frame-caption-input:focus {
+    outline: none;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.16);
+}
+
+.social-locket-studio.is-post-view {
+    gap: 1.1rem;
+    padding-top: 1.35rem !important;
+}
+
+.social-locket-studio.is-post-view .social-studio-meta,
+.social-locket-studio.is-post-view .social-composer-status,
+.social-locket-studio.is-post-view #social-feed-meta-row,
+.social-locket-studio.is-post-view #social-feed-dots-row,
+.social-locket-studio.is-post-view #social-caption-overlay {
+    display: none !important;
+}
+
+.social-locket-studio.is-post-view .social-locket-action-btn {
+    width: auto;
+    height: auto;
+    min-width: 44px;
+    min-height: 44px;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+    font-size: 1.35rem;
+    color: #0f172a;
+    padding: 0.35rem;
+}
+
+.social-locket-studio.is-post-view .social-locket-action-btn:hover {
+    background: transparent;
+    color: #0f172a;
+    transform: none;
+}
+
+.social-locket-shutter.is-send-mode {
+    pointer-events: auto;
+}
+
+.social-locket-send-circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #fff;
+    color: #0f172a;
+    font-size: 1.15rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.14), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.social-locket-shutter.is-send-mode:active .social-locket-send-circle {
+    transform: scale(0.94);
+}
+
+.social-locket-frame.is-feed-mode .locket-feed-badges {
+    top: auto;
+    bottom: 14px;
+    right: 14px;
+    left: auto;
+    flex-direction: row;
+    align-items: center;
+}
+
+.social-locket-frame.has-preview .social-frame-caption-bar {
+    display: block !important;
+}
+
+.social-locket-frame.has-preview .social-caption-overlay.pos-bottom {
+    bottom: 3.2rem;
 }
 
 .social-feed-layer {
@@ -1653,7 +1802,7 @@ body.app-light .app-main {
 #social-feed-meta-row.locket-feed-meta,
 #social-feed-dots-row.locket-feed-dots {
     width: 100%;
-    max-width: 300px;
+    max-width: 360px;
 }
 
 .social-feed-section {
@@ -1799,8 +1948,8 @@ body.app-light .app-main {
 .locket-feed-frame {
     position: relative;
     width: 100%;
-    aspect-ratio: 3 / 4;
-    border-radius: 28px;
+    aspect-ratio: 1 / 1;
+    border-radius: 16px;
     overflow: hidden;
     background: #e2e8f0;
     box-shadow: 0 10px 36px rgba(15, 23, 42, 0.14), 0 0 0 1px rgba(0, 0, 0, 0.04);

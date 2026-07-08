@@ -716,6 +716,24 @@
         return 'idle';
     }
 
+    function ensureShutterRing() {
+        const shutter = document.getElementById('social-shutter-btn');
+        if (!shutter || shutter.querySelector('.social-locket-shutter-ring')) return;
+        shutter.innerHTML = '<span class="social-locket-shutter-ring"></span>';
+    }
+
+    function updateSendAudienceLabel() {
+        const label = document.getElementById('social-send-audience');
+        if (!label) return;
+        const selected = document.querySelector('input[name="social-visibility"]:checked')?.value;
+        if (selected === 'selected') {
+            const n = document.querySelectorAll('#social-audience-friends input[type="checkbox"]:checked').length;
+            label.textContent = n > 0 ? n + ' bạn bè' : 'chọn bạn';
+        } else {
+            label.textContent = 'tất cả';
+        }
+    }
+
     function updateUnifiedActionButtons() {
         const leftBtn = document.getElementById('social-unified-left');
         if (!leftBtn) return;
@@ -755,7 +773,17 @@
 
         document.getElementById('social-post-row')?.classList.toggle('is-preview-active', isPreview);
 
+        const studio = document.querySelector('.social-locket-studio');
+        const unifiedCard = document.querySelector('.social-locket-unified');
+        studio?.classList.toggle('is-post-view', isPreview);
+        unifiedCard?.classList.toggle('is-post-view', isPreview);
+
+        document.getElementById('social-send-header')?.classList.toggle('hidden', !isPreview);
+        document.getElementById('social-frame-caption-bar')?.classList.toggle('hidden', !isPreview);
+
         updateUnifiedActionButtons();
+        updateShutterState();
+        if (isPreview) updateSendAudienceLabel();
 
         if (isFeed) startFeedRotation();
         else stopFeedRotation();
@@ -878,8 +906,15 @@
         if (!shutter) return;
         const hasMedia = !!pendingImage || !!pendingVideoBlob;
         shutter.classList.toggle('is-live', !!cameraStream && !hasMedia);
+        shutter.classList.toggle('is-send-mode', hasMedia);
         shutter.classList.toggle('is-captured', false);
-        shutter.disabled = hasMedia;
+        shutter.disabled = false;
+        shutter.setAttribute('aria-label', hasMedia ? 'Đăng bài' : 'Chụp ảnh');
+        if (hasMedia) {
+            shutter.innerHTML = '<span class="social-locket-send-circle"><i class="fas fa-paper-plane"></i></span>';
+        } else {
+            ensureShutterRing();
+        }
     }
 
     function updateComposerMode() {
@@ -989,9 +1024,9 @@
         setComposerStatus(
             isVid
                 ? (pendingDriveStreamUrl
-                    ? 'Video trên Drive — bấm ▶ để xem lại, rồi Đăng hoặc Hủy'
-                    : 'Bấm ▶ trên video để xem lại — Đăng, Lưu hoặc Hủy')
-                : 'Đăng ảnh, Lưu vào máy, hoặc Hủy',
+                    ? 'Bấm ▶ xem lại video rồi gửi'
+                    : 'Thêm tin nhắn và bấm máy bay để đăng')
+                : 'Thêm tin nhắn và bấm máy bay để đăng',
             'ok'
         );
         if (isVid && pendingVideoBlob) {
@@ -1434,7 +1469,11 @@
             ? 'Đăng video này lên bảng tin?\nVideo lưu trên Google Drive — bạn bè đã kết bạn sẽ xem được.'
             : 'Đăng ảnh này lên bảng tin?\nBạn bè đã kết bạn sẽ xem được.';
         if (!confirm(confirmMsg)) return;
-        const caption = document.getElementById('social-caption')?.value.trim() || '';
+        const caption = (
+            document.getElementById('social-caption-inline')?.value
+            || document.getElementById('social-caption')?.value
+            || ''
+        ).trim();
         const extras = window.SocialCreative?.getPostExtras() || {};
         let imageToPost = pendingImage;
         if (!isVid && pendingImage) {
@@ -1462,7 +1501,10 @@
             if (shouldSaveWhen('post')) {
                 saveImageToDevice(isVid ? (videoBlob || imageToPost) : imageToPost, 'dang');
             }
-            document.getElementById('social-caption').value = '';
+            const capDrawer = document.getElementById('social-caption');
+            const capInline = document.getElementById('social-caption-inline');
+            if (capDrawer) capDrawer.value = '';
+            if (capInline) capInline.value = '';
             clearPreview({ keepDrive: true });
             const posted = isVid ? 'video' : 'ảnh';
             if (isVid && res.driveSynced) {
@@ -2040,7 +2082,10 @@
     }
 
     async function onShutterClick() {
-        if (pendingImage || pendingVideoBlob) return;
+        if (pendingImage || pendingVideoBlob) {
+            await publishPost();
+            return;
+        }
         if (composerMode === 'video') {
             if (!cameraStream) {
                 await startCamera();
@@ -2418,10 +2463,29 @@
         }, 300);
     }
 
+    function initCaptionSync() {
+        const inline = document.getElementById('social-caption-inline');
+        const drawer = document.getElementById('social-caption');
+        if (!inline || !drawer) return;
+        const syncToDrawer = () => {
+            drawer.value = inline.value;
+            drawer.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+        const syncToInline = () => {
+            inline.value = drawer.value;
+        };
+        inline.addEventListener('input', syncToDrawer);
+        drawer.addEventListener('input', syncToInline);
+    }
+
     function initDrawerTabs() {
         document.querySelectorAll('.social-drawer-tab').forEach(btn => {
             btn.addEventListener('click', () => setDrawerTab(btn.dataset.drawerTab));
         });
+        document.querySelectorAll('input[name="social-visibility"]').forEach(radio => {
+            radio.addEventListener('change', updateSendAudienceLabel);
+        });
+        document.getElementById('social-audience-friends')?.addEventListener('change', updateSendAudienceLabel);
     }
 
     function initFeedToolbar() {
@@ -2483,6 +2547,10 @@
         document.getElementById('social-flip-camera')?.addEventListener('click', flipCamera);
         document.getElementById('social-post-btn')?.addEventListener('click', publishPost);
         document.getElementById('social-save-btn')?.addEventListener('click', onSavePreviewClick);
+        document.getElementById('social-send-audience-btn')?.addEventListener('click', () => {
+            openSocialDrawer(null, 'capture');
+        });
+        initCaptionSync();
         bindPreviewPlayButton();
 
         const searchInput = document.getElementById('social-search');
