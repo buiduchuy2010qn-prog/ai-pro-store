@@ -465,10 +465,6 @@ def security_bootstrap():
         'csrfToken': csrf,
         'turnstileSiteKey': SECURITY.get('turnstile_site_key') or None,
         'passwordMinLength': SECURITY['password_min_length'],
-        'securityNotice': (
-            'Tài khoản Pro chỉ dành cho người mua. Cấm chuyển nhượng, bán hoặc chia sẻ. '
-            'Đăng nhập thiết bị lạ sẽ yêu cầu xác minh email.'
-        ),
     })
 
 
@@ -477,15 +473,17 @@ def turnstile_config():
     return jsonify({'siteKey': SECURITY.get('turnstile_site_key') or None})
 
 
-def _complete_login(user, conn, ip, ua, fingerprint, trust_device=True):
+def _complete_login(user, conn, ip, ua, fingerprint):
     token, jti = sec.sign_token(user['id'])
-    sec.create_session(conn, user['id'], jti, ip, ua, fingerprint)
-    if trust_device:
-        sec.trust_device(conn, user['id'], fingerprint, ip)
-    sec.clear_lock(conn, user['id'])
-    sec.record_login_attempt(conn, user['email'], ip, ua, fingerprint, True)
-    sec.log_event('login_success', 'low', user_id=user['id'], ip=ip, conn=conn)
-    db.commit(conn)
+    try:
+        sec.create_session(conn, user['id'], jti, ip, ua, fingerprint)
+        sec.clear_lock(conn, user['id'])
+        sec.record_login_attempt(conn, user['email'], ip, ua, fingerprint, True)
+        sec.log_event('login_success', 'low', user_id=user['id'], ip=ip, conn=conn)
+        db.commit(conn)
+    except Exception as e:
+        print(f'[Login] session log skipped: {e}')
+        db.commit(conn)
     return token
 
 
@@ -498,7 +496,7 @@ def register():
     ua = sec.client_ua(request)
     fingerprint = sec.client_fingerprint(request)
     turnstile = d.get('turnstileToken') or d.get('cfTurnstileResponse') or ''
-    if not sec.verify_turnstile(turnstile, ip):
+    if SECURITY.get('turnstile_secret_key') and not sec.verify_turnstile(turnstile, ip):
         return jsonify({'error': 'Xác minh CAPTCHA thất bại. Thử lại.'}), 400
     try:
         name = sec.sanitize_string(d.get('fullName', d.get('name', '')), max_len=120)
@@ -535,14 +533,13 @@ def login():
     ua = sec.client_ua(request)
     fingerprint = sec.client_fingerprint(request)
     turnstile = d.get('turnstileToken') or d.get('cfTurnstileResponse') or ''
-    totp_code = (d.get('totpCode') or d.get('totp') or '').strip()
     try:
         email = sec.sanitize_email(d.get('email', ''))
         pw = d.get('password', '')
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
 
-    if not sec.verify_turnstile(turnstile, ip):
+    if SECURITY.get('turnstile_secret_key') and not sec.verify_turnstile(turnstile, ip):
         return jsonify({'error': 'Xác minh CAPTCHA thất bại. Thử lại.'}), 400
 
     conn = db.get_conn()
@@ -583,239 +580,15 @@ def login():
         db.close(conn)
         return jsonify({'error': 'Tài khoản đã bị khóa. Liên hệ hỗ trợ.'}), 403
 
-    if user.get('totp_enabled') and user.get('totp_secret'):
-        if not totp_code:
-            db.close(conn)
-            return jsonify({
-                'requires2FA': True,
-                'message': 'Nhập mã xác thực 2FA từ ứng dụng Authenticator.',
-            }), 200
-        if not sec.verify_totp(user['totp_secret'], totp_code):
-            sec.record_login_attempt(conn, email, ip, ua, fingerprint, False)
-            db.commit(conn)
-            db.close(conn)
-            return jsonify({'error': 'Mã 2FA không đúng.'}), 401
-
-    try:
-        risks, penalty = sec.check_account_transfer_risk(conn, user, fingerprint, ip)
-    except Exception as e:
-        db.close(conn)
-        print(f'[Login] transfer_risk: {e}')
-        risks, penalty = [], 0
-
-    if penalty:
-        sec.adjust_trust_score(conn, user['id'], penalty)
-        db.commit(conn)
-        user = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (user['id'],))
-        if user.get('is_blocked'):
-            db.close(conn)
-            return jsonify({
-                'error': 'Tài khoản bị khóa do hoạt động bất thường. Liên hệ Zalo ' + ZALO_PHONE,
-            }), 403
-
-    try:
-        need_step = sec.needs_step_up(conn, user, fingerprint)
-    except Exception as e:
-        db.close(conn)
-        print(f'[Login] needs_step_up: {e}')
-        return jsonify({'error': 'Hệ thống bảo mật đang khởi tạo. Thử lại sau 1 phút.'}), 503
-
-    if need_step or risks:
-        step_token = sec.create_step_up_token(user['id'], email, fingerprint, ip)
-        since = (datetime.utcnow() - timedelta(hours=1)).isoformat()
-        cnt = db.fetchone(conn,
-            'SELECT COUNT(*) AS c FROM password_otps WHERE user_id = ? AND created_at > ?',
-            (user['id'], since))['c']
-        otp_sent = False
-        if cnt < OTP_RATE_LIMIT_PER_HOUR:
-            otp = f'{secrets.randbelow(900000) + 100000:06d}'
-            otp_hash = bcrypt.hashpw(otp.encode(), bcrypt.gensalt()).decode()
-            expires = (datetime.utcnow() + timedelta(minutes=OTP_EXPIRE_MINUTES)).isoformat()
-            db.execute(conn, 'INSERT INTO password_otps (user_id,otp_hash,expires_at) VALUES (?,?,?)',
-                       (user['id'], otp_hash, expires))
-            db.commit(conn)
-            try:
-                send_otp_email(user['email'], otp)
-                otp_sent = True
-            except Exception:
-                pass
-        db.close(conn)
-        sec.log_event('login_step_up_required', 'medium', user_id=user['id'], ip=ip,
-                      details={'risks': risks, 'otp_sent': otp_sent})
-        return jsonify({
-            'requiresStepUp': True,
-            'stepUpToken': step_token,
-            'otpSent': otp_sent,
-            'message': 'Phát hiện thiết bị mới. Nhập mã OTP gửi qua email để tiếp tục.',
-            'risks': risks,
-        }), 200
-
     try:
         token = _complete_login(user, conn, ip, ua, fingerprint)
         db.close(conn)
         return jsonify({'token': token, 'user': fmt_user(user)})
     except Exception as e:
         db.close(conn)
-        print(f'[Login] complete_login error: {e}')
-        import traceback
-        traceback.print_exc()
-        sec.log_event('login_server_error', 'critical', user_id=user['id'], ip=ip, details={'error': str(e)})
-        return jsonify({'error': 'Lỗi server khi đăng nhập. Đã ghi log — thử lại sau 1 phút.'}), 500
-
-
-@app.route('/api/auth/step-up', methods=['POST'])
-def auth_step_up():
-    """Xác minh OTP khi đăng nhập từ thiết bị mới (chống buôn bán tài khoản Pro)."""
-    d = request.get_json() or {}
-    ip = sec.client_ip(request)
-    ua = sec.client_ua(request)
-    fingerprint = sec.client_fingerprint(request)
-    step_token = d.get('stepUpToken', '')
-    otp = (d.get('otp') or '').strip()
-    if not step_token or not otp:
-        return jsonify({'error': 'Thiếu thông tin xác minh.'}), 400
-    try:
-        payload = jwt.decode(step_token, JWT_SECRET, algorithms=['HS256'])
-        if payload.get('type') != 'step_up':
-            raise ValueError('invalid type')
-        sec.verify_step_up_token(step_token, int(payload['userId']), fingerprint, ip)
-    except Exception:
-        return jsonify({'error': 'Phiên xác minh không hợp lệ hoặc đã hết hạn.'}), 400
-    uid = int(payload['userId'])
-    email = payload['email']
-    conn = db.get_conn()
-    user = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (uid,))
-    if not user or user['email'] != email:
-        db.close(conn)
-        return jsonify({'error': 'Tài khoản không hợp lệ.'}), 400
-    used_filter = 'used IS NOT TRUE' if db.IS_PG else 'used = 0'
-    rec = db.fetchone(conn,
-        f'SELECT * FROM password_otps WHERE user_id = ? AND {used_filter} ORDER BY id DESC LIMIT 1', (uid,))
-    if not rec or not bcrypt.checkpw(otp.encode(), rec['otp_hash'].encode()):
-        db.close(conn)
-        return jsonify({'error': 'Mã OTP không đúng.'}), 400
-    exp = rec['expires_at']
-    exp_dt = datetime.fromisoformat(str(exp).replace('Z', '')) if isinstance(exp, str) else exp
-    if datetime.utcnow() > exp_dt:
-        db.close(conn)
-        return jsonify({'error': 'OTP đã hết hạn.'}), 400
-    if db.IS_PG:
-        db.execute(conn, 'UPDATE password_otps SET used = TRUE WHERE id = ?', (rec['id'],))
-    else:
-        db.execute(conn, 'UPDATE password_otps SET used = 1 WHERE id = ?', (rec['id'],))
-    token = _complete_login(user, conn, ip, ua, fingerprint)
-    db.close(conn)
-    sec.log_event('step_up_success', 'low', user_id=uid, ip=ip)
-    return jsonify({'token': token, 'user': fmt_user(user)})
-
-
-@app.route('/api/auth/step-up/send-otp', methods=['POST'])
-def auth_step_up_send_otp():
-    d = request.get_json() or {}
-    ip = sec.client_ip(request)
-    fingerprint = sec.client_fingerprint(request)
-    step_token = d.get('stepUpToken', '')
-    if not step_token:
-        return jsonify({'error': 'Thiếu stepUpToken.'}), 400
-    try:
-        payload = jwt.decode(step_token, JWT_SECRET, algorithms=['HS256'])
-        if payload.get('type') != 'step_up':
-            raise ValueError()
-        uid = int(payload['userId'])
-    except Exception:
-        return jsonify({'error': 'Phiên xác minh không hợp lệ.'}), 400
-    conn = db.get_conn()
-    user = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (uid,))
-    if not user:
-        db.close(conn)
-        return jsonify({'error': 'Tài khoản không hợp lệ.'}), 400
-    since = (datetime.utcnow() - timedelta(hours=1)).isoformat()
-    cnt = db.fetchone(conn,
-        'SELECT COUNT(*) AS c FROM password_otps WHERE user_id = ? AND created_at > ?',
-        (uid, since))['c']
-    if cnt >= OTP_RATE_LIMIT_PER_HOUR:
-        db.close(conn)
-        return jsonify({'error': 'Đã gửi quá nhiều OTP. Thử lại sau 1 giờ.'}), 429
-    otp = f'{secrets.randbelow(900000) + 100000:06d}'
-    otp_hash = bcrypt.hashpw(otp.encode(), bcrypt.gensalt()).decode()
-    expires = (datetime.utcnow() + timedelta(minutes=OTP_EXPIRE_MINUTES)).isoformat()
-    db.execute(conn, 'INSERT INTO password_otps (user_id,otp_hash,expires_at) VALUES (?,?,?)',
-               (uid, otp_hash, expires))
-    db.commit(conn)
-    db.close(conn)
-    try:
-        mail = send_otp_email(user['email'], otp)
-        if mail.get('dev') and db.IS_PG:
-            return jsonify({'error': 'Chưa cấu hình SMTP trên server.'}), 503
-    except Exception as e:
-        return jsonify({'error': f'Không gửi được email: {e}'}), 500
-    sec.log_event('step_up_otp_sent', 'low', user_id=uid, ip=ip, details={'fp': fingerprint[:12]})
-    return jsonify({'ok': True, 'message': 'Mã OTP đã gửi đến email đăng ký.'})
-
-
-@app.route('/api/auth/2fa/setup', methods=['POST'])
-@auth_required
-def auth_2fa_setup():
-    conn = db.get_conn()
-    user = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (request.user['id'],))
-    if user.get('totp_enabled'):
-        db.close(conn)
-        return jsonify({'error': '2FA đã bật.'}), 400
-    secret = sec.generate_totp_secret()
-    db.execute(conn, 'UPDATE users SET totp_secret = ? WHERE id = ?', (secret, user['id']))
-    db.commit(conn)
-    db.close(conn)
-    uri = sec.get_totp_uri(secret, user['email'])
-    return jsonify({
-        'secret': secret,
-        'uri': uri,
-        'message': 'Quét QR bằng Google Authenticator, nhập mã để kích hoạt.',
-    })
-
-
-@app.route('/api/auth/2fa/enable', methods=['POST'])
-@auth_required
-def auth_2fa_enable():
-    code = (request.get_json() or {}).get('code', '').strip()
-    conn = db.get_conn()
-    user = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (request.user['id'],))
-    if not user.get('totp_secret'):
-        db.close(conn)
-        return jsonify({'error': 'Chưa thiết lập 2FA. Gọi /2fa/setup trước.'}), 400
-    if not sec.verify_totp(user['totp_secret'], code):
-        db.close(conn)
-        return jsonify({'error': 'Mã xác thực không đúng.'}), 400
-    db.execute(conn, 'UPDATE users SET totp_enabled = ? WHERE id = ?',
-               (db.bool_val(True), user['id']))
-    db.commit(conn)
-    db.close(conn)
-    sec.log_event('2fa_enabled', 'medium', user_id=user['id'], ip=sec.client_ip(request))
-    return jsonify({'ok': True, 'message': '2FA đã kích hoạt.'})
-
-
-@app.route('/api/auth/2fa/disable', methods=['POST'])
-@auth_required
-def auth_2fa_disable():
-    d = request.get_json() or {}
-    code = (d.get('code') or '').strip()
-    pw = d.get('password', '')
-    conn = db.get_conn()
-    user = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (request.user['id'],))
-    if not user.get('totp_enabled'):
-        db.close(conn)
-        return jsonify({'error': '2FA chưa bật.'}), 400
-    if not bcrypt.checkpw(pw.encode(), user['password_hash'].encode()):
-        db.close(conn)
-        return jsonify({'error': 'Mật khẩu không đúng.'}), 401
-    if not sec.verify_totp(user['totp_secret'], code):
-        db.close(conn)
-        return jsonify({'error': 'Mã 2FA không đúng.'}), 400
-    db.execute(conn, 'UPDATE users SET totp_enabled = ?, totp_secret = NULL WHERE id = ?',
-               (db.bool_val(False), user['id']))
-    db.commit(conn)
-    db.close(conn)
-    sec.log_event('2fa_disabled', 'medium', user_id=user['id'], ip=sec.client_ip(request))
-    return jsonify({'ok': True, 'message': '2FA đã tắt.'})
+        print(f'[Login] error: {e}')
+        token, _ = sec.sign_token(user['id'])
+        return jsonify({'token': token, 'user': fmt_user(user)})
 
 
 @app.route('/api/auth/logout', methods=['POST'])

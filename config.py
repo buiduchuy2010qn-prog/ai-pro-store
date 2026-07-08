@@ -72,7 +72,7 @@ SECURITY = {
     'lockout_attempts': int(os.getenv('LOCKOUT_ATTEMPTS', '5')),
     'lockout_minutes': int(os.getenv('LOCKOUT_MINUTES', '15')),
     'jwt_expire_hours': int(os.getenv('JWT_EXPIRE_HOURS', '24')),
-    'max_sessions_per_user': int(os.getenv('MAX_SESSIONS_PER_USER', '3')),
+    'max_sessions_per_user': int(os.getenv('MAX_SESSIONS_PER_USER', '20')),
     'legacy_jwt_allowed': os.getenv('LEGACY_JWT_ALLOWED', 'true').lower() != 'false',
     'csrf_ttl_sec': int(os.getenv('CSRF_TTL_SEC', '7200')),
     'csrf_relaxed': os.getenv('CSRF_RELAXED', 'true').lower() != 'false',

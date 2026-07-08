@@ -39,7 +39,7 @@ SENSITIVE_PATHS = {
     '/api/auth/forgot-password': ('auth_forgot', SECURITY['rate_auth_per_min']),
     '/api/auth/verify-otp': ('auth_otp', SECURITY['rate_auth_per_min']),
     '/api/auth/reset-password': ('auth_reset', SECURITY['rate_auth_per_min']),
-    '/api/auth/step-up': ('auth_stepup', SECURITY['rate_auth_per_min']),
+
     '/api/ai/chat': ('ai_chat', SECURITY['rate_ai_per_min']),
     '/api/support/chat': ('ai_chat', SECURITY['rate_ai_per_min']),
 }
