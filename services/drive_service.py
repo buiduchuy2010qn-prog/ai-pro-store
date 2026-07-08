@@ -622,9 +622,12 @@ def sync_posts_without_drive(conn=None, limit=None):
     videos = 0
     errors = 0
     for r in rows:
-        if is_drive_reference(r['image_data']):
-            fid = parse_drive_reference(r['image_data'])
-            if fid:
+        img = r.get('image_data') or ''
+        if img in ('drive:pending', ''):
+            continue
+        if is_drive_reference(img):
+            fid = parse_drive_reference(img)
+            if fid and fid != 'pending':
                 from database import execute
                 execute(conn, 'UPDATE social_posts SET drive_file_id = ? WHERE id = ?', (fid, r['id']))
                 synced += 1
@@ -632,6 +635,8 @@ def sync_posts_without_drive(conn=None, limit=None):
                     videos += 1
                 else:
                     photos += 1
+            continue
+        if not img.startswith('data:'):
             continue
         media_type = r.get('media_type') or ''
         fid, err = upload_post_image(
@@ -756,22 +761,67 @@ def _resolve_upload_credentials(conn):
     return None, 'none'
 
 
+def _decode_b64_payload(b64_text):
+    """Giải mã base64 — chịu khoảng trắng, thiếu padding (hay gặp từ trình duyệt/mobile)."""
+    if not b64_text:
+        return None
+    cleaned = re.sub(r'\s+', '', str(b64_text))
+    cleaned = cleaned.replace('-', '+').replace('_', '/')
+    pad = (-len(cleaned)) % 4
+    if pad:
+        cleaned += '=' * pad
+    for decoder in (
+        lambda s: base64.b64decode(s, validate=False),
+        lambda s: base64.urlsafe_b64decode(s + ('=' * ((4 - len(s) % 4) % 4))),
+    ):
+        try:
+            raw = decoder(cleaned)
+            if raw:
+                return raw
+        except Exception:
+            continue
+    return None
+
+
+def _mime_to_ext(mime, default='bin'):
+    m = (mime or '').lower().split(';')[0].strip()
+    mapping = {
+        'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/pjpeg': 'jpg',
+        'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif',
+        'video/webm': 'webm', 'video/mp4': 'mp4', 'video/quicktime': 'mp4',
+    }
+    if m in mapping:
+        return mapping[m]
+    if '/' in m:
+        return m.split('/')[-1][:8] or default
+    return default
+
+
 def _parse_media_b64(data_url):
-    m = re.match(r'^data:(image/(jpeg|jpg|png|webp)|video/(webm|mp4));base64,(.+)$', data_url or '', re.I)
-    if not m:
+    text = (data_url or '').strip()
+    if not text:
         return None
-    kind = m.group(1).lower()
-    fmt = m.group(2).lower()
-    if kind.startswith('image/'):
-        ext = 'jpg' if fmt == 'jpeg' else fmt
-        mime = 'image/jpeg' if ext == 'jpg' else f'image/{ext}'
-    else:
-        ext = fmt
-        mime = f'video/{ext}'
-    try:
-        raw = base64.b64decode(m.group(3), validate=True)
-    except Exception:
+
+    if is_drive_reference(text):
         return None
+
+    marker = ';base64,'
+    pos = text.lower().find(marker)
+    if pos < 0:
+        return None
+    header = text[5:pos]
+    mime = header.split(';')[0].lower().strip()
+    if not (mime.startswith('image/') or mime.startswith('video/')):
+        return None
+
+    raw = _decode_b64_payload(text[pos + len(marker):])
+    if not raw:
+        print(f'[Drive] base64 decode failed mime={mime} len={len(text) - pos}')
+        return None
+
+    ext = _mime_to_ext(mime)
+    if mime.startswith('image/') and ext == 'jpg':
+        mime = 'image/jpeg'
     return raw, mime, ext
 
 

@@ -2347,9 +2347,10 @@ MAX_SOCIAL_VIDEO_LEN = 12_000_000
 def _social_media_type(data):
     if not data or not isinstance(data, str):
         return None
-    if re.match(r'^data:video/(webm|mp4);base64,', data, re.I):
+    text = data.strip()
+    if re.match(r'^data:video/', text, re.I) and ';base64,' in text.lower():
         return 'video'
-    if re.match(r'^data:image/(jpeg|jpg|png|webp);base64,', data, re.I):
+    if re.match(r'^data:image/', text, re.I) and ';base64,' in text.lower():
         return 'image'
     return None
 
@@ -2725,14 +2726,21 @@ def social_create_post():
 
         if not _valid_social_media(media):
             return jsonify({'error': 'Ảnh không hợp lệ hoặc quá lớn (~500KB).'}), 400
+        parsed = drive._parse_media_b64(media)
         pid = db.insert_returning_id(conn,
             'INSERT INTO social_posts (user_id, caption, image_data, media_type) VALUES (?, ?, ?, ?)',
             (request.user['id'], caption, media, media_type))
         drive_file_id = None
         drive_error = None
         if drive.is_configured(conn):
-            drive_file_id, drive_error = drive.upload_post_image(
-                media, request.user['email'], pid, caption, conn=conn, media_type=media_type)
+            if parsed:
+                raw, mime, ext = parsed
+                drive_file_id, drive_error = drive.upload_media_bytes(
+                    raw, mime, ext, request.user['email'], pid,
+                    caption=caption, conn=conn, is_video=False)
+            else:
+                drive_file_id, drive_error = drive.upload_post_image(
+                    media, request.user['email'], pid, caption, conn=conn, media_type=media_type)
             if drive_file_id:
                 db.execute(conn, 'UPDATE social_posts SET drive_file_id = ? WHERE id = ?',
                            (drive_file_id, pid))

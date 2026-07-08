@@ -696,7 +696,11 @@
             } else if (res.driveSynced) {
                 window.toast?.('Đã đăng ' + posted + ' — admin đã sao lưu lên Drive!');
             } else if (res.driveWarning && driveAdminBackup) {
-                window.toast?.('Đã đăng ' + posted + ' nhưng Drive: ' + res.driveWarning, true, 5000);
+                window.toast?.(
+                    'Đã đăng ' + posted + ' — Drive sẽ tự đồng bộ lại sau vài phút. (' + res.driveWarning + ')',
+                    true,
+                    6000
+                );
             } else {
                 window.toast?.('Đã đăng ' + posted + ' lên bảng tin!');
             }
