@@ -20,7 +20,8 @@
 #app,
 #toast,
 .zalo-float,
-#social-fab-wrap {
+#social-fab-wrap,
+#ai-chat-wrap {
     position: relative;
     z-index: 2;
 }

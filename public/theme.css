@@ -650,23 +650,72 @@ body.app-bg::after {
     box-shadow: var(--shadow-accent) !important;
 }
 
-/* ── AI Assistant ── */
-.ai-fab {
-    display: flex;
+/* ── Nút nổi hỗ trợ (AI + Zalo) — nhỏ gọn ── */
+.support-float-btn {
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 18px;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    max-width: none;
+}
+
+.ai-fab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 12px;
     border-radius: var(--radius-pill);
     background: var(--color-accent);
     color: #fff;
-    font-weight: 500;
-    font-size: 14px;
+    font-weight: 600;
+    font-size: 12px;
     box-shadow: var(--shadow-accent);
     border: none;
     cursor: pointer;
     transition: transform 0.2s;
+    line-height: 1;
 }
-.ai-fab:hover { transform: translateY(-2px); }
+.ai-fab:hover { transform: translateY(-1px); }
+
+.support-float-btn i,
+.ai-fab i {
+    font-size: 0.95rem;
+}
+
+@media (max-width: 639px) {
+    .support-float-label {
+        display: none;
+    }
+
+    .support-float-btn,
+    .ai-fab {
+        width: 42px;
+        height: 42px;
+        padding: 0;
+        border-radius: 50%;
+    }
+
+    .support-float-btn i,
+    .ai-fab i {
+        font-size: 1rem;
+    }
+
+    #ai-chat-wrap.support-float-wrap {
+        bottom: 3.5rem;
+        right: 0.65rem;
+    }
+
+    #zalo-float-btn {
+        bottom: 0.65rem;
+        right: 0.65rem;
+    }
+}
 
 .social-fab {
     display: flex;

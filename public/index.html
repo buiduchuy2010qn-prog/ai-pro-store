@@ -730,7 +730,7 @@
 </div>
 
 <!-- AI Đức Hi Assistant -->
-<div id="ai-chat-wrap" class="fixed bottom-24 right-4 sm:right-6 z-50 flex flex-col items-end gap-3 max-w-[calc(100vw-2rem)]">
+<div id="ai-chat-wrap" class="support-float-wrap fixed bottom-20 right-3 sm:right-5 z-50 hidden flex flex-col items-end gap-2 max-w-[calc(100vw-2rem)]">
     <div id="ai-chat-panel" class="hidden glass-card shadow-2xl overflow-hidden flex flex-col">
         <div class="ai-chat-header shrink-0">
             <div class="min-w-0">
@@ -758,18 +758,17 @@
             <p class="text-[10px] text-slate-400 mt-2 text-center">Cần người thật? <a href="https://zalo.me/0944255413" target="_blank" class="text-brand-600 hover:underline font-medium">Zalo 0944255413</a></p>
         </div>
     </div>
-    <button type="button" id="ai-chat-toggle" class="ai-fab">
-        <i class="fas fa-robot text-lg"></i>
-        <span>AI Hỗ Trợ</span>
+    <button type="button" id="ai-chat-toggle" class="ai-fab support-float-btn">
+        <i class="fas fa-robot"></i>
+        <span class="support-float-label">AI Hỗ Trợ</span>
     </button>
 </div>
 
 <!-- Zalo floating button -->
-<a href="https://zalo.me/0944255413" target="_blank" rel="noopener noreferrer"
-   class="zalo-float fixed bottom-6 right-6 z-50 text-white px-4 py-3 shadow-lg text-sm font-medium flex items-center gap-2 transition max-w-[calc(100vw-3rem)]">
-    <i class="fas fa-comment-dots text-lg"></i>
-    <span class="hidden sm:inline">Cần hỗ trợ? Liên hệ Zalo: 0944255413</span>
-    <span class="sm:hidden">Zalo: 0944255413</span>
+<a href="https://zalo.me/0944255413" target="_blank" rel="noopener noreferrer" id="zalo-float-btn"
+   class="zalo-float support-float-btn fixed bottom-3 right-3 sm:right-5 z-50 hidden text-white shadow-lg font-medium flex items-center gap-1.5 transition">
+    <i class="fas fa-comment-dots"></i>
+    <span class="support-float-label">Zalo</span>
 </a>
 
 <script src="/security-client.js"></script>
@@ -1002,6 +1001,8 @@ function showAuth() {
     document.getElementById('auth-screen').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
     document.getElementById('social-fab-wrap')?.classList.add('hidden');
+    document.getElementById('ai-chat-wrap')?.classList.add('hidden');
+    document.getElementById('zalo-float-btn')?.classList.add('hidden');
     showAuthTab('login');
 }
 
@@ -1034,6 +1035,8 @@ async function showApp() {
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
     document.getElementById('social-fab-wrap')?.classList.remove('hidden');
+    document.getElementById('ai-chat-wrap')?.classList.remove('hidden');
+    document.getElementById('zalo-float-btn')?.classList.remove('hidden');
     await refreshUser();
     navigateTo('products');
     if (!sessionStorage.getItem('social_fab_hint_shown')) {
