@@ -775,9 +775,7 @@
         }
         grid.innerHTML = feedPostsCache.map((post, i) => {
             const src = post.mediaUrl || post.imageData || '';
-            const isVid = post.mediaType === 'video'
-                || String(src).startsWith('data:video/')
-                || !!post.mediaUrl;
+            const isVid = isPostVideo(post);
             const media = isVid
                 ? `<video src="${esc(src)}" muted playsinline preload="metadata"></video><span class="social-history-grid-vid"><i class="fas fa-play"></i></span>`
                 : `<img src="${esc(src)}" alt="" loading="lazy">`;
@@ -788,17 +786,82 @@
         });
     }
 
+    function isPostVideo(post) {
+        if (!post) return false;
+        const src = post.mediaUrl || post.imageData || '';
+        return post.mediaType === 'video'
+            || String(src).startsWith('data:video/')
+            || String(src).startsWith('blob:video/')
+            || (!!post.mediaUrl && post.mediaType !== 'image');
+    }
+
+    function fmtRelativeTime(d) {
+        const dt = new Date(d);
+        if (isNaN(dt)) return '';
+        const sec = Math.floor((Date.now() - dt.getTime()) / 1000);
+        if (sec < 60) return 'vừa xong';
+        if (sec < 3600) return Math.floor(sec / 60) + ' phút trước';
+        if (sec < 86400) return Math.floor(sec / 3600) + ' giờ trước';
+        if (sec < 604800) return Math.floor(sec / 86400) + ' ngày trước';
+        return fmtTime(d);
+    }
+
+    function closeSocialPostViewer() {
+        const overlay = document.getElementById('social-post-viewer');
+        const mediaWrap = document.getElementById('social-post-viewer-media');
+        mediaWrap?.querySelector('video')?.pause();
+        if (mediaWrap) mediaWrap.innerHTML = '';
+        overlay?.classList.add('hidden');
+        overlay?.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
+
+    function openSocialPostViewer(post) {
+        if (!post) return;
+        const overlay = document.getElementById('social-post-viewer');
+        const mediaWrap = document.getElementById('social-post-viewer-media');
+        const captionEl = document.getElementById('social-post-viewer-caption');
+        const metaEl = document.getElementById('social-post-viewer-meta');
+        if (!overlay || !mediaWrap) return;
+
+        const src = post.mediaUrl || post.imageData || '';
+        const isVid = isPostVideo(post);
+
+        if (isVid) {
+            mediaWrap.innerHTML = `<video class="social-post-viewer-vid" src="${esc(src)}" playsinline muted loop autoplay preload="auto" webkit-playsinline></video>`;
+            const vid = mediaWrap.querySelector('video');
+            vid?.play().catch(() => {});
+        } else if (src) {
+            mediaWrap.innerHTML = `<img class="social-post-viewer-img" src="${esc(src)}" alt="Ảnh bài đăng">`;
+        } else {
+            mediaWrap.innerHTML = '<div class="social-locket-placeholder"><i class="fas fa-image"></i></div>';
+        }
+
+        if (captionEl) {
+            if (post.caption) {
+                window.SocialCreative?.applyFeedCaptionPill?.(captionEl, post);
+                captionEl.classList.remove('hidden');
+            } else {
+                captionEl.textContent = '';
+                captionEl.classList.add('hidden');
+            }
+        }
+
+        const name = post.author?.fullName || post.author?.email || 'Người dùng';
+        if (metaEl) {
+            metaEl.innerHTML = `<i class="fas fa-user-circle"></i><span>${esc(name)} · ${esc(fmtRelativeTime(post.createdAt))}</span>`;
+        }
+
+        overlay.classList.remove('hidden');
+        overlay.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    }
+
     function openHistoryGridItem(index) {
         const post = feedPostsCache[index];
         if (!post) return;
         feedSlotIndex = index;
-        const src = post.mediaUrl || post.imageData || '';
-        const isVid = post.mediaType === 'video' || String(src).startsWith('data:video/') || !!post.mediaUrl;
-        if (isVid) {
-            window.open(src, '_blank', 'noopener');
-            return;
-        }
-        window.ShopFeatures?.openPhotoLightbox?.(src);
+        openSocialPostViewer(post);
     }
 
     async function closeHistoryAndOpenCamera() {
@@ -2008,7 +2071,20 @@
             });
         });
         root.querySelectorAll('.social-post-img[data-lightbox]').forEach(img => {
-            img.addEventListener('click', () => window.ShopFeatures?.openPhotoLightbox?.(img.src));
+            img.addEventListener('click', () => {
+                const postId = Number(root.closest('[data-post-id]')?.dataset?.postId
+                    || root.querySelector('[data-post-id]')?.dataset?.postId);
+                const post = feedPostsCache.find(p => p.id === postId)
+                    || feedPostsCache[feedSlotIndex];
+                if (post) openSocialPostViewer(post);
+                else window.ShopFeatures?.openPhotoLightbox?.(img.src);
+            });
+        });
+        root.querySelectorAll('.social-post-video, .locket-feed-media-wrap video').forEach(vid => {
+            vid.addEventListener('click', () => {
+                const post = feedPostsCache[feedSlotIndex];
+                if (post) openSocialPostViewer(post);
+            });
         });
         bindFeedMediaMeta(root);
         bindEngagement(root);
@@ -2027,7 +2103,7 @@
         if (!feedLayer || !mediaWrap) return;
 
         const name = post.author?.fullName || post.author?.email || 'Người dùng';
-        const isVid = post.mediaType === 'video' || String(post.imageData).startsWith('data:video/') || !!post.mediaUrl;
+        const isVid = isPostVideo(post);
         const mediaSrc = post.mediaUrl || post.imageData || '';
         const mediaHtml = isVid
             ? `<video src="${esc(mediaSrc)}" class="social-post-video locket-feed-media" playsinline muted loop autoplay preload="metadata"></video>`
@@ -2732,8 +2808,16 @@
         document.getElementById('social-save-top-btn')?.addEventListener('click', onSavePreviewClick);
         document.getElementById('social-drawer-close')?.addEventListener('click', closeSocialDrawer);
         document.getElementById('social-drawer-overlay')?.addEventListener('click', closeSocialDrawer);
+        document.getElementById('social-post-viewer-close')?.addEventListener('click', closeSocialPostViewer);
+        document.getElementById('social-post-viewer')?.addEventListener('click', e => {
+            if (e.target.id === 'social-post-viewer') closeSocialPostViewer();
+        });
         document.addEventListener('keydown', e => {
             if (e.key !== 'Escape') return;
+            if (!document.getElementById('social-post-viewer')?.classList.contains('hidden')) {
+                closeSocialPostViewer();
+                return;
+            }
             if (window.SocialCreative?.isStudioOpen?.()) {
                 window.SocialCreative.closeStudio();
                 return;
@@ -2823,6 +2907,7 @@
     }
 
     function leaveView() {
+        closeSocialPostViewer();
         closeSocialDrawer();
         stopFeedRotation();
         historyPanelOpen = false;

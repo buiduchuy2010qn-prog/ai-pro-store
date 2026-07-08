@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/theme.css">
-    <link rel="stylesheet" href="/auth-light.css?v=locket-studio1">
+    <link rel="stylesheet" href="/auth-light.css?v=locket-viewer1">
     <link rel="stylesheet" href="/sidebar-menu.css?v=1">
     <link rel="stylesheet" href="/post-composer.css?v=locket2">
     <script>
@@ -518,6 +518,15 @@
                     </div>
                 </div>
             </div>
+            <div id="social-post-viewer" class="social-post-viewer hidden" aria-hidden="true">
+                <div class="social-post-viewer-card">
+                    <button type="button" id="social-post-viewer-close" class="social-post-viewer-close" aria-label="Đóng">&times;</button>
+                    <div id="social-post-viewer-media" class="social-post-viewer-media">
+                        <div id="social-post-viewer-caption" class="locket-feed-caption-pill hidden"></div>
+                    </div>
+                </div>
+                <p id="social-post-viewer-meta" class="social-post-viewer-meta"></p>
+            </div>
             <div id="social-drawer-overlay" class="social-drawer-overlay hidden" aria-hidden="true"></div>
             <aside id="social-side-drawer" class="social-side-drawer" aria-hidden="true" aria-label="Chi tiết chụp ảnh và bài đăng">
                 <div class="social-side-drawer-head">
@@ -1018,7 +1027,7 @@
 <script src="/security-client.js"></script>
 <link rel="stylesheet" href="/social-creative.css?v=locket-caption-pill1">
 <script src="/social-creative.js?v=locket-caption-pill1"></script>
-<script src="/social-feed.js?v=locket-caption-pill1"></script>
+<script src="/social-feed.js?v=locket-viewer1"></script>
 <script src="/shop-features.js?v=mxh1"></script>
 <script src="/sidebar-menu.js?v=1"></script>
 <script src="/post-composer.js?v=locket2"></script>
