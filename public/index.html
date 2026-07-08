@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/theme.css">
-    <link rel="stylesheet" href="/auth-light.css?v=adr-camera1">
+    <link rel="stylesheet" href="/auth-light.css?v=social-layout1">
     <link rel="stylesheet" href="/sidebar-menu.css?v=1">
     <link rel="stylesheet" href="/post-composer.css?v=locket2">
     <script>
@@ -423,15 +423,8 @@
         </section>
 
         <!-- MXH mini — đăng ảnh, kết bạn -->
-        <section id="view-social" class="hidden app-section">
-            <div class="section-header mb-2">
-                <div>
-                    <h1 class="page-title"><i class="fas fa-images text-brand-500 mr-2"></i>Bảng tin ảnh</h1>
-                    <p class="page-subtitle">Đăng ảnh kiểu mạng xã hội — chỉ bạn bè mới xem được trên web</p>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div class="xl:col-span-2 space-y-5">
+        <section id="view-social" class="hidden app-section social-page">
+            <div class="social-page-main space-y-5">
                     <div class="glass-card padded social-composer-card social-locket-card">
                         <div class="social-locket-studio">
                             <div class="social-friends-count">
@@ -576,17 +569,39 @@
                                 </p>
                                 <p id="social-drive-hint" class="social-drive-hint hidden">Drive admin chưa cấu hình — video cần Drive để đăng.</p>
                             </div>
-                            <button type="button" id="social-history-toggle" class="social-history-toggle">
-                                Lịch sử <i class="fas fa-chevron-down social-history-chevron"></i>
-                            </button>
                             <input type="file" id="social-file-input" accept="image/*,video/webm,video/mp4" class="hidden">
                         </div>
                     </div>
-                    <div id="social-feed-panel" class="social-feed-panel hidden">
-                        <div id="social-feed-list" class="social-feed-list"></div>
+                    <div class="social-feed-section">
+                        <div class="social-feed-toolbar">
+                            <div class="social-feed-toolbar-left">
+                                <button type="button" id="social-feed-folder" class="social-feed-folder-btn" title="Tất cả bài đăng">
+                                    <i class="far fa-folder"></i>
+                                </button>
+                                <span class="social-feed-toolbar-title">Tất cả dấu trang</span>
+                                <span class="social-feed-toolbar-divider" aria-hidden="true"></span>
+                            </div>
+                            <div class="social-feed-toolbar-right">
+                                <button type="button" id="social-toolbar-chat" class="social-feed-icon-btn" title="Lời mời &amp; tin nhắn">
+                                    <i class="far fa-comment"></i>
+                                </button>
+                                <button type="button" id="social-toolbar-menu" class="social-feed-icon-btn" title="Kết bạn &amp; cài đặt">
+                                    <i class="fas fa-bars"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="social-feed-panel" class="social-feed-panel">
+                            <div id="social-feed-list" class="social-feed-list"></div>
+                        </div>
                     </div>
+            </div>
+            <div id="social-drawer-overlay" class="social-drawer-overlay hidden" aria-hidden="true"></div>
+            <aside id="social-side-drawer" class="social-side-drawer" aria-hidden="true" aria-label="Kết bạn và cài đặt">
+                <div class="social-side-drawer-head">
+                    <h2><i class="fas fa-user-friends mr-1"></i> MXH</h2>
+                    <button type="button" id="social-drawer-close" class="social-drawer-close" aria-label="Đóng">&times;</button>
                 </div>
-                <div class="space-y-4">
+                <div class="social-side-drawer-body pretty-scrollbar space-y-4">
                     <div class="glass-card padded social-friends-card">
                         <h2 class="social-side-title"><i class="fas fa-user-plus text-violet-500 mr-1"></i>Kết bạn</h2>
                         <p class="text-sm text-slate-500 mb-3">Tìm theo email hoặc tên để gửi lời mời</p>
@@ -655,7 +670,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </aside>
         </section>
 
         <!-- Transactions -->
@@ -967,7 +982,7 @@
 <script src="/security-client.js"></script>
 <link rel="stylesheet" href="/social-creative.css?v=1">
 <script src="/social-creative.js?v=1"></script>
-<script src="/social-feed.js?v=adr-camera2"></script>
+<script src="/social-feed.js?v=social-layout1"></script>
 <script src="/shop-features.js?v=mxh1"></script>
 <script src="/sidebar-menu.js?v=1"></script>
 <script src="/post-composer.js?v=locket2"></script>

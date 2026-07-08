@@ -1409,13 +1409,9 @@
                 window.toast?.('Đã đăng ' + posted + ' lên bảng tin!');
             }
             const panel = document.getElementById('social-feed-panel');
-            const histBtn = document.getElementById('social-history-toggle');
-            if (panel?.classList.contains('hidden')) {
-                panel.classList.remove('hidden');
-                histBtn?.classList.add('is-open');
-                panel.dataset.loaded = '1';
-            }
+            if (panel && !panel.dataset.loaded) panel.dataset.loaded = '1';
             await loadFeed();
+            document.querySelector('.social-feed-section')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
             scheduleAutoCameraStart(400);
         } catch (err) {
             window.toast?.(err.message, true);
@@ -1865,6 +1861,7 @@
                 badge.textContent = n;
                 badge.classList.toggle('hidden', n === 0);
             }
+            updateToolbarInviteBadge();
             const countEl = document.getElementById('social-friend-count-num');
             if (countEl) countEl.textContent = String((data.friends || []).length);
             window.SocialCreative?.setFriendsList((data.friends || []).map(item => ({
@@ -2203,16 +2200,54 @@
         updateComposerStatusText();
     }
 
-    function toggleHistoryPanel() {
-        const panel = document.getElementById('social-feed-panel');
-        const btn = document.getElementById('social-history-toggle');
-        if (!panel || !btn) return;
-        const open = panel.classList.toggle('hidden');
-        btn.classList.toggle('is-open', !open);
-        if (!open && !panel.dataset.loaded) {
-            panel.dataset.loaded = '1';
-            loadFeed();
+    function updateToolbarInviteBadge() {
+        const badge = document.getElementById('social-pending-badge');
+        const chatBtn = document.getElementById('social-toolbar-chat');
+        if (!chatBtn) return;
+        const n = parseInt(badge?.textContent || '0', 10);
+        chatBtn.classList.toggle('has-badge', n > 0 && !badge?.classList.contains('hidden'));
+    }
+
+    function openSocialDrawer(scrollTo) {
+        document.getElementById('social-drawer-overlay')?.classList.remove('hidden');
+        document.getElementById('social-drawer-overlay')?.classList.add('is-open');
+        document.getElementById('social-side-drawer')?.classList.add('is-open');
+        document.getElementById('social-side-drawer')?.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('social-drawer-open');
+        if (scrollTo) {
+            const el = document.getElementById(scrollTo);
+            el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
+    }
+
+    function closeSocialDrawer() {
+        document.getElementById('social-drawer-overlay')?.classList.remove('is-open');
+        document.getElementById('social-side-drawer')?.classList.remove('is-open');
+        document.getElementById('social-side-drawer')?.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('social-drawer-open');
+        setTimeout(() => {
+            document.getElementById('social-drawer-overlay')?.classList.add('hidden');
+        }, 300);
+    }
+
+    function initFeedToolbar() {
+        document.getElementById('social-feed-folder')?.addEventListener('click', () => {
+            document.querySelector('.social-feed-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const panel = document.getElementById('social-feed-panel');
+            if (panel && !panel.dataset.loaded) {
+                panel.dataset.loaded = '1';
+                loadFeed();
+            }
+        });
+        document.getElementById('social-toolbar-menu')?.addEventListener('click', () => openSocialDrawer());
+        document.getElementById('social-toolbar-chat')?.addEventListener('click', () => openSocialDrawer('social-pending-in'));
+        document.getElementById('social-drawer-close')?.addEventListener('click', closeSocialDrawer);
+        document.getElementById('social-drawer-overlay')?.addEventListener('click', closeSocialDrawer);
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && document.getElementById('social-side-drawer')?.classList.contains('is-open')) {
+                closeSocialDrawer();
+            }
+        });
     }
 
     function initFabButton() {
@@ -2242,7 +2277,6 @@
         document.getElementById('social-flip-camera')?.addEventListener('click', flipCamera);
         document.getElementById('social-post-btn')?.addEventListener('click', publishPost);
         document.getElementById('social-save-btn')?.addEventListener('click', onSavePreviewClick);
-        document.getElementById('social-history-toggle')?.addEventListener('click', toggleHistoryPanel);
         bindPreviewPlayButton();
 
         const searchInput = document.getElementById('social-search');
@@ -2263,10 +2297,16 @@
         clearPreview();
         await stopCamera();
         await Promise.all([loadFriendsPanel(), loadDriveStatus()]);
+        const panel = document.getElementById('social-feed-panel');
+        if (panel) {
+            panel.dataset.loaded = '1';
+            await loadFeed();
+        }
         scheduleAutoCameraStart(500);
     }
 
     function leaveView() {
+        closeSocialDrawer();
         stopCamera();
         clearPreview();
     }
@@ -2311,6 +2351,7 @@
 
     function init() {
         initFabButton();
+        initFeedToolbar();
         initSaveMode();
         initModeToggle();
         initComposerEvents();
