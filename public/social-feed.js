@@ -11,6 +11,15 @@
     const MAX_VIDEO_SEC = 20;
     const MAX_VIDEO_FILE_MB = 8;
     const LS_SAVE_MODE = 'social_save_mode';
+    const REACTION_DEFS = [
+        { key: 'like', emoji: '👍', label: 'Thích' },
+        { key: 'love', emoji: '❤️', label: 'Yêu thích' },
+        { key: 'haha', emoji: '😂', label: 'Haha' },
+        { key: 'wow', emoji: '😮', label: 'Wow' },
+        { key: 'sad', emoji: '😢', label: 'Buồn' },
+        { key: 'angry', emoji: '😡', label: 'Phẫn nộ' },
+    ];
+    const REACTION_EMOJI = Object.fromEntries(REACTION_DEFS.map(r => [r.key, r.emoji]));
     let driveAdminBackup = false;
 
     let cameraStream = null;
@@ -720,6 +729,220 @@
         }
     }
 
+    function renderReactionSummary(post) {
+        const reactions = post.reactions || {};
+        const keys = Object.keys(reactions).filter(k => reactions[k] > 0);
+        if (!keys.length && !post.reactionTotal) return '';
+        const chips = keys.map(k =>
+            '<span class="social-reaction-chip">' + (REACTION_EMOJI[k] || k) + ' ' + reactions[k] + '</span>'
+        ).join('');
+        const total = post.reactionTotal || keys.reduce((s, k) => s + (reactions[k] || 0), 0);
+        return '<div class="social-reaction-summary">'
+            + chips
+            + (total ? '<span class="social-reaction-total">' + total + ' cảm xúc</span>' : '')
+            + '</div>';
+    }
+
+    function renderReactionBar(post) {
+        const my = post.myReaction || '';
+        const btns = REACTION_DEFS.map(r => {
+            const active = my === r.key ? ' is-active' : '';
+            const count = (post.reactions || {})[r.key] || 0;
+            return '<button type="button" class="social-reaction-btn' + active + '"'
+                + ' data-react-post="' + post.id + '" data-reaction="' + r.key + '"'
+                + ' title="' + esc(r.label) + '" aria-label="' + esc(r.label) + '">'
+                + '<span class="social-reaction-emoji">' + r.emoji + '</span>'
+                + (count ? '<span class="social-reaction-count">' + count + '</span>' : '')
+                + '</button>';
+        }).join('');
+        return '<div class="social-reaction-bar">' + btns + '</div>';
+    }
+
+    function renderCommentSection(post) {
+        const count = post.commentCount || 0;
+        return `
+        <div class="social-comments" data-comments-for="${post.id}">
+            <button type="button" class="social-comments-toggle" data-toggle-comments="${post.id}">
+                <i class="fas fa-comment"></i>
+                ${count ? count + ' bình luận' : 'Bình luận'}
+            </button>
+            <div class="social-comments-body hidden" data-comments-body="${post.id}">
+                <div class="social-comments-list" data-comments-list="${post.id}"></div>
+            </div>
+            <form class="social-comment-form" data-comment-form="${post.id}">
+                <input type="text" maxlength="500" class="social-comment-input"
+                    placeholder="Viết bình luận..." data-comment-input="${post.id}" autocomplete="off">
+                <button type="submit" class="social-comment-send" aria-label="Gửi bình luận">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>`;
+    }
+
+    function renderCommentItem(c, postId) {
+        const name = c.author?.fullName || c.author?.email || 'Người dùng';
+        const initial = name.charAt(0).toUpperCase();
+        return `
+        <div class="social-comment-item" data-comment-id="${c.id}">
+            <div class="social-comment-avatar">${esc(initial)}</div>
+            <div class="social-comment-bubble">
+                <div class="social-comment-author">${esc(name)}</div>
+                <div class="social-comment-text">${esc(c.content)}</div>
+                <div class="social-comment-time">${esc(fmtTime(c.createdAt))}</div>
+            </div>
+            ${c.isMine ? `<button type="button" class="social-comment-delete" data-delete-comment="${c.id}" data-post-id="${postId}" title="Xóa"><i class="fas fa-times"></i></button>` : ''}
+        </div>`;
+    }
+
+    async function toggleReaction(postId, reaction) {
+        try {
+            const res = await socialApi('/social/posts/' + postId + '/reactions', {
+                method: 'POST',
+                body: JSON.stringify({ reaction }),
+            });
+            const card = document.querySelector('[data-post-id="' + postId + '"]');
+            if (!card) return;
+            const bar = card.querySelector('.social-reaction-bar');
+            const summary = card.querySelector('.social-reaction-summary');
+            if (bar) {
+                bar.outerHTML = renderReactionBar({
+                    id: postId,
+                    myReaction: res.myReaction,
+                    reactions: res.reactions,
+                    reactionTotal: res.reactionTotal,
+                });
+                bindReactionButtons(card);
+            }
+            if (summary) {
+                summary.outerHTML = renderReactionSummary({
+                    reactions: res.reactions,
+                    reactionTotal: res.reactionTotal,
+                });
+            } else if (res.reactionTotal) {
+                const engage = card.querySelector('.social-post-engage');
+                engage?.insertAdjacentHTML('afterbegin', renderReactionSummary({
+                    reactions: res.reactions,
+                    reactionTotal: res.reactionTotal,
+                }));
+            }
+        } catch (err) {
+            window.toast?.(err.message, true);
+        }
+    }
+
+    async function loadComments(postId, forceOpen) {
+        const card = document.querySelector('[data-post-id="' + postId + '"]');
+        if (!card) return;
+        const body = card.querySelector('[data-comments-body="' + postId + '"]');
+        const list = card.querySelector('[data-comments-list="' + postId + '"]');
+        if (!body || !list) return;
+        if (!forceOpen && !body.classList.contains('hidden')) {
+            body.classList.add('hidden');
+            return;
+        }
+        body.classList.remove('hidden');
+        list.innerHTML = '<div class="social-comment-loading"><i class="fas fa-spinner fa-spin"></i></div>';
+        try {
+            const { comments } = await socialApi('/social/posts/' + postId + '/comments');
+            list.innerHTML = comments?.length
+                ? comments.map(c => renderCommentItem(c, postId)).join('')
+                : '<div class="social-comment-empty">Chưa có bình luận — hãy là người đầu tiên!</div>';
+            bindCommentDeletes(card);
+        } catch (err) {
+            list.innerHTML = '<div class="social-comment-empty">' + esc(err.message) + '</div>';
+        }
+    }
+
+    async function submitComment(postId, content) {
+        const res = await socialApi('/social/posts/' + postId + '/comments', {
+            method: 'POST',
+            body: JSON.stringify({ content }),
+        });
+        const card = document.querySelector('[data-post-id="' + postId + '"]');
+        if (!card) return res;
+        const toggle = card.querySelector('[data-toggle-comments="' + postId + '"]');
+        if (toggle) {
+            toggle.innerHTML = '<i class="fas fa-comment"></i> ' + (res.commentCount || 0) + ' bình luận';
+        }
+        const body = card.querySelector('[data-comments-body="' + postId + '"]');
+        const list = card.querySelector('[data-comments-list="' + postId + '"]');
+        if (body && list) {
+            body.classList.remove('hidden');
+            const empty = list.querySelector('.social-comment-empty');
+            if (empty) empty.remove();
+            list.insertAdjacentHTML('beforeend', renderCommentItem(res.comment, postId));
+            bindCommentDeletes(card);
+        }
+        return res;
+    }
+
+    async function deleteComment(postId, commentId) {
+        if (!confirm('Xóa bình luận này?')) return;
+        try {
+            const res = await socialApi('/social/posts/' + postId + '/comments/' + commentId, {
+                method: 'DELETE',
+            });
+            const item = document.querySelector('[data-comment-id="' + commentId + '"]');
+            item?.remove();
+            const card = document.querySelector('[data-post-id="' + postId + '"]');
+            const toggle = card?.querySelector('[data-toggle-comments="' + postId + '"]');
+            if (toggle) {
+                const n = res.commentCount || 0;
+                toggle.innerHTML = '<i class="fas fa-comment"></i> ' + (n ? n + ' bình luận' : 'Bình luận');
+            }
+            const list = card?.querySelector('[data-comments-list="' + postId + '"]');
+            if (list && !list.querySelector('.social-comment-item')) {
+                list.innerHTML = '<div class="social-comment-empty">Chưa có bình luận — hãy là người đầu tiên!</div>';
+            }
+        } catch (err) {
+            window.toast?.(err.message, true);
+        }
+    }
+
+    function bindReactionButtons(root) {
+        root.querySelectorAll('[data-react-post]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                toggleReaction(Number(btn.dataset.reactPost), btn.dataset.reaction);
+            });
+        });
+    }
+
+    function bindCommentDeletes(root) {
+        root.querySelectorAll('[data-delete-comment]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                deleteComment(Number(btn.dataset.postId), Number(btn.dataset.deleteComment));
+            });
+        });
+    }
+
+    function bindEngagement(root) {
+        bindReactionButtons(root);
+        bindCommentDeletes(root);
+        root.querySelectorAll('[data-toggle-comments]').forEach(btn => {
+            btn.addEventListener('click', () => loadComments(Number(btn.dataset.toggleComments), true));
+        });
+        root.querySelectorAll('[data-comment-form]').forEach(form => {
+            form.addEventListener('submit', async e => {
+                e.preventDefault();
+                const postId = Number(form.dataset.commentForm);
+                const input = form.querySelector('[data-comment-input="' + postId + '"]');
+                const text = input?.value.trim() || '';
+                if (!text) return;
+                const submitBtn = form.querySelector('.social-comment-send');
+                if (submitBtn) submitBtn.disabled = true;
+                try {
+                    await submitComment(postId, text);
+                    if (input) input.value = '';
+                    window.toast?.('Đã gửi bình luận', false, 1800);
+                } catch (err) {
+                    window.toast?.(err.message, true);
+                } finally {
+                    if (submitBtn) submitBtn.disabled = false;
+                }
+            });
+        });
+    }
+
     async function deletePost(postId) {
         if (!confirm('Hủy đăng ảnh này?\nBạn bè sẽ không xem được nữa.')) return;
         try {
@@ -765,6 +988,11 @@
                     ? `<video src="${esc(mediaSrc)}" class="social-post-video" controls playsinline preload="metadata"></video>`
                     : `<img src="${esc(mediaSrc)}" class="social-post-img" data-lightbox="1" alt="Ảnh bài đăng">`}
                 ${renderPostMediaMeta(p)}
+                <div class="social-post-engage">
+                    ${renderReactionSummary(p)}
+                    ${renderReactionBar(p)}
+                    ${renderCommentSection(p)}
+                </div>
             </article>`;
         }).join('');
 
@@ -784,6 +1012,7 @@
             img.addEventListener('click', () => window.ShopFeatures?.openPhotoLightbox?.(img.src));
         });
         bindFeedMediaMeta(el);
+        bindEngagement(el);
     }
 
     async function loadFeed() {

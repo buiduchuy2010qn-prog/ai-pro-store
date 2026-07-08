@@ -1650,6 +1650,227 @@ body.app-light .app-main {
     background: #e2e8f0;
 }
 
+.social-post-engage {
+    padding: 0.55rem 1rem 0.85rem;
+    border-top: 1px solid rgba(226, 232, 240, 0.9);
+    background: linear-gradient(180deg, #fafbff, #fff);
+}
+
+.social-reaction-summary {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.5rem;
+    margin-bottom: 0.45rem;
+    font-size: 0.74rem;
+    color: #64748b;
+}
+
+.social-reaction-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.12rem 0.45rem;
+    border-radius: 999px;
+    background: #f1f5f9;
+}
+
+.social-reaction-total {
+    color: #94a3b8;
+}
+
+.social-reaction-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-bottom: 0.55rem;
+}
+
+.social-reaction-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.28rem 0.5rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 999px;
+    background: #fff;
+    cursor: pointer;
+    transition: transform 0.12s, border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.social-reaction-btn:hover {
+    transform: scale(1.06);
+    border-color: #c4b5fd;
+    background: #faf5ff;
+}
+
+.social-reaction-btn.is-active {
+    border-color: #8b5cf6;
+    background: linear-gradient(135deg, #ede9fe, #fce7f3);
+    box-shadow: 0 2px 10px rgba(139, 92, 246, 0.18);
+}
+
+.social-reaction-emoji {
+    font-size: 1.05rem;
+    line-height: 1;
+}
+
+.social-reaction-count {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #6d28d9;
+}
+
+.social-comments {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.social-comments-toggle {
+    align-self: flex-start;
+    border: none;
+    background: none;
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.15rem 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.social-comments-toggle:hover {
+    color: #7c3aed;
+}
+
+.social-comments-body {
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.social-comments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    margin-bottom: 0.35rem;
+}
+
+.social-comment-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+}
+
+.social-comment-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #a78bfa, #6366f1);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.social-comment-bubble {
+    flex: 1;
+    min-width: 0;
+    background: #f1f5f9;
+    border-radius: 14px;
+    padding: 0.45rem 0.65rem;
+}
+
+.social-comment-author {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 0.1rem;
+}
+
+.social-comment-text {
+    font-size: 0.82rem;
+    color: #1e293b;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.social-comment-time {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    margin-top: 0.2rem;
+}
+
+.social-comment-delete {
+    border: none;
+    background: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0.25rem;
+    font-size: 0.75rem;
+}
+
+.social-comment-delete:hover {
+    color: #ef4444;
+}
+
+.social-comment-empty,
+.social-comment-loading {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    padding: 0.35rem 0;
+}
+
+.social-comment-form {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.social-comment-input {
+    flex: 1;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.82rem;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.social-comment-input:focus {
+    border-color: #a78bfa;
+    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.15);
+}
+
+.social-comment-send {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.12s, opacity 0.15s;
+}
+
+.social-comment-send:hover:not(:disabled) {
+    transform: scale(1.05);
+}
+
+.social-comment-send:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
 .social-side-title {
     font-weight: 700;
     font-size: 1rem;

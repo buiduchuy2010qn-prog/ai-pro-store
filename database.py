@@ -179,6 +179,19 @@ def _ensure_social_tables(conn):
                 caption TEXT DEFAULT '',
                 image_data TEXT NOT NULL,
                 created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS social_post_reactions (
+                id SERIAL PRIMARY KEY,
+                post_id INTEGER NOT NULL REFERENCES social_posts(id) ON DELETE CASCADE,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                reaction TEXT NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                UNIQUE(post_id, user_id))''',
+            '''CREATE TABLE IF NOT EXISTS social_post_comments (
+                id SERIAL PRIMARY KEY,
+                post_id INTEGER NOT NULL REFERENCES social_posts(id) ON DELETE CASCADE,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                content TEXT NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
         ]
     else:
         stmts = [
@@ -198,6 +211,23 @@ def _ensure_social_tables(conn):
                 caption TEXT DEFAULT '',
                 image_data TEXT NOT NULL,
                 created_at TEXT DEFAULT ({n}),
+                FOREIGN KEY (user_id) REFERENCES users(id))''',
+            f'''CREATE TABLE IF NOT EXISTS social_post_reactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                reaction TEXT NOT NULL,
+                created_at TEXT DEFAULT ({n}),
+                FOREIGN KEY (post_id) REFERENCES social_posts(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                UNIQUE(post_id, user_id))''',
+            f'''CREATE TABLE IF NOT EXISTS social_post_comments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                content TEXT NOT NULL,
+                created_at TEXT DEFAULT ({n}),
+                FOREIGN KEY (post_id) REFERENCES social_posts(id) ON DELETE CASCADE,
                 FOREIGN KEY (user_id) REFERENCES users(id))''',
         ]
     for stmt in stmts:

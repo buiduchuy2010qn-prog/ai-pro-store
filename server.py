@@ -2342,6 +2342,8 @@ def admin_avatar_top_selling():
 
 MAX_SOCIAL_IMAGE_LEN = 700_000
 MAX_SOCIAL_VIDEO_LEN = 12_000_000
+SOCIAL_REACTION_TYPES = frozenset({'like', 'love', 'haha', 'wow', 'sad', 'angry'})
+SOCIAL_COMMENT_MAX_LEN = 500
 
 
 def _social_media_type(data):
@@ -2371,6 +2373,81 @@ def _social_can_view_post(conn, viewer_id, post_user_id):
     if viewer_id == post_user_id:
         return True
     return post_user_id in _friend_ids(conn, viewer_id)
+
+
+def _social_get_post(conn, pid):
+    return db.fetchone(conn, '''
+        SELECT p.*, u.name, u.email
+        FROM social_posts p
+        JOIN users u ON u.id = p.user_id
+        WHERE p.id = ?
+    ''', (pid,))
+
+
+def _social_require_post_access(conn, viewer_id, pid):
+    row = _social_get_post(conn, pid)
+    if not row:
+        return None, (jsonify({'error': 'Bài đăng không tồn tại.'}), 404)
+    if not _social_can_view_post(conn, viewer_id, row['user_id']):
+        return None, (jsonify({'error': 'Bạn không có quyền xem bài này.'}), 403)
+    return row, None
+
+
+def _social_comment_payload(row, viewer_id):
+    return {
+        'id': row['id'],
+        'postId': row['post_id'],
+        'content': row['content'] or '',
+        'createdAt': format_dt_vn(row['created_at']),
+        'author': {
+            'id': row['user_id'],
+            'fullName': row.get('name') or row.get('author_name') or 'Người dùng',
+            'email': row.get('email') or row.get('author_email') or '',
+        },
+        'isMine': row['user_id'] == viewer_id,
+    }
+
+
+def _social_attach_engagement(conn, posts, viewer_id):
+    if not posts:
+        return posts
+    ids = [p['id'] for p in posts]
+    placeholders = ','.join(['?'] * len(ids))
+
+    reaction_rows = db.fetchall(conn, f'''
+        SELECT post_id, reaction, COUNT(*) AS cnt
+        FROM social_post_reactions
+        WHERE post_id IN ({placeholders})
+        GROUP BY post_id, reaction
+    ''', tuple(ids))
+
+    my_rows = db.fetchall(conn, f'''
+        SELECT post_id, reaction FROM social_post_reactions
+        WHERE user_id = ? AND post_id IN ({placeholders})
+    ''', (viewer_id, *ids))
+
+    comment_rows = db.fetchall(conn, f'''
+        SELECT post_id, COUNT(*) AS cnt
+        FROM social_post_comments
+        WHERE post_id IN ({placeholders})
+        GROUP BY post_id
+    ''', tuple(ids))
+
+    react_map = {pid: {} for pid in ids}
+    for r in reaction_rows:
+        react_map.setdefault(r['post_id'], {})[r['reaction']] = int(r['cnt'])
+
+    my_map = {r['post_id']: r['reaction'] for r in my_rows}
+    comment_map = {r['post_id']: int(r['cnt']) for r in comment_rows}
+
+    for p in posts:
+        reactions = react_map.get(p['id'], {})
+        total = sum(reactions.values())
+        p['reactions'] = reactions
+        p['reactionTotal'] = total
+        p['myReaction'] = my_map.get(p['id'])
+        p['commentCount'] = comment_map.get(p['id'], 0)
+    return posts
 
 
 def _social_drive_file_id(row):
@@ -2478,6 +2555,7 @@ def social_feed():
         LIMIT 50
     ''', tuple(visible))
     posts = [_social_post_payload(r, uid, conn) for r in rows]
+    posts = _social_attach_engagement(conn, posts, uid)
     db.close(conn)
     return jsonify({'posts': posts})
 
@@ -2766,10 +2844,139 @@ def social_delete_post(pid):
     if row['user_id'] != request.user['id']:
         db.close(conn)
         return jsonify({'error': 'Chỉ xóa được bài của mình.'}), 403
+    db.execute(conn, 'DELETE FROM social_post_comments WHERE post_id = ?', (pid,))
+    db.execute(conn, 'DELETE FROM social_post_reactions WHERE post_id = ?', (pid,))
     db.execute(conn, 'DELETE FROM social_posts WHERE id = ?', (pid,))
     db.commit(conn)
     db.close(conn)
     return jsonify({'ok': True})
+
+
+@app.route('/api/social/posts/<int:pid>/reactions', methods=['POST'])
+@auth_required
+def social_toggle_reaction(pid):
+    d = request.get_json(silent=True) or {}
+    reaction = (d.get('reaction') or '').strip().lower()
+    if reaction not in SOCIAL_REACTION_TYPES:
+        return jsonify({'error': 'Cảm xúc không hợp lệ.'}), 400
+    uid = request.user['id']
+    conn = db.get_conn()
+    row, err = _social_require_post_access(conn, uid, pid)
+    if err:
+        db.close(conn)
+        return err
+    existing = db.fetchone(conn,
+        'SELECT id, reaction FROM social_post_reactions WHERE post_id = ? AND user_id = ?',
+        (pid, uid))
+    if existing and existing['reaction'] == reaction:
+        db.execute(conn, 'DELETE FROM social_post_reactions WHERE id = ?', (existing['id'],))
+        my_reaction = None
+    elif existing:
+        db.execute(conn,
+            'UPDATE social_post_reactions SET reaction = ? WHERE id = ?',
+            (reaction, existing['id']))
+        my_reaction = reaction
+    else:
+        db.insert_returning_id(conn,
+            'INSERT INTO social_post_reactions (post_id, user_id, reaction) VALUES (?, ?, ?)',
+            (pid, uid, reaction))
+        my_reaction = reaction
+    counts = db.fetchall(conn, '''
+        SELECT reaction, COUNT(*) AS cnt FROM social_post_reactions
+        WHERE post_id = ? GROUP BY reaction
+    ''', (pid,))
+    db.commit(conn)
+    db.close(conn)
+    reactions = {r['reaction']: int(r['cnt']) for r in counts}
+    return jsonify({
+        'ok': True,
+        'myReaction': my_reaction,
+        'reactions': reactions,
+        'reactionTotal': sum(reactions.values()),
+    })
+
+
+@app.route('/api/social/posts/<int:pid>/comments', methods=['GET'])
+@auth_required
+def social_list_comments(pid):
+    uid = request.user['id']
+    conn = db.get_conn()
+    _, err = _social_require_post_access(conn, uid, pid)
+    if err:
+        db.close(conn)
+        return err
+    rows = db.fetchall(conn, '''
+        SELECT c.id, c.post_id, c.user_id, c.content, c.created_at,
+               u.name, u.email
+        FROM social_post_comments c
+        JOIN users u ON u.id = c.user_id
+        WHERE c.post_id = ?
+        ORDER BY c.created_at ASC
+        LIMIT 100
+    ''', (pid,))
+    db.close(conn)
+    return jsonify({
+        'comments': [_social_comment_payload(r, uid) for r in rows],
+    })
+
+
+@app.route('/api/social/posts/<int:pid>/comments', methods=['POST'])
+@auth_required
+def social_add_comment(pid):
+    d = request.get_json(silent=True) or {}
+    content = sec.sanitize_string(d.get('content', ''), max_len=SOCIAL_COMMENT_MAX_LEN).strip()
+    if not content:
+        return jsonify({'error': 'Nhập nội dung bình luận.'}), 400
+    uid = request.user['id']
+    conn = db.get_conn()
+    _, err = _social_require_post_access(conn, uid, pid)
+    if err:
+        db.close(conn)
+        return err
+    cid = db.insert_returning_id(conn,
+        'INSERT INTO social_post_comments (post_id, user_id, content) VALUES (?, ?, ?)',
+        (pid, uid, content))
+    row = db.fetchone(conn, '''
+        SELECT c.id, c.post_id, c.user_id, c.content, c.created_at,
+               u.name, u.email
+        FROM social_post_comments c
+        JOIN users u ON u.id = c.user_id
+        WHERE c.id = ?
+    ''', (cid,))
+    count_row = db.fetchone(conn,
+        'SELECT COUNT(*) AS cnt FROM social_post_comments WHERE post_id = ?', (pid,))
+    db.commit(conn)
+    db.close(conn)
+    return jsonify({
+        'ok': True,
+        'comment': _social_comment_payload(row, uid),
+        'commentCount': int(count_row['cnt'] or 0),
+    }), 201
+
+
+@app.route('/api/social/posts/<int:pid>/comments/<int:cid>', methods=['DELETE'])
+@auth_required
+def social_delete_comment(pid, cid):
+    uid = request.user['id']
+    conn = db.get_conn()
+    post, err = _social_require_post_access(conn, uid, pid)
+    if err:
+        db.close(conn)
+        return err
+    row = db.fetchone(conn,
+        'SELECT * FROM social_post_comments WHERE id = ? AND post_id = ?', (cid, pid))
+    if not row:
+        db.close(conn)
+        return jsonify({'error': 'Bình luận không tồn tại.'}), 404
+    if row['user_id'] != uid and post['user_id'] != uid:
+        db.close(conn)
+        return jsonify({'error': 'Chỉ xóa được bình luận của mình hoặc bài của mình.'}), 403
+    db.execute(conn, 'DELETE FROM social_post_comments WHERE id = ?', (cid,))
+    count_row = db.fetchone(conn,
+        'SELECT COUNT(*) AS cnt FROM social_post_comments WHERE post_id = ?', (pid,))
+    db.commit(conn)
+    db.close(conn)
+    return jsonify({'ok': True, 'commentCount': int(count_row['cnt'] or 0)})
 
 
 @app.route('/api/social/users/search')
