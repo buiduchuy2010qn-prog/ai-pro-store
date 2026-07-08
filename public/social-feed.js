@@ -699,7 +699,9 @@
         if (!isAdmin) return;
 
         const connected = !!data.connected;
-        const oauthReady = !!data.oauthAvailable;
+        const credTest = setup?.credentialTest;
+        const credOk = credTest ? credTest.ok !== false : true;
+        const oauthReady = !!data.oauthAvailable && credOk;
         if (connectedBox) connectedBox.classList.toggle('hidden', !connected);
         if (disconnectedBox) disconnectedBox.classList.toggle('hidden', connected);
         if (emailEl) emailEl.textContent = data.googleEmail || 'Tài khoản Google';
