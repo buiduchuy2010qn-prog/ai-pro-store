@@ -17,13 +17,16 @@
 }
 
 /* Mọi UI tương tác nằm TRÊN canvas */
-#auth-screen,
 #app,
 #toast,
-.zalo-float,
-.modal-overlay:not(.hidden) {
+.zalo-float {
     position: relative;
     z-index: 2;
+}
+
+#auth-screen.login-modal-overlay {
+    position: fixed;
+    z-index: 50 !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -453,8 +456,39 @@ body.shop-carousel-theme input:focus {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
 }
 
-body.shop-carousel-theme .auth-bg {
-    background: var(--sc-bg) !important;
+/* ─── Login Modal ─── */
+.login-modal-overlay {
+    z-index: 50 !important;
+}
+
+.login-modal-panel {
+    max-height: 92vh;
+    overflow-y: auto;
+}
+
+.login-modal-tab {
+    background: transparent;
+    border: none;
+    border-bottom: 4px solid transparent;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.login-modal-tab:hover {
+    color: #e4e4e7;
+}
+
+.login-modal-tab-active {
+    color: #fff !important;
+    border-bottom-color: #3b82f6 !important;
+}
+
+.login-modal-input:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+.login-modal-submit:active {
+    transform: scale(0.98);
 }
 
 body.shop-carousel-theme #wallet-balance,
