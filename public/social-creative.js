@@ -497,9 +497,11 @@
     function renderCaptionDisplay() {
         const pillEl = document.getElementById('social-caption-pill-overlay');
         const barEl = document.getElementById('social-frame-caption-bar');
-        const isPreview = document.querySelector('.social-locket-frame.has-preview');
+        const frame = document.querySelector('.social-locket-frame');
+        const isPreview = frame?.classList.contains('has-preview');
         if (!pillEl || !isPreview) {
             pillEl?.classList.add('hidden');
+            frame?.classList.remove('is-pill-caption', 'is-input-caption');
             return;
         }
 
@@ -512,12 +514,16 @@
             pillEl.classList.remove('hidden');
             pillEl.setAttribute('aria-hidden', 'false');
             barEl?.classList.add('hidden');
+            frame?.classList.add('is-pill-caption');
+            frame?.classList.remove('is-input-caption');
             return;
         }
 
         pillEl.classList.add('hidden');
         pillEl.setAttribute('aria-hidden', 'true');
         barEl?.classList.remove('hidden');
+        frame?.classList.add('is-input-caption');
+        frame?.classList.remove('is-pill-caption');
     }
 
     function useInputCaptionMode() {

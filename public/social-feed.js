@@ -1023,8 +1023,14 @@
 
         document.getElementById('social-capture-header')?.classList.toggle('hidden', isPreview);
         document.getElementById('social-send-header')?.classList.toggle('hidden', !isPreview);
-        document.getElementById('social-frame-caption-bar')?.classList.toggle('hidden', !isPreview);
         document.getElementById('social-history-panel')?.classList.add('hidden');
+
+        if (isPreview) {
+            window.SocialCreative?.renderCaptionDisplay?.();
+        } else {
+            document.getElementById('social-frame-caption-bar')?.classList.add('hidden');
+            document.getElementById('social-caption-pill-overlay')?.classList.add('hidden');
+        }
 
         updateUnifiedActionButtons();
         updateShutterState();

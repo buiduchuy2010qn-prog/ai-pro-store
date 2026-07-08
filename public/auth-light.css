@@ -1816,14 +1816,44 @@ body.app-light .app-main {
 }
 
 .social-locket-studio.is-post-view {
-    gap: 0.85rem;
-    padding-top: 0.25rem !important;
+    gap: 1rem;
+    padding-top: 0.35rem !important;
 }
 
 .social-locket-studio.is-post-view .social-capture-only,
 .social-locket-studio.is-post-view .social-history-panel,
-.social-locket-studio.is-post-view #social-caption-overlay {
+.social-locket-studio.is-post-view #social-caption-overlay,
+.social-locket-studio.is-post-view .social-deco-overlay,
+.social-locket-studio.is-post-view .social-history-hint {
     display: none !important;
+}
+
+.social-locket-frame.has-preview.is-pill-caption .social-frame-caption-bar {
+    display: none !important;
+}
+
+.social-locket-frame.has-preview.is-input-caption .social-caption-pill-overlay {
+    display: none !important;
+}
+
+.social-locket-unified.is-post-view .social-send-topbar {
+    padding-bottom: 1rem;
+}
+
+.social-locket-unified.is-post-view .social-locket-frame {
+    box-shadow: 0 10px 36px rgba(15, 23, 42, 0.1);
+}
+
+.social-locket-studio.is-post-view .social-locket-controls {
+    gap: 3.25rem;
+    padding: 0.5rem 0 0.25rem;
+}
+
+.social-locket-frame.has-preview.is-pill-caption .social-caption-pill-overlay {
+    top: 62%;
+    font-size: 0.95rem;
+    padding: 0.55rem 1.1rem;
+    max-width: calc(100% - 32px);
 }
 
 .social-locket-studio:not(.is-post-view) .social-recipient-strip {
