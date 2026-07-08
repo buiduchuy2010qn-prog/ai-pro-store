@@ -714,8 +714,8 @@
 
     function getUnifiedSlotMode() {
         if (pendingImage || pendingVideoBlob) return 'preview';
+        if (historyPanelOpen && feedPostsCache.length) return 'feed';
         if (cameraStream) return 'capture';
-        if (feedPostsCache.length) return 'feed';
         return 'idle';
     }
 
@@ -840,11 +840,12 @@
         const isFeed = mode === 'feed';
 
         frame?.classList.toggle('is-feed-mode', isFeed);
+        frame?.classList.toggle('is-history-mode', historyPanelOpen && !isPreview);
         frame?.classList.toggle('has-preview', isPreview);
         feedLayer?.classList.toggle('hidden', !isFeed);
         placeholder?.classList.toggle('hidden', isPreview || isCapture || isFeed);
         modePicker?.classList.toggle('hidden', isPreview || isFeed);
-        const showHistoryFeed = isFeed && historyPanelOpen;
+        const showHistoryFeed = historyPanelOpen && isFeed;
         metaRow?.classList.toggle('hidden', !showHistoryFeed);
         dotsRow?.classList.toggle('hidden', !showHistoryFeed || feedPostsCache.length <= 1);
 
@@ -873,34 +874,45 @@
         else stopFeedRotation();
     }
 
-    function toggleHistoryPanel() {
+    async function toggleHistoryPanel() {
         historyPanelOpen = !historyPanelOpen;
         const btn = document.getElementById('social-history-toggle');
+        const studio = document.querySelector('.social-locket-studio');
         btn?.classList.toggle('is-open', historyPanelOpen);
-        if (historyPanelOpen && !feedPostsCache.length) loadFeed();
-        else updateUnifiedSlotVisibility();
+        studio?.classList.toggle('is-history-open', historyPanelOpen);
+
+        if (historyPanelOpen) {
+            if (!feedPostsCache.length) await loadFeed();
+            if (feedPostsCache.length) {
+                if (cameraStream) await stopCamera();
+                showFeedSlot(feedSlotIndex, true);
+                startFeedRotation();
+            }
+        } else {
+            stopFeedRotation();
+            document.getElementById('social-feed-layer')?.classList.add('hidden');
+            updateUnifiedSlotVisibility();
+            if (!pendingImage && !pendingVideoBlob) {
+                scheduleAutoCameraStart(200);
+            }
+        }
+        updateUnifiedSlotVisibility();
     }
 
     async function exitCameraToFeed() {
         await stopCamera();
         updateUnifiedSlotVisibility();
-        if (feedPostsCache.length) {
-            setComposerStatus('Vuốt chấm hoặc đợi — bài đăng tự đổi');
-        } else {
-            updateComposerStatusText();
-        }
+        updateComposerStatusText();
     }
 
     function scheduleAutoCameraStart(delayMs = 500) {
         if (pendingImage || pendingVideoBlob) return;
-        if (feedPostsCache.length > 0) {
+        if (historyPanelOpen) {
             updateUnifiedSlotVisibility();
             return;
         }
-        if (isPhoneDevice()) {
-            updateUnifiedSlotVisibility();
-            return;
-        }
+        updateUnifiedSlotVisibility();
+        if (isPhoneDevice()) return;
         setTimeout(() => startCamera().catch(() => {}), delayMs);
     }
 
@@ -988,7 +1000,9 @@
         const el = document.getElementById('social-composer-status');
         if (!el) return;
         el.textContent = msg;
-        el.className = 'social-composer-status' + (type ? ' ' + type : '');
+        el.className = 'social-composer-status social-studio-meta hidden' + (type ? ' ' + type : '');
+        const show = type === 'recording' || (type === 'err' && (pendingImage || pendingVideoBlob));
+        if (show) el.classList.remove('hidden');
     }
 
     function updateShutterState() {
@@ -1612,7 +1626,8 @@
                 window.toast?.('Đã đăng ' + posted + ' lên bảng tin!');
             }
             await loadFeed();
-            scheduleAutoCameraStart(400);
+            if (historyPanelOpen) showFeedSlot(0, true);
+            else scheduleAutoCameraStart(400);
         } catch (err) {
             window.toast?.(err.message, true);
         } finally {
@@ -1920,8 +1935,11 @@
 
         feedLayer.dataset.feedSlotId = String(post.id);
         feedLayer.classList.toggle('is-swapping', !!animate);
+        feedLayer.classList.toggle('is-slide-down', !!animate);
         if (animate) {
-            feedLayer.addEventListener('animationend', () => feedLayer.classList.remove('is-swapping'), { once: true });
+            feedLayer.addEventListener('animationend', () => {
+                feedLayer.classList.remove('is-swapping', 'is-slide-down');
+            }, { once: true });
         }
 
         mediaWrap.innerHTML = wrappedMedia;
@@ -2006,20 +2024,22 @@
             return;
         }
 
-        renderLocketSlot(feedPostsCache[0], false);
+        if (historyPanelOpen) {
+            renderLocketSlot(feedPostsCache[0], false);
+            startFeedRotation();
+        } else {
+            document.getElementById('social-feed-layer')?.classList.add('hidden');
+            updateUnifiedSlotVisibility();
+        }
     }
 
     async function loadFeed() {
-        setComposerStatus('Đang tải bảng tin...');
         try {
             const { posts } = await socialApi('/social/feed');
             renderFeed(posts || []);
-            if (feedPostsCache.length && !pendingImage && !pendingVideoBlob && !cameraStream) {
-                setComposerStatus('Vuốt chấm hoặc đợi — bài đăng tự đổi');
-            }
         } catch (err) {
             clearUnifiedFeedDisplay();
-            setComposerStatus(err.message, 'err');
+            if (historyPanelOpen) setComposerStatus(err.message, 'err');
         }
     }
 

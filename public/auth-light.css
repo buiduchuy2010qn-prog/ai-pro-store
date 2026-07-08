@@ -1826,12 +1826,40 @@ body.app-light .app-main {
 
 .social-history-panel {
     width: 100%;
-    max-width: 360px;
+    max-width: 400px;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
     padding-top: 0.15rem;
+    overflow: hidden;
+}
+
+.social-locket-studio.is-history-open .social-history-panel {
+    animation: historyPanelOpen 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes historyPanelOpen {
+    from { opacity: 0; max-height: 0; transform: translateY(-8px); }
+    to { opacity: 1; max-height: 200px; transform: translateY(0); }
+}
+
+.social-locket-frame.is-history-mode .social-feed-layer.is-slide-down,
+.social-feed-layer.is-slide-down {
+    animation: historyFeedSlideDown 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.social-feed-layer.is-swapping {
+    animation: historyFeedSlideDown 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes historyFeedSlideDown {
+    0% { opacity: 0.35; transform: translateY(-18px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.social-locket-studio.is-history-open .social-locket-frame {
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .social-recipient-strip {
