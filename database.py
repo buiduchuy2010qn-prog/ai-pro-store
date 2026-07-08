@@ -153,8 +153,10 @@ def migrate(conn):
     _ensure_social_tables(conn)
     if IS_PG:
         _safe_alter(conn, 'ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS drive_file_id TEXT')
+        _safe_alter(conn, "ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS media_type TEXT DEFAULT 'image'")
     else:
         _safe_alter(conn, 'ALTER TABLE social_posts ADD COLUMN drive_file_id TEXT')
+        _safe_alter(conn, "ALTER TABLE social_posts ADD COLUMN media_type TEXT DEFAULT 'image'")
     commit(conn)
 
 

@@ -565,21 +565,36 @@ def _resolve_upload_credentials(conn):
     return None, 'none'
 
 
-def _parse_image_b64(image_data_url):
-    m = re.match(r'^data:image/(jpeg|jpg|png|webp);base64,(.+)$', image_data_url or '', re.I)
+def _parse_media_b64(data_url):
+    m = re.match(r'^data:(image/(jpeg|jpg|png|webp)|video/(webm|mp4));base64,(.+)$', data_url or '', re.I)
     if not m:
         return None
-    fmt = m.group(1).lower()
-    ext = 'jpg' if fmt == 'jpeg' else fmt
-    mime = 'image/jpeg' if ext == 'jpg' else f'image/{ext}'
+    kind = m.group(1).lower()
+    fmt = m.group(2).lower()
+    if kind.startswith('image/'):
+        ext = 'jpg' if fmt == 'jpeg' else fmt
+        mime = 'image/jpeg' if ext == 'jpg' else f'image/{ext}'
+    else:
+        ext = fmt
+        mime = f'video/{ext}'
     try:
-        raw = base64.b64decode(m.group(2), validate=True)
+        raw = base64.b64decode(m.group(3), validate=True)
     except Exception:
         return None
     return raw, mime, ext
 
 
-def upload_post_image(image_data_url, user_email, post_id, caption='', conn=None):
+def _parse_image_b64(image_data_url):
+    parsed = _parse_media_b64(image_data_url)
+    if not parsed:
+        return None
+    mime = parsed[1]
+    if not mime.startswith('image/'):
+        return None
+    return parsed
+
+
+def upload_post_image(image_data_url, user_email, post_id, caption='', conn=None, media_type=None):
     """
     Upload ảnh bài đăng vào Drive (ưu tiên OAuth admin, fallback Service Account).
     Trả về (file_id, error_message).
@@ -595,13 +610,14 @@ def upload_post_image(image_data_url, user_email, post_id, caption='', conn=None
             close(conn)
         return None, 'Google Drive chưa được kết nối — admin cần liên kết tài khoản Google'
 
-    parsed = _parse_image_b64(image_data_url)
+    parsed = _parse_media_b64(image_data_url)
     if not parsed:
         if own_conn:
             from database import close
             close(conn)
-        return None, 'Ảnh không hợp lệ để đồng bộ Drive'
+        return None, 'Media không hợp lệ để đồng bộ Drive'
     raw, mime, ext = parsed
+    is_video = (media_type == 'video') or mime.startswith('video/')
 
     creds, method = _resolve_upload_credentials(conn)
     if not creds:
@@ -619,7 +635,8 @@ def upload_post_image(image_data_url, user_email, post_id, caption='', conn=None
         return None, 'Thiếu thư viện Google Drive trên server'
 
     safe_email = re.sub(r'[^a-zA-Z0-9@._-]', '_', (user_email or 'user').lower())
-    filename = f'shop-anh-{safe_email}-{post_id}.{ext}'
+    prefix = 'shop-video' if is_video else 'shop-anh'
+    filename = f'{prefix}-{safe_email}-{post_id}.{ext}'
 
     try:
         service = _build_drive_service(creds)

@@ -219,8 +219,11 @@ def sanitize_password(pw):
     return pw
 
 
-IMAGE_PAYLOAD_KEYS = frozenset({'imageData', 'image_data', 'image', 'photo', 'snapshot'})
+MEDIA_PAYLOAD_KEYS = frozenset({'imageData', 'image_data', 'image', 'photo', 'snapshot', 'videoData', 'video_data'})
+IMAGE_PAYLOAD_KEYS = MEDIA_PAYLOAD_KEYS
 MAX_IMAGE_STRING_LEN = 800_000
+MAX_VIDEO_STRING_LEN = 12_000_000
+SOCIAL_POST_MAX_BODY = 14_000_000
 
 
 def scan_payload(obj, depth=0, parent_key=None):
@@ -238,10 +241,17 @@ def scan_payload(obj, depth=0, parent_key=None):
         for item in obj:
             scan_payload(item, depth + 1, parent_key=parent_key)
     elif isinstance(obj, str):
-        limit = MAX_IMAGE_STRING_LEN if parent_key in IMAGE_PAYLOAD_KEYS else 20000
+        if parent_key in MEDIA_PAYLOAD_KEYS and obj.startswith('data:video/'):
+            limit = MAX_VIDEO_STRING_LEN
+        elif parent_key in MEDIA_PAYLOAD_KEYS:
+            limit = MAX_IMAGE_STRING_LEN
+        else:
+            limit = 20000
         if len(obj) > limit:
             raise ValueError('Chuỗi quá dài.')
-        if parent_key in IMAGE_PAYLOAD_KEYS and obj.startswith('data:image/'):
+        if parent_key in MEDIA_PAYLOAD_KEYS and (
+            obj.startswith('data:image/') or obj.startswith('data:video/')
+        ):
             return
         for pat in DANGEROUS_PATTERNS:
             if pat.search(obj):
@@ -256,7 +266,10 @@ def validate_request_body(req):
     if req.path in CSRF_EXEMPT:
         return
     cl = req.content_length or 0
-    if cl > SECURITY['max_body_bytes']:
+    max_bytes = SECURITY['max_body_bytes']
+    if req.path == '/api/social/posts' and req.method == 'POST':
+        max_bytes = max(max_bytes, SOCIAL_POST_MAX_BODY)
+    if cl > max_bytes:
         raise ValueError('Payload quá lớn.')
     if req.is_json:
         data = req.get_json(silent=True)

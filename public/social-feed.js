@@ -7,14 +7,39 @@
     const PHOTO_MAX_W = 640;
     const PHOTO_QUALITY = 0.55;
     const MAX_IMAGE_CHARS = 520000;
+    const MAX_VIDEO_CHARS = 10_000_000;
+    const MAX_VIDEO_SEC = 20;
+    const MAX_VIDEO_FILE_MB = 8;
     const LS_SAVE_MODE = 'social_save_mode';
     let driveAdminBackup = false;
 
     let cameraStream = null;
     let pendingImage = null;
+    /** 'image' | 'video' */
+    let pendingMediaType = 'image';
+    let composerMode = 'photo';
+    let mediaRecorder = null;
+    let recordChunks = [];
+    let recordingTimer = null;
     let searchTimer = null;
     /** 'user' = trước, 'environment' = sau */
     let cameraFacing = 'user';
+
+    function isVideoMedia() {
+        return pendingMediaType === 'video' || (pendingImage || '').startsWith('data:video/');
+    }
+
+    function getRecorderMime() {
+        if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) {
+            return 'video/webm;codecs=vp8,opus';
+        }
+        if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+            return 'video/webm;codecs=vp8';
+        }
+        if (MediaRecorder.isTypeSupported('video/webm')) return 'video/webm';
+        if (MediaRecorder.isTypeSupported('video/mp4')) return 'video/mp4';
+        return '';
+    }
 
     function isPhoneDevice() {
         const ua = navigator.userAgent || '';
@@ -28,7 +53,7 @@
             video.classList.toggle('mirror-front', cameraFacing === 'user');
         }
         if (flipBtn) {
-            const showFlip = isPhoneDevice() && !!cameraStream && !pendingImage;
+            const showFlip = isPhoneDevice() && !!cameraStream && !pendingImage && composerMode === 'photo';
             flipBtn.classList.toggle('is-visible', showFlip);
             flipBtn.title = cameraFacing === 'user' ? 'Chuyển camera sau' : 'Chuyển camera trước';
         }
@@ -135,57 +160,171 @@
         return mode === when;
     }
 
-    function saveImageToDevice(dataUrl, label) {
+    function saveMediaToDevice(dataUrl, label) {
         if (!dataUrl) return;
+        const isVid = dataUrl.startsWith('data:video/');
+        const ext = isVid ? (dataUrl.includes('webm') ? 'webm' : 'mp4') : 'jpg';
         try {
             const a = document.createElement('a');
             a.href = dataUrl;
-            a.download = `shop-anh-${label || 'luu'}-${Date.now()}.jpg`;
+            a.download = `shop-${isVid ? 'video' : 'anh'}-${label || 'luu'}-${Date.now()}.${ext}`;
             document.body.appendChild(a);
             a.click();
             a.remove();
-            window.toast?.('Đã lưu ảnh vào máy');
+            window.toast?.(isVid ? 'Đã lưu video vào máy' : 'Đã lưu ảnh vào máy');
         } catch (_) {
-            window.toast?.('Không lưu được ảnh — thử giữ ảnh để tải thủ công', true);
+            window.toast?.('Không lưu được — thử tải thủ công', true);
         }
     }
 
-    function showPreview(src) {
+    function saveImageToDevice(dataUrl, label) {
+        saveMediaToDevice(dataUrl, label);
+    }
+
+    function showPreview(src, mediaType) {
         pendingImage = src;
+        pendingMediaType = mediaType || (src.startsWith('data:video/') ? 'video' : 'image');
+        const isVid = pendingMediaType === 'video';
         const preview = document.getElementById('social-preview');
+        const previewVid = document.getElementById('social-preview-video');
         const placeholder = document.getElementById('social-preview-placeholder');
         if (preview) {
-            preview.src = src;
-            preview.classList.remove('hidden');
+            preview.classList.toggle('hidden', isVid);
+            if (!isVid) preview.src = src;
+            else preview.src = '';
+        }
+        if (previewVid) {
+            previewVid.classList.toggle('hidden', !isVid);
+            if (isVid) {
+                previewVid.src = src;
+                previewVid.load();
+            } else {
+                previewVid.src = '';
+            }
         }
         placeholder?.classList.add('hidden');
         document.getElementById('social-post-row')?.classList.remove('hidden');
+        const postBtn = document.getElementById('social-post-btn');
+        if (postBtn) postBtn.innerHTML = isVid
+            ? '<i class="fas fa-paper-plane mr-1"></i>Đăng video'
+            : '<i class="fas fa-paper-plane mr-1"></i>Đăng ảnh';
         updateShutterState();
         updateCameraUi();
         updateComposerMode();
-        setComposerStatus('Đăng ảnh, Lưu ảnh vào máy, hoặc Hủy', 'ok');
+        setComposerStatus(isVid ? 'Đăng video, Lưu vào máy, hoặc Hủy' : 'Đăng ảnh, Lưu vào máy, hoặc Hủy', 'ok');
         if (shouldSaveWhen('capture')) {
-            saveImageToDevice(src, 'chup');
+            saveMediaToDevice(src, isVid ? 'quay' : 'chup');
         }
     }
 
     function clearPreview() {
         pendingImage = null;
+        pendingMediaType = 'image';
         const preview = document.getElementById('social-preview');
+        const previewVid = document.getElementById('social-preview-video');
         const placeholder = document.getElementById('social-preview-placeholder');
         if (preview) {
             preview.src = '';
             preview.classList.add('hidden');
         }
+        if (previewVid) {
+            previewVid.pause?.();
+            previewVid.src = '';
+            previewVid.classList.add('hidden');
+        }
         placeholder?.classList.remove('hidden');
         document.getElementById('social-post-row')?.classList.add('hidden');
+        const postBtn = document.getElementById('social-post-btn');
+        if (postBtn) postBtn.innerHTML = '<i class="fas fa-paper-plane mr-1"></i>Đăng';
         updateShutterState();
         updateCameraUi();
         updateComposerMode();
-        setComposerStatus(cameraStream ? 'Căn khung hình rồi bấm nút tròn tím' : 'Chụp ảnh gửi cho bạn bè');
+        updateComposerStatusText();
+    }
+
+    function updateComposerStatusText() {
+        if (composerMode === 'video') {
+            setComposerStatus(
+                cameraStream
+                    ? (mediaRecorder?.state === 'recording' ? 'Đang quay... bấm nút đỏ để dừng' : 'Bấm nút tròn để bắt đầu quay (tối đa 20 giây)')
+                    : 'Quay video gửi cho bạn bè — bấm nút tròn',
+                mediaRecorder?.state === 'recording' ? 'recording' : ''
+            );
+        } else {
+            setComposerStatus(cameraStream ? 'Căn khung hình rồi bấm nút tròn tím' : 'Chụp ảnh gửi cho bạn bè');
+        }
+    }
+
+    function stopVideoRecord() {
+        clearTimeout(recordingTimer);
+        recordingTimer = null;
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+        }
+        updateShutterRecordingState(false);
+    }
+
+    function updateShutterRecordingState(recording) {
+        const shutter = document.getElementById('social-shutter-btn');
+        if (shutter) shutter.classList.toggle('is-recording', !!recording);
+    }
+
+    async function startVideoRecord() {
+        if (!cameraStream) await startCamera();
+        if (!cameraStream) return;
+        const mime = getRecorderMime();
+        if (!mime || typeof MediaRecorder === 'undefined') {
+            window.toast?.('Trình duyệt không hỗ trợ quay video — chọn video từ máy', true);
+            return;
+        }
+        recordChunks = [];
+        try {
+            mediaRecorder = new MediaRecorder(cameraStream, {
+                mimeType: mime,
+                videoBitsPerSecond: 900000,
+            });
+        } catch (e) {
+            window.toast?.('Không quay được video trên thiết bị này', true);
+            return;
+        }
+        mediaRecorder.ondataavailable = e => {
+            if (e.data && e.data.size) recordChunks.push(e.data);
+        };
+        mediaRecorder.onstop = async () => {
+            const blob = new Blob(recordChunks, { type: mime.split(';')[0] });
+            recordChunks = [];
+            mediaRecorder = null;
+            if (blob.size > MAX_VIDEO_FILE_MB * 1024 * 1024) {
+                window.toast?.('Video quá lớn — quay ngắn hơn (tối đa ~20 giây)', true);
+                updateComposerStatusText();
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = () => {
+                const dataUrl = reader.result;
+                if (String(dataUrl).length > MAX_VIDEO_CHARS) {
+                    window.toast?.('Video quá lớn để đăng — quay ngắn hơn', true);
+                    return;
+                }
+                stopCamera();
+                showPreview(dataUrl, 'video');
+            };
+            reader.onerror = () => window.toast?.('Lỗi xử lý video', true);
+            reader.readAsDataURL(blob);
+        };
+        mediaRecorder.start(250);
+        recordingTimer = setTimeout(() => {
+            if (mediaRecorder?.state === 'recording') {
+                stopVideoRecord();
+                window.toast?.('Đã quay đủ 20 giây', false, 2500);
+            }
+        }, MAX_VIDEO_SEC * 1000);
+        updateShutterRecordingState(true);
+        setComposerStatus('Đang quay... bấm nút đỏ để dừng', 'recording');
     }
 
     async function stopCamera() {
+        stopVideoRecord();
         if (cameraStream) {
             cameraStream.getTracks().forEach(t => t.stop());
             cameraStream = null;
@@ -279,8 +418,7 @@
             document.getElementById('social-preview')?.classList.add('hidden');
             updateShutterState();
             updateCameraUi();
-            const camLabel = cameraFacing === 'environment' ? 'camera sau' : 'camera trước';
-            setComposerStatus(`Đang dùng ${camLabel} — bấm nút tròn để chụp`, 'ok');
+            updateComposerStatusText();
         } catch (err) {
             console.warn('[SocialFeed] camera:', err);
             await stopCamera();
@@ -312,18 +450,35 @@
     }
 
     async function handleFileSelect(file) {
-        if (!file || !file.type.startsWith('image/')) {
-            window.toast?.('Chọn file ảnh hợp lệ', true);
+        if (!file) return;
+        const isImg = file.type.startsWith('image/');
+        const isVid = file.type.startsWith('video/');
+        if (!isImg && !isVid) {
+            window.toast?.('Chọn file ảnh hoặc video hợp lệ', true);
+            return;
+        }
+        if (isVid && file.size > MAX_VIDEO_FILE_MB * 1024 * 1024) {
+            window.toast?.('Video quá lớn (tối đa ~' + MAX_VIDEO_FILE_MB + 'MB)', true);
             return;
         }
         const reader = new FileReader();
         reader.onload = async () => {
             try {
-                const compressed = await compressDataUrl(reader.result);
-                await stopCamera();
-                showPreview(compressed);
-            } catch (_) {
-                window.toast?.('Không đọc được ảnh', true);
+                if (isImg) {
+                    const compressed = await compressDataUrl(reader.result);
+                    await stopCamera();
+                    showPreview(compressed, 'image');
+                } else {
+                    const dataUrl = reader.result;
+                    if (String(dataUrl).length > MAX_VIDEO_CHARS) {
+                        window.toast?.('Video quá lớn để đăng', true);
+                        return;
+                    }
+                    await stopCamera();
+                    showPreview(dataUrl, 'video');
+                }
+            } catch (err) {
+                window.toast?.(err.message || 'Không đọc được file', true);
             }
         };
         reader.readAsDataURL(file);
@@ -333,16 +488,19 @@
         const user = window.currentUser;
         if (!user) return;
         if (!pendingImage) {
-            window.toast?.('Chọn hoặc chụp ảnh trước', true);
+            window.toast?.('Chụp/quay hoặc chọn media trước', true);
             return;
         }
-        if (pendingImage.length > MAX_IMAGE_CHARS) {
-            window.toast?.('Ảnh quá lớn — bấm Chụp lại hoặc chọn ảnh khác', true);
+        const isVid = isVideoMedia();
+        const maxLen = isVid ? MAX_VIDEO_CHARS : MAX_IMAGE_CHARS;
+        if (pendingImage.length > maxLen) {
+            window.toast?.(isVid ? 'Video quá lớn — quay ngắn hơn' : 'Ảnh quá lớn — chụp lại', true);
             return;
         }
-        if (!confirm('Đăng ảnh này lên bảng tin?\nBạn bè đã kết bạn sẽ xem được.')) {
-            return;
-        }
+        const confirmMsg = isVid
+            ? 'Đăng video này lên bảng tin?\nBạn bè đã kết bạn sẽ xem được.'
+            : 'Đăng ảnh này lên bảng tin?\nBạn bè đã kết bạn sẽ xem được.';
+        if (!confirm(confirmMsg)) return;
         const caption = document.getElementById('social-caption')?.value.trim() || '';
         const imageToPost = pendingImage;
         const btn = document.getElementById('social-post-btn');
@@ -357,12 +515,13 @@
             }
             document.getElementById('social-caption').value = '';
             clearPreview();
+            const posted = isVid ? 'video' : 'ảnh';
             if (res.driveSynced) {
-                window.toast?.('Đã đăng ảnh — admin đã sao lưu lên Drive!');
+                window.toast?.('Đã đăng ' + posted + ' — admin đã sao lưu lên Drive!');
             } else if (res.driveWarning && driveAdminBackup) {
-                window.toast?.('Đã đăng ảnh nhưng Drive admin: ' + res.driveWarning, true, 5000);
+                window.toast?.('Đã đăng ' + posted + ' nhưng Drive: ' + res.driveWarning, true, 5000);
             } else {
-                window.toast?.('Đã đăng ảnh lên bảng tin!');
+                window.toast?.('Đã đăng ' + posted + ' lên bảng tin!');
             }
             const panel = document.getElementById('social-feed-panel');
             const histBtn = document.getElementById('social-history-toggle');
@@ -395,7 +554,7 @@
         const el = document.getElementById('social-feed-list');
         if (!el) return;
         if (!posts.length) {
-            el.innerHTML = '<div class="social-empty"><i class="fas fa-images"></i><p>Chưa có bài đăng. Hãy đăng ảnh hoặc kết bạn để xem bảng tin!</p></div>';
+            el.innerHTML = '<div class="social-empty"><i class="fas fa-images"></i><p>Chưa có bài đăng. Hãy đăng ảnh/video hoặc kết bạn để xem bảng tin!</p></div>';
             return;
         }
         el.innerHTML = posts.map(p => {
@@ -415,7 +574,9 @@
                     </div>
                 </div>
                 ${p.caption ? `<p class="social-post-caption">${esc(p.caption)}</p>` : ''}
-                <img src="${p.imageData}" class="social-post-img" data-lightbox="1" alt="Ảnh bài đăng">
+                ${(p.mediaType === 'video' || String(p.imageData).startsWith('data:video/'))
+                    ? `<video src="${p.imageData}" class="social-post-video" controls playsinline preload="metadata"></video>`
+                    : `<img src="${p.imageData}" class="social-post-img" data-lightbox="1" alt="Ảnh bài đăng">`}
             </article>`;
         }).join('');
 
@@ -426,7 +587,9 @@
             btn.addEventListener('click', () => {
                 const card = btn.closest('[data-post-id]');
                 const img = card?.querySelector('.social-post-img');
-                if (img?.src) saveImageToDevice(img.src, 'bai');
+                const vid = card?.querySelector('.social-post-video');
+                const src = vid?.src || img?.src;
+                if (src) saveMediaToDevice(src, 'bai');
             });
         });
         el.querySelectorAll('.social-post-img[data-lightbox]').forEach(img => {
@@ -590,11 +753,55 @@
 
     async function onShutterClick() {
         if (pendingImage) return;
+        if (composerMode === 'video') {
+            if (!cameraStream) {
+                await startCamera();
+                return;
+            }
+            if (mediaRecorder?.state === 'recording') {
+                stopVideoRecord();
+            } else {
+                await startVideoRecord();
+            }
+            return;
+        }
         if (cameraStream) {
             await captureFromCamera();
             return;
         }
         await startCamera();
+    }
+
+    function setComposerMode(mode) {
+        composerMode = mode === 'video' ? 'video' : 'photo';
+        document.getElementById('social-mode-photo')?.classList.toggle('is-active', composerMode === 'photo');
+        document.getElementById('social-mode-video')?.classList.toggle('is-active', composerMode === 'video');
+        const fileBtn = document.getElementById('social-file-btn');
+        if (fileBtn) {
+            fileBtn.title = composerMode === 'video' ? 'Chọn video từ máy' : 'Chọn ảnh từ máy';
+            fileBtn.innerHTML = composerMode === 'video'
+                ? '<i class="fas fa-film"></i>'
+                : '<i class="fas fa-image"></i>';
+        }
+        updateComposerStatusText();
+    }
+
+    function initModeToggle() {
+        document.getElementById('social-mode-photo')?.addEventListener('click', async () => {
+            if (composerMode === 'photo') return;
+            stopVideoRecord();
+            clearPreview();
+            setComposerMode('photo');
+            await stopCamera();
+            await startCamera().catch(() => {});
+        });
+        document.getElementById('social-mode-video')?.addEventListener('click', async () => {
+            if (composerMode === 'video') return;
+            clearPreview();
+            setComposerMode('video');
+            await stopCamera();
+            await startCamera().catch(() => {});
+        });
     }
 
     async function onRetakeClick() {
@@ -918,8 +1125,10 @@
     function init() {
         initFabButton();
         initSaveMode();
+        initModeToggle();
         initComposerEvents();
         initDriveConnect();
+        setComposerMode('photo');
     }
 
     if (document.readyState === 'loading') {

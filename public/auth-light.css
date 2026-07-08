@@ -805,6 +805,60 @@ body.app-light .app-main {
     transform: scaleX(-1);
 }
 
+.social-mode-toggle {
+    display: flex;
+    gap: 0.4rem;
+    justify-content: center;
+    margin-bottom: 0.65rem;
+}
+
+.social-mode-btn {
+    flex: 1;
+    max-width: 8rem;
+    padding: 0.4rem 0.65rem;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.social-mode-btn.is-active {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    color: #fff;
+    border-color: transparent;
+}
+
+.social-locket-shutter.is-recording {
+    background: #ef4444 !important;
+    animation: social-rec-pulse 1s ease infinite;
+}
+
+@keyframes social-rec-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45); }
+    50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+}
+
+.social-composer-status.recording {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+.social-post-video {
+    width: 100%;
+    max-height: 420px;
+    border-radius: 14px;
+    background: #0f172a;
+    display: block;
+}
+
+#social-preview-video.social-locket-media {
+    object-fit: contain;
+    background: #0f172a;
+}
+
 .social-flip-camera-btn {
     position: absolute;
     top: 10px;

@@ -2340,14 +2340,26 @@ def admin_avatar_top_selling():
 # ─── Social (MXH mini — đăng ảnh, kết bạn) ───
 
 MAX_SOCIAL_IMAGE_LEN = 700_000
+MAX_SOCIAL_VIDEO_LEN = 12_000_000
 
 
-def _valid_social_image(data):
+def _social_media_type(data):
     if not data or not isinstance(data, str):
-        return False
-    if not re.match(r'^data:image/(jpeg|jpg|png|webp);base64,', data, re.I):
-        return False
-    return len(data) <= MAX_SOCIAL_IMAGE_LEN
+        return None
+    if re.match(r'^data:video/(webm|mp4);base64,', data, re.I):
+        return 'video'
+    if re.match(r'^data:image/(jpeg|jpg|png|webp);base64,', data, re.I):
+        return 'image'
+    return None
+
+
+def _valid_social_media(data):
+    mtype = _social_media_type(data)
+    if mtype == 'image':
+        return len(data) <= MAX_SOCIAL_IMAGE_LEN
+    if mtype == 'video':
+        return len(data) <= MAX_SOCIAL_VIDEO_LEN
+    return False
 
 
 def _social_user_brief(row):
@@ -2383,7 +2395,7 @@ def social_feed():
     visible = [uid] + list(_friend_ids(conn, uid))
     placeholders = ','.join(['?'] * len(visible))
     rows = db.fetchall(conn, f'''
-        SELECT p.id, p.user_id, p.caption, p.image_data, p.created_at,
+        SELECT p.id, p.user_id, p.caption, p.image_data, p.media_type, p.created_at,
                u.name, u.email
         FROM social_posts p
         JOIN users u ON u.id = p.user_id
@@ -2397,6 +2409,7 @@ def social_feed():
         'userId': r['user_id'],
         'caption': r['caption'] or '',
         'imageData': r['image_data'],
+        'mediaType': r.get('media_type') or _social_media_type(r['image_data']) or 'image',
         'createdAt': format_dt_vn(r['created_at']),
         'author': {'id': r['user_id'], 'fullName': r['name'], 'email': r['email']},
         'isMine': r['user_id'] == uid,
@@ -2519,19 +2532,20 @@ def social_drive_disconnect():
 def social_create_post():
     d = request.get_json(silent=True) or {}
     caption = sec.sanitize_string(d.get('caption', ''), max_len=500)
-    image = d.get('imageData') or d.get('image_data') or ''
-    if not _valid_social_image(image):
-        return jsonify({'error': 'Ảnh không hợp lệ hoặc quá lớn (tối đa ~500KB).'}), 400
+    media = d.get('imageData') or d.get('image_data') or d.get('videoData') or d.get('video_data') or ''
+    media_type = _social_media_type(media)
+    if not _valid_social_media(media):
+        return jsonify({'error': 'Ảnh/video không hợp lệ hoặc quá lớn (ảnh ~500KB, video ~20 giây).'}), 400
     conn = db.get_conn()
     pid = db.insert_returning_id(conn,
-        'INSERT INTO social_posts (user_id, caption, image_data) VALUES (?, ?, ?)',
-        (request.user['id'], caption, image))
+        'INSERT INTO social_posts (user_id, caption, image_data, media_type) VALUES (?, ?, ?, ?)',
+        (request.user['id'], caption, media, media_type))
     drive_file_id = None
     drive_error = None
     # Tự động sao lưu lên Drive admin (quản lý ảnh mọi người)
     if drive.is_configured(conn):
         drive_file_id, drive_error = drive.upload_post_image(
-            image, request.user['email'], pid, caption, conn=conn)
+            media, request.user['email'], pid, caption, conn=conn, media_type=media_type)
         if drive_file_id:
             db.execute(conn, 'UPDATE social_posts SET drive_file_id = ? WHERE id = ?',
                        (drive_file_id, pid))
