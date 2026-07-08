@@ -11,6 +11,26 @@
     let cameraStream = null;
     let pendingImage = null;
     let searchTimer = null;
+    /** 'user' = trước, 'environment' = sau */
+    let cameraFacing = 'user';
+
+    function isPhoneDevice() {
+        const ua = navigator.userAgent || '';
+        return /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || window.matchMedia('(max-width: 767px)').matches;
+    }
+
+    function updateCameraUi() {
+        const video = document.getElementById('social-camera-video');
+        const flipBtn = document.getElementById('social-flip-camera');
+        if (video) {
+            video.classList.toggle('mirror-front', cameraFacing === 'user');
+        }
+        if (flipBtn) {
+            const showFlip = isPhoneDevice() && !!cameraStream && !pendingImage;
+            flipBtn.classList.toggle('is-visible', showFlip);
+            flipBtn.title = cameraFacing === 'user' ? 'Chuyển camera sau' : 'Chuyển camera trước';
+        }
+    }
 
     function esc(s) {
         return (window.escapeHtml || (x => String(x ?? '')))(s);
@@ -82,6 +102,7 @@
         placeholder?.classList.add('hidden');
         document.getElementById('social-post-row')?.classList.remove('hidden');
         updateShutterState();
+        updateCameraUi();
         setComposerStatus('Ảnh đã chụp — bấm Gửi ảnh hoặc nút ↻ để chụp lại', 'ok');
     }
 
@@ -96,6 +117,7 @@
         placeholder?.classList.remove('hidden');
         document.getElementById('social-post-row')?.classList.add('hidden');
         updateShutterState();
+        updateCameraUi();
         setComposerStatus(cameraStream ? 'Căn khung hình rồi bấm nút tròn' : 'Chụp ảnh gửi cho bạn bè');
     }
 
@@ -113,6 +135,7 @@
             document.getElementById('social-preview-placeholder')?.classList.remove('hidden');
         }
         updateShutterState();
+        updateCameraUi();
     }
 
     function cameraErrorMessage(err) {
@@ -133,11 +156,19 @@
     }
 
     async function requestCameraStream() {
-        const constraints = [
-            { video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
-            { video: { facingMode: 'user' }, audio: false },
-            { video: true, audio: false },
-        ];
+        const facing = cameraFacing;
+        const constraints = facing === 'environment'
+            ? [
+                { video: { facingMode: { exact: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+                { video: { facingMode: 'environment' }, audio: false },
+                { video: { facingMode: 'user' }, audio: false },
+                { video: true, audio: false },
+            ]
+            : [
+                { video: { facingMode: { exact: 'user' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+                { video: { facingMode: 'user' }, audio: false },
+                { video: true, audio: false },
+            ];
         let lastErr;
         for (const c of constraints) {
             try {
@@ -147,6 +178,17 @@
             }
         }
         throw lastErr;
+    }
+
+    async function flipCamera() {
+        if (!isPhoneDevice()) return;
+        cameraFacing = cameraFacing === 'user' ? 'environment' : 'user';
+        if (cameraStream) {
+            await startCamera();
+        } else {
+            updateCameraUi();
+        }
+        window.toast?.(cameraFacing === 'environment' ? 'Camera sau' : 'Camera trước', false, 1800);
     }
 
     async function startCamera() {
@@ -172,7 +214,9 @@
             document.getElementById('social-preview-placeholder')?.classList.add('hidden');
             document.getElementById('social-preview')?.classList.add('hidden');
             updateShutterState();
-            setComposerStatus('Căn khung hình rồi bấm nút tròn tím', 'ok');
+            updateCameraUi();
+            const camLabel = cameraFacing === 'environment' ? 'camera sau' : 'camera trước';
+            setComposerStatus(`Đang dùng ${camLabel} — bấm nút tròn để chụp`, 'ok');
         } catch (err) {
             console.warn('[SocialFeed] camera:', err);
             await stopCamera();
@@ -189,8 +233,10 @@
         canvas.width = video.videoWidth || 640;
         canvas.height = video.videoHeight || 480;
         const ctx = canvas.getContext('2d');
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
+        if (cameraFacing === 'user') {
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+        }
         ctx.drawImage(video, 0, 0);
         try {
             const compressed = await compressDataUrl(canvas.toDataURL('image/jpeg', 0.85));
@@ -500,6 +546,7 @@
         });
         document.getElementById('social-shutter-btn')?.addEventListener('click', onShutterClick);
         document.getElementById('social-retake-btn')?.addEventListener('click', onRetakeClick);
+        document.getElementById('social-flip-camera')?.addEventListener('click', flipCamera);
         document.getElementById('social-post-btn')?.addEventListener('click', publishPost);
         document.getElementById('social-history-toggle')?.addEventListener('click', toggleHistoryPanel);
 
