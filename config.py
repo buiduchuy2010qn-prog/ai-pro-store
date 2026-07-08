@@ -54,6 +54,19 @@ AI = {
     'rate_limit': int(os.getenv('AI_RATE_LIMIT_PER_HOUR', '30')),
 }
 
+_code_editor_model = os.getenv('CODE_EDITOR_AI_MODEL', '')
+if not _code_editor_model:
+    _code_editor_model = 'grok-3' if os.getenv('XAI_API_KEY') else 'gpt-4o'
+
+CODE_EDITOR = {
+    'password': os.getenv('CODE_EDITOR_PASSWORD', '100610'),
+    'unlock_ttl_sec': int(os.getenv('CODE_EDITOR_UNLOCK_TTL_SEC', '7200')),
+    'ai_model': _code_editor_model,
+    'rate_limit': int(os.getenv('CODE_EDITOR_AI_RATE_LIMIT_PER_HOUR', '30')),
+    'max_file_bytes': int(os.getenv('CODE_EDITOR_MAX_FILE_BYTES', '600000')),
+    'max_ai_context_bytes': int(os.getenv('CODE_EDITOR_MAX_CONTEXT_BYTES', '120000')),
+}
+
 _cors_raw = os.getenv('CORS_ORIGINS', '')
 _cors_list = [o.strip() for o in _cors_raw.split(',') if o.strip()]
 

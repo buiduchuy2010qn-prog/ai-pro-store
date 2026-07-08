@@ -42,6 +42,8 @@ SENSITIVE_PATHS = {
 
     '/api/ai/chat': ('ai_chat', SECURITY['rate_ai_per_min']),
     '/api/support/chat': ('ai_chat', SECURITY['rate_ai_per_min']),
+    '/api/admin/code/ai/chat': ('code_editor_ai', SECURITY['rate_ai_per_min']),
+    '/api/admin/code/unlock': ('code_editor_unlock', SECURITY['rate_auth_per_min']),
 }
 
 WRITE_METHODS = frozenset({'POST', 'PUT', 'PATCH', 'DELETE'})

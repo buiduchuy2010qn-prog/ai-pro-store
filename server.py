@@ -17,7 +17,8 @@ import database as db
 from config import (
     JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD, BANK, WEBHOOK_SECRET, CASSO,
     ZALO_PHONE, SITE_NAME, WELCOME_MSG, OTP_EXPIRE_MINUTES,
-    OTP_MAX_ATTEMPTS, OTP_RATE_LIMIT_PER_HOUR, PORT, SECURITY, GOOGLE_DRIVE
+    OTP_MAX_ATTEMPTS, OTP_RATE_LIMIT_PER_HOUR, PORT, SECURITY, GOOGLE_DRIVE,
+    CODE_EDITOR,
 )
 from services import security as sec
 from services.email_service import send_otp_email
@@ -297,6 +298,22 @@ def admin_required(f):
     return deco
 
 
+def code_editor_unlock_required(f):
+    @wraps(f)
+    def deco(*args, **kwargs):
+        from services import code_editor as ce
+        token = (
+            request.headers.get('X-Code-Editor-Token')
+            or (request.get_json(silent=True) or {}).get('codeEditorToken')
+            or request.args.get('codeEditorToken')
+            or ''
+        )
+        if not ce.verify_unlock_token(token, request.user['id']):
+            return jsonify({'error': 'Cần mật khẩu quản lý code. Nhập mật khẩu để tiếp tục.', 'needsUnlock': True}), 403
+        return f(*args, **kwargs)
+    return deco
+
+
 def optional_auth(f):
     @wraps(f)
     def deco(*args, **kwargs):
@@ -476,6 +493,102 @@ def admin_ai_settings_patch():
     if 'quickAdmin' in d:
         mapping['quick_admin'] = d['quickAdmin']
     return jsonify({'settings': update_settings(mapping)})
+
+
+# ─── Admin Code Editor (AI chỉnh web) ───
+@app.route('/api/admin/code/status', methods=['GET'])
+@admin_required
+def admin_code_status():
+    from services import code_editor as ce
+    token = request.headers.get('X-Code-Editor-Token', '')
+    unlocked = ce.verify_unlock_token(token, request.user['id'])
+    return jsonify({'unlocked': unlocked, **ce.status()})
+
+
+@app.route('/api/admin/code/unlock', methods=['POST'])
+@admin_required
+def admin_code_unlock():
+    from services import code_editor as ce
+    d = request.get_json() or {}
+    try:
+        token = ce.unlock(d.get('password', ''), request.user['id'])
+        return jsonify({
+            'ok': True,
+            'token': token,
+            'expiresIn': CODE_EDITOR['unlock_ttl_sec'],
+        })
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 403
+
+
+@app.route('/api/admin/code/tree', methods=['GET'])
+@admin_required
+@code_editor_unlock_required
+def admin_code_tree():
+    from services import code_editor as ce
+    return jsonify({'tree': ce.list_tree()})
+
+
+@app.route('/api/admin/code/file', methods=['GET'])
+@admin_required
+@code_editor_unlock_required
+def admin_code_file_get():
+    from services import code_editor as ce
+    path = request.args.get('path', '')
+    try:
+        return jsonify(ce.read_file(path))
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/admin/code/file', methods=['PUT'])
+@admin_required
+@code_editor_unlock_required
+def admin_code_file_put():
+    from services import code_editor as ce
+    d = request.get_json() or {}
+    try:
+        return jsonify(ce.write_file(d.get('path', ''), d.get('content', '')))
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/admin/code/apply', methods=['POST'])
+@admin_required
+@code_editor_unlock_required
+def admin_code_apply():
+    from services import code_editor as ce
+    d = request.get_json() or {}
+    try:
+        results = ce.apply_edits(d.get('edits') or [])
+        return jsonify({'ok': True, 'applied': results})
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/admin/code/ai/chat', methods=['POST'])
+@admin_required
+@code_editor_unlock_required
+def admin_code_ai_chat():
+    from services import code_editor as ce
+    d = request.get_json() or {}
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+    try:
+        result = ce.ai_chat(
+            d.get('message', ''),
+            history=d.get('history') or [],
+            open_file=d.get('openFile', ''),
+            open_content=d.get('openContent', ''),
+            context_paths=d.get('contextPaths') or [],
+            client_ip=ip,
+        )
+        return jsonify({'ok': True, **result})
+    except PermissionError as e:
+        return jsonify({'error': str(e)}), 429
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except RuntimeError as e:
+        return jsonify({'error': str(e)}), 503
 
 
 # ─── Security Bootstrap ───
