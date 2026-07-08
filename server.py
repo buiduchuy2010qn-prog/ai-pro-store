@@ -2513,6 +2513,33 @@ def _create_drive_video_post(conn, user, caption, raw, mime, ext):
     return pid, None
 
 
+def _create_drive_video_post_from_file(conn, user, caption, drive_file_id):
+    if not drive.is_configured(conn):
+        return None, 'Đăng video cần Google Drive admin đã kết nối — liên hệ admin.'
+    meta = drive.get_file_metadata(drive_file_id, conn) or {}
+    if not drive.user_owns_drive_filename(meta, user['email']):
+        return None, 'Video preview không hợp lệ hoặc đã hết hạn.'
+    stored = drive.drive_ref(drive_file_id)
+    pid = db.insert_returning_id(conn,
+        'INSERT INTO social_posts (user_id, caption, image_data, media_type, drive_file_id) VALUES (?, ?, ?, ?, ?)',
+        (user['id'], caption, stored, 'video', drive_file_id))
+    db.commit(conn)
+    return pid, None
+
+
+def _stream_drive_video(file_id, conn):
+    meta = drive.get_file_metadata(file_id, conn) or {}
+    mime = meta.get('mimeType') or 'video/webm'
+    size = int(meta.get('size') or 0)
+    from flask import Response
+    resp = Response(drive.iter_file_chunks(file_id, conn=conn), mimetype=mime)
+    if size > 0:
+        resp.headers['Content-Length'] = str(size)
+    resp.headers['Accept-Ranges'] = 'bytes'
+    resp.headers['Cache-Control'] = 'private, max-age=300'
+    return resp
+
+
 def _social_user_brief(row):
     return {'id': row['id'], 'fullName': row['name'], 'email': row['email']}
 
@@ -2682,30 +2709,115 @@ def social_drive_disconnect():
     return jsonify({'ok': True})
 
 
+@app.route('/api/social/video/preview', methods=['POST'])
+@auth_required
+def social_video_preview_upload():
+    """Tải video lên Drive để xem trước — phát qua API stream, không dùng blob local."""
+    conn = db.get_conn()
+    try:
+        if not drive.is_configured(conn):
+            return jsonify({'error': 'Cần Google Drive admin đã kết nối.'}), 400
+        video = request.files.get('video')
+        if not video:
+            return jsonify({'error': 'Thiếu file video.'}), 400
+        if (video.content_length or 0) > MAX_SOCIAL_VIDEO_BYTES:
+            return jsonify({'error': 'Video quá lớn (tối đa ~8MB). Quay ngắn hơn.'}), 400
+        mime = (video.mimetype or 'video/webm').lower()
+        if not mime.startswith('video/'):
+            return jsonify({'error': 'File không phải video hợp lệ.'}), 400
+        ext = 'webm' if 'webm' in mime else 'mp4'
+        raw = video.read()
+        if not raw:
+            return jsonify({'error': 'File video rỗng.'}), 400
+        if len(raw) > MAX_SOCIAL_VIDEO_BYTES:
+            return jsonify({'error': 'Video quá lớn (tối đa ~8MB). Quay ngắn hơn.'}), 400
+        drive_file_id, err = drive.upload_preview_bytes(
+            raw, mime, ext, request.user['email'], conn=conn)
+        if err:
+            return jsonify({'error': err}), 400
+        token = sec.sign_preview_token(request.user['id'], drive_file_id)
+        return jsonify({
+            'ok': True,
+            'driveFileId': drive_file_id,
+            'previewUrl': f'/api/social/preview/{drive_file_id}?t={token}',
+        }), 201
+    finally:
+        db.close(conn)
+
+
+@app.route('/api/social/video/preview/<file_id>', methods=['DELETE'])
+@auth_required
+def social_video_preview_delete(file_id):
+    """Xóa video preview trên Drive khi user hủy."""
+    file_id = (file_id or '').strip()
+    if not file_id:
+        return jsonify({'error': 'Thiếu file video.'}), 400
+    conn = db.get_conn()
+    try:
+        meta = drive.get_file_metadata(file_id, conn) or {}
+        if not drive.user_owns_drive_filename(meta, request.user['email'], prefixes=('shop-video-preview',)):
+            return jsonify({'error': 'Không có quyền xóa video này.'}), 403
+        ok, err = drive.delete_file(file_id, conn=conn)
+        if not ok:
+            return jsonify({'error': err or 'Không xóa được video trên Drive.'}), 400
+        return jsonify({'ok': True})
+    finally:
+        db.close(conn)
+
+
+@app.route('/api/social/preview/<file_id>')
+def social_stream_preview(file_id):
+    """Phát video preview từ Drive (chỉ chủ video, token ngắn hạn)."""
+    file_id = (file_id or '').strip()
+    token = (request.args.get('t') or '').strip()
+    if not token:
+        return jsonify({'error': 'Thiếu quyền xem video.'}), 401
+    try:
+        payload = sec.verify_preview_token(token, file_id=file_id)
+        viewer_id = int(payload['userId'])
+    except Exception:
+        return jsonify({'error': 'Link video hết hạn hoặc không hợp lệ.'}), 403
+    conn = db.get_conn()
+    try:
+        meta = drive.get_file_metadata(file_id, conn) or {}
+        row = db.fetchone(conn, 'SELECT email FROM users WHERE id = ?', (viewer_id,))
+        if not row or not drive.user_owns_drive_filename(meta, row['email'], prefixes=('shop-video-preview',)):
+            return jsonify({'error': 'Bạn không có quyền xem video này.'}), 403
+        return _stream_drive_video(file_id, conn)
+    finally:
+        db.close(conn)
+
+
 @app.route('/api/social/posts/video', methods=['POST'])
 @auth_required
 def social_create_video_post():
     """Đăng video — lưu trên Google Drive, không nhét base64 vào DB."""
-    video = request.files.get('video')
-    if not video:
-        return jsonify({'error': 'Thiếu file video.'}), 400
-    if (video.content_length or 0) > MAX_SOCIAL_VIDEO_BYTES:
-        return jsonify({'error': 'Video quá lớn (tối đa ~8MB). Quay ngắn hơn.'}), 400
     caption = sec.sanitize_string(request.form.get('caption', ''), max_len=500)
-    mime = (video.mimetype or 'video/webm').lower()
-    if not mime.startswith('video/'):
-        return jsonify({'error': 'File không phải video hợp lệ.'}), 400
-    ext = 'webm' if 'webm' in mime else 'mp4'
-    raw = video.read()
-    if not raw:
-        return jsonify({'error': 'File video rỗng.'}), 400
-    if len(raw) > MAX_SOCIAL_VIDEO_BYTES:
-        return jsonify({'error': 'Video quá lớn (tối đa ~8MB). Quay ngắn hơn.'}), 400
+    drive_file_id = (request.form.get('driveFileId') or '').strip()
     conn = db.get_conn()
     try:
-        pid, err = _create_drive_video_post(conn, request.user, caption, raw, mime, ext)
-        if err:
-            return jsonify({'error': err}), 400
+        if drive_file_id:
+            pid, err = _create_drive_video_post_from_file(conn, request.user, caption, drive_file_id)
+            if err:
+                return jsonify({'error': err}), 400
+        else:
+            video = request.files.get('video')
+            if not video:
+                return jsonify({'error': 'Thiếu file video.'}), 400
+            if (video.content_length or 0) > MAX_SOCIAL_VIDEO_BYTES:
+                return jsonify({'error': 'Video quá lớn (tối đa ~8MB). Quay ngắn hơn.'}), 400
+            mime = (video.mimetype or 'video/webm').lower()
+            if not mime.startswith('video/'):
+                return jsonify({'error': 'File không phải video hợp lệ.'}), 400
+            ext = 'webm' if 'webm' in mime else 'mp4'
+            raw = video.read()
+            if not raw:
+                return jsonify({'error': 'File video rỗng.'}), 400
+            if len(raw) > MAX_SOCIAL_VIDEO_BYTES:
+                return jsonify({'error': 'Video quá lớn (tối đa ~8MB). Quay ngắn hơn.'}), 400
+            pid, err = _create_drive_video_post(conn, request.user, caption, raw, mime, ext)
+            if err:
+                return jsonify({'error': err}), 400
         token = sec.sign_media_token(request.user['id'], pid)
         return jsonify({
             'ok': True,

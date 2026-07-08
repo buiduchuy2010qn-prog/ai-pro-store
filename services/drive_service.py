@@ -857,7 +857,64 @@ def _get_admin_drive_service(conn):
     return _build_drive_service(creds)
 
 
-def upload_media_bytes(raw, mime, ext, user_email, post_id, caption='', conn=None, is_video=False):
+def _user_email_slug(user_email):
+    return re.sub(r'[^a-zA-Z0-9@._-]', '_', (user_email or 'user').lower())
+
+
+def user_owns_drive_filename(meta, user_email, prefixes=('shop-video', 'shop-video-preview')):
+    """Kiểm tra tên file Drive có khớp user (dùng cho preview / đăng từ file có sẵn)."""
+    name = (meta or {}).get('name') or ''
+    slug = _user_email_slug(user_email)
+    if slug not in name:
+        return False
+    return any(name.startswith(p + '-') for p in prefixes)
+
+
+def upload_preview_bytes(raw, mime, ext, user_email, conn=None):
+    """Upload video tạm lên Drive để xem trước — không tạo bài đăng."""
+    own_conn = conn is None
+    if own_conn:
+        from database import get_conn
+        conn = get_conn()
+    slug = _user_email_slug(user_email)
+    stamp = int(time.time())
+    filename = f'shop-video-preview-{slug}-{stamp}.{ext}'
+    fid, err = upload_media_bytes(
+        raw, mime, ext, user_email, f'preview-{stamp}', caption='', conn=conn, is_video=True,
+        filename_override=filename)
+    if own_conn:
+        from database import close
+        close(conn)
+    return fid, err
+
+
+def delete_file(file_id, conn=None):
+    """Xóa file trên Drive (draft preview bị hủy)."""
+    own_conn = conn is None
+    if own_conn:
+        from database import get_conn
+        conn = get_conn()
+    service = _get_admin_drive_service(conn)
+    if not service:
+        if own_conn:
+            from database import close
+            close(conn)
+        return False, 'Không kết nối được Google Drive'
+    try:
+        service.files().delete(fileId=file_id).execute()
+        if own_conn:
+            from database import close
+            close(conn)
+        return True, None
+    except Exception as e:
+        print(f'[Drive] delete failed file={file_id}: {e}')
+        if own_conn:
+            from database import close
+            close(conn)
+        return False, 'Không xóa được file trên Drive'
+
+
+def upload_media_bytes(raw, mime, ext, user_email, post_id, caption='', conn=None, is_video=False, filename_override=None):
     """Upload bytes lên Drive. Trả về (file_id, error_message)."""
     own_conn = conn is None
     if own_conn:
@@ -885,9 +942,12 @@ def upload_media_bytes(raw, mime, ext, user_email, post_id, caption='', conn=Non
             close(conn)
         return None, 'Thiếu thư viện Google Drive trên server'
 
-    safe_email = re.sub(r'[^a-zA-Z0-9@._-]', '_', (user_email or 'user').lower())
-    prefix = 'shop-video' if is_video else 'shop-anh'
-    filename = f'{prefix}-{safe_email}-{post_id}.{ext}'
+    safe_email = _user_email_slug(user_email)
+    if filename_override:
+        filename = filename_override
+    else:
+        prefix = 'shop-video' if is_video else 'shop-anh'
+        filename = f'{prefix}-{safe_email}-{post_id}.{ext}'
 
     try:
         service = _build_drive_service(creds)

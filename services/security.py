@@ -540,6 +540,26 @@ def verify_media_token(token, post_id=None):
     return payload
 
 
+def sign_preview_token(user_id, drive_file_id, hours=2):
+    payload = {
+        'type': 'social_preview',
+        'userId': int(user_id),
+        'driveFileId': str(drive_file_id),
+        'iat': int(time.time()),
+        'exp': int(time.time()) + hours * 3600,
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
+
+
+def verify_preview_token(token, file_id=None):
+    payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+    if payload.get('type') != 'social_preview':
+        raise ValueError('Token preview không hợp lệ.')
+    if file_id is not None and str(payload.get('driveFileId', '')) != str(file_id):
+        raise ValueError('Token preview không khớp file.')
+    return payload
+
+
 def verify_step_up_token(token, uid, fingerprint, ip):
     payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
     if payload.get('type') != 'step_up':

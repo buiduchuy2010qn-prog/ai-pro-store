@@ -37,6 +37,9 @@
     let recordStartedAt = 0;
     let lastRecordDurationSec = 0;
     let previewPosterUrl = null;
+    /** Video đã tải lên Drive để xem trước — đăng bài dùng lại file này */
+    let pendingDriveFileId = null;
+    let pendingDriveStreamUrl = null;
     let searchTimer = null;
     /** 'user' = trước, 'environment' = sau */
     let cameraFacing = 'user';
@@ -112,7 +115,7 @@
             } catch (err) {
                 console.warn('[SocialFeed] preview play:', err);
                 showPreviewPlayBtn();
-                window.toast?.('Không phát được — thử Lưu video rồi mở bằng trình phát trên máy', true, 4500);
+                window.toast?.('Không phát được — đợi vài giây rồi bấm ▶ lại (video đang tải từ Drive)', true, 4500);
             }
         }
     }
@@ -333,11 +336,45 @@
         return new Blob([arr], { type: mime });
     }
 
-    async function uploadVideoPost(blob, caption) {
+    async function uploadVideoPreviewToDrive(blob) {
         const form = new FormData();
         const ext = (blob.type || '').includes('mp4') ? 'mp4' : 'webm';
-        form.append('video', blob, `shop-video-${Date.now()}.${ext}`);
+        form.append('video', blob, `shop-video-preview-${Date.now()}.${ext}`);
+        const secHeaders = window.SecurityClient
+            ? await window.SecurityClient.secureHeaders()
+            : {};
+        const headers = { ...secHeaders };
+        const token = localStorage.getItem('auth_token');
+        if (token) headers.Authorization = 'Bearer ' + token;
+        const res = await fetch('/api/social/video/preview', { method: 'POST', headers, body: form });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Không tải video lên Drive để xem trước');
+        return data;
+    }
+
+    async function deleteDrivePreviewDraft(fileId) {
+        if (!fileId) return;
+        const secHeaders = window.SecurityClient
+            ? await window.SecurityClient.secureHeaders()
+            : {};
+        const headers = { ...secHeaders };
+        const token = localStorage.getItem('auth_token');
+        if (token) headers.Authorization = 'Bearer ' + token;
+        await fetch('/api/social/video/preview/' + encodeURIComponent(fileId), {
+            method: 'DELETE',
+            headers,
+        }).catch(() => {});
+    }
+
+    async function uploadVideoPost(blob, caption, driveFileId) {
+        const form = new FormData();
         form.append('caption', caption || '');
+        if (driveFileId) {
+            form.append('driveFileId', driveFileId);
+        } else {
+            const ext = (blob.type || '').includes('mp4') ? 'mp4' : 'webm';
+            form.append('video', blob, `shop-video-${Date.now()}.${ext}`);
+        }
         const secHeaders = window.SecurityClient
             ? await window.SecurityClient.secureHeaders()
             : {};
@@ -348,6 +385,21 @@
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'Không đăng được video');
         return data;
+    }
+
+    async function prepareVideoPreviewOnDrive(blob, poster) {
+        const postBtn = document.getElementById('social-post-btn');
+        if (postBtn) postBtn.disabled = true;
+        setComposerStatus('Đang tải video lên Google Drive...');
+        try {
+            const data = await uploadVideoPreviewToDrive(blob);
+            pendingDriveFileId = data.driveFileId || null;
+            pendingDriveStreamUrl = data.previewUrl || null;
+            showPreview(pendingDriveStreamUrl, 'video', blob, poster);
+            window.toast?.('Video đã lên Drive — bấm ▶ để xem lại', false, 2800);
+        } finally {
+            if (postBtn) postBtn.disabled = false;
+        }
     }
 
     function bindFeedMediaMeta(root) {
@@ -571,18 +623,26 @@
 
     function showPreview(src, mediaType, videoBlob, posterUrl) {
         const isVid = mediaType === 'video' || !!videoBlob
-            || (src && String(src).startsWith('data:video/'));
+            || (src && String(src).startsWith('data:video/'))
+            || (src && String(src).startsWith('/api/social/preview/'));
         pendingMediaType = isVid ? 'video' : 'image';
         pendingImage = isVid ? null : src;
         if (isVid && videoBlob) {
             pendingVideoBlob = videoBlob;
             previewPosterUrl = posterUrl || previewPosterUrl || null;
             revokePreviewObjectUrl();
-            previewObjectUrl = URL.createObjectURL(videoBlob);
-            pendingImage = previewObjectUrl;
+            if (pendingDriveStreamUrl) {
+                previewObjectUrl = null;
+                pendingImage = pendingDriveStreamUrl;
+            } else {
+                previewObjectUrl = URL.createObjectURL(videoBlob);
+                pendingImage = previewObjectUrl;
+            }
         } else if (!isVid) {
             previewPosterUrl = null;
             pendingVideoBlob = null;
+            pendingDriveFileId = null;
+            pendingDriveStreamUrl = null;
             revokePreviewObjectUrl();
         }
 
@@ -596,7 +656,7 @@
         }
         if (previewVid) {
             if (isVid) {
-                const playUrl = previewObjectUrl || src;
+                const playUrl = pendingDriveStreamUrl || previewObjectUrl || src;
                 setupPreviewVideoElement(previewVid, playUrl, pendingVideoBlob, previewPosterUrl);
             } else {
                 hidePreviewPlayBtn();
@@ -619,7 +679,11 @@
         updateCameraUi();
         updateComposerMode();
         setComposerStatus(
-            isVid ? 'Bấm ▶ trên video để xem lại — Đăng, Lưu hoặc Hủy' : 'Đăng ảnh, Lưu vào máy, hoặc Hủy',
+            isVid
+                ? (pendingDriveStreamUrl
+                    ? 'Video trên Google Drive — bấm ▶ để xem lại, rồi Đăng hoặc Hủy'
+                    : 'Bấm ▶ trên video để xem lại — Đăng, Lưu hoặc Hủy')
+                : 'Đăng ảnh, Lưu vào máy, hoặc Hủy',
             'ok'
         );
         if (isVid && pendingVideoBlob) {
@@ -638,12 +702,18 @@
         }
     }
 
-    function clearPreview() {
+    function clearPreview(opts = {}) {
+        const keepDrive = !!opts.keepDrive;
+        if (!keepDrive && pendingDriveFileId) {
+            deleteDrivePreviewDraft(pendingDriveFileId);
+        }
         pendingImage = null;
         pendingVideoBlob = null;
         pendingMediaType = 'image';
         lastRecordDurationSec = 0;
         previewPosterUrl = null;
+        pendingDriveFileId = null;
+        pendingDriveStreamUrl = null;
         revokePreviewObjectUrl();
         releaseSilentAudio();
         hidePreviewPlayBtn();
@@ -762,7 +832,18 @@
                 return;
             }
             stopCameraTracksOnly();
-            showPreview(null, 'video', blob, poster);
+            if (driveAdminBackup) {
+                try {
+                    await prepareVideoPreviewOnDrive(blob, poster);
+                } catch (err) {
+                    console.warn('[SocialFeed] drive preview:', err);
+                    window.toast?.(err.message || 'Không tải lên Drive — thử lại', true);
+                    lastRecordDurationSec = 0;
+                    updateComposerStatusText();
+                }
+            } else {
+                showPreview(null, 'video', blob, poster);
+            }
         };
         lastRecordDurationSec = 0;
         mediaRecorder.start();
@@ -933,7 +1014,15 @@
                         return;
                     }
                     await stopCamera();
-                    showPreview(null, 'video', file);
+                    if (driveAdminBackup) {
+                        try {
+                            await prepareVideoPreviewOnDrive(file, null);
+                        } catch (err) {
+                            window.toast?.(err.message || 'Không tải video lên Drive', true);
+                        }
+                    } else {
+                        showPreview(null, 'video', file);
+                    }
                 }
             } catch (err) {
                 window.toast?.(err.message || 'Không đọc được file', true);
@@ -970,7 +1059,11 @@
         try {
             setComposerStatus(isVid ? 'Đang tải video lên Drive...' : 'Đang đăng ảnh...');
             const res = isVid
-                ? await uploadVideoPost(videoBlob || dataUrlToBlob(imageToPost), caption)
+                ? await uploadVideoPost(
+                    videoBlob || dataUrlToBlob(imageToPost),
+                    caption,
+                    pendingDriveFileId
+                )
                 : await socialApi('/social/posts', {
                     method: 'POST',
                     body: JSON.stringify({ caption, imageData: imageToPost }),
@@ -979,7 +1072,7 @@
                 saveImageToDevice(isVid ? (videoBlob || imageToPost) : imageToPost, 'dang');
             }
             document.getElementById('social-caption').value = '';
-            clearPreview();
+            clearPreview({ keepDrive: true });
             const posted = isVid ? 'video' : 'ảnh';
             if (isVid && res.driveSynced) {
                 window.toast?.('Đã đăng video — lưu trên Google Drive!');
