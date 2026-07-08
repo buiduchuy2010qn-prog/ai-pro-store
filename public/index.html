@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/theme.css">
     <link rel="stylesheet" href="/auth-light.css?v=adr-camera1">
+    <link rel="stylesheet" href="/sidebar-menu.css?v=1">
     <script>
         tailwind.config = {
             theme: {
@@ -134,9 +135,44 @@
 
 <!-- ═══ MAIN APP ═══ -->
 <div id="app" class="hidden min-h-screen flex flex-col">
+    <!-- Side Menu — Locket Dio style -->
+    <div id="side-menu-overlay" class="side-menu-overlay" aria-hidden="true"></div>
+    <aside id="side-menu" class="side-menu" aria-hidden="true" aria-label="Menu điều hướng">
+        <div class="side-menu-inner">
+            <div class="side-menu-header">
+                <span class="side-menu-label">MENU</span>
+                <button type="button" id="side-menu-close" class="side-menu-close" aria-label="Đóng menu">&times;</button>
+            </div>
+            <div class="side-menu-user">
+                <div class="side-menu-avatar"><i class="fas fa-user"></i></div>
+                <div>
+                    <div id="side-menu-user-name" class="side-menu-user-name">—</div>
+                    <div id="side-menu-user-balance" class="side-menu-user-balance">—</div>
+                </div>
+            </div>
+            <div class="side-menu-theme">
+                <span class="side-menu-theme-label"><i class="fas fa-palette"></i>Giao diện</span>
+                <button type="button" id="side-menu-theme-toggle" class="side-theme-toggle" aria-label="Đổi giao diện sáng/tối">
+                    <span class="side-theme-knob"></span>
+                    <i class="fas fa-sun side-theme-icon-light"></i>
+                    <i class="fas fa-moon side-theme-icon-dark"></i>
+                </button>
+            </div>
+            <nav id="side-menu-nav" class="side-menu-nav" aria-label="Danh sách menu"></nav>
+            <div class="side-menu-footer">
+                <button type="button" id="side-menu-logout" class="side-menu-logout">
+                    <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                </button>
+            </div>
+        </div>
+    </aside>
+
     <header class="site-header">
         <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-            <button id="brand-btn" class="text-left shrink-0">
+            <button type="button" id="side-menu-toggle" class="side-menu-toggle-btn" title="Mở menu" aria-label="Mở menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <button id="brand-btn" class="text-left shrink-0 min-w-0 flex-1 sm:flex-none">
                 <div class="brand-logo"><span class="brand-dot"></span>Shop<span style="color:#0ea5e9">.</span> Đức Hi</div>
                 <div class="brand-tagline hidden sm:block">Chào mừng đến Web Shop của Đức Hi</div>
             </button>
@@ -160,19 +196,8 @@
                 <button id="logout-btn" class="btn-ghost p-2.5 text-slate-500 hover:text-red-500" title="Đăng xuất">
                     <i class="fas fa-sign-out-alt"></i>
                 </button>
-                <button id="mobile-menu-btn" class="md:hidden btn-ghost p-2.5 text-slate-600">
-                    <i class="fas fa-bars"></i>
-                </button>
+                <button id="mobile-menu-btn" class="hidden" aria-hidden="true" tabindex="-1"></button>
             </div>
-        </div>
-        <div id="mobile-menu" class="hidden md:hidden border-t border-sky-100 px-3 py-3 space-y-1 bg-white/90 backdrop-blur">
-            <button data-view="products" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-box-open mr-2 w-4"></i>Sản phẩm</button>
-            <button data-view="wallet" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-wallet mr-2 w-4"></i>Ví tiền</button>
-            <button data-view="orders" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-shopping-bag mr-2 w-4"></i>Đơn hàng</button>
-            <button data-view="transactions" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-clock-rotate-left mr-2 w-4"></i>Lịch sử</button>
-            <button data-view="dressroom" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-shirt mr-2 w-4"></i>Phòng Thay Đồ</button>
-            <button data-view="admin" id="admin-mobile-nav-btn" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium hidden"><i class="fas fa-shield-alt mr-2 w-4"></i>Quản trị</button>
-            <button type="button" id="profile-mobile-btn" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-user-circle mr-2 w-4"></i>Hồ sơ</button>
         </div>
     </header>
 
@@ -939,6 +964,7 @@
 <script src="/social-creative.js?v=1"></script>
 <script src="/social-feed.js?v=adr-camera2"></script>
 <script src="/shop-features.js?v=mxh1"></script>
+<script src="/sidebar-menu.js?v=1"></script>
 <script>
 const API = '/api';
 
@@ -1180,6 +1206,7 @@ function showAuth() {
     setCurrentUser(null);
     forgotEmail = '';
     forgotOtp = '';
+    window.SideMenu?.close?.();
     document.getElementById('auth-screen').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
     document.getElementById('social-fab-wrap')?.classList.add('hidden');
@@ -1204,7 +1231,7 @@ function updateHeader() {
     document.getElementById('user-topup-code').textContent = currentUser.topupCode || '';
     const isAdmin = currentUser.role === 'admin';
     document.getElementById('admin-nav-btn').classList.toggle('hidden', !isAdmin);
-    document.getElementById('admin-mobile-nav-btn').classList.toggle('hidden', !isAdmin);
+    window.SideMenu?.refresh?.();
     if (isAdmin) {
         startSupportPolling();
         refreshSupportBadge();
@@ -1240,8 +1267,9 @@ function navigateTo(view) {
         adminEl.classList.add('view-animate');
         document.getElementById('admin-denied').classList.remove('hidden');
         document.getElementById('admin-content').classList.add('hidden');
-        document.getElementById('mobile-menu').classList.add('hidden');
+        window.SideMenu?.close?.();
         highlightNav(view);
+        window.SideMenu?.setActive?.(view);
         if (location.hash !== '#' + view) location.hash = view;
         return;
     }
@@ -1255,7 +1283,7 @@ function navigateTo(view) {
     viewEl.classList.remove('view-animate');
     void viewEl.offsetWidth;
     viewEl.classList.add('view-animate');
-    document.getElementById('mobile-menu').classList.add('hidden');
+    window.SideMenu?.close?.();
     if (view === 'products') loadProducts();
     if (view === 'wallet') renderWallet();
     if (view === 'orders') {
@@ -1270,12 +1298,13 @@ function navigateTo(view) {
     if (prevView === 'social' && viewId !== 'social') SocialFeed?.leaveView?.();
     if (viewId === 'social') SocialFeed?.loadView?.();
     highlightNav(viewId);
+    window.SideMenu?.setActive?.(viewId);
     document.getElementById('social-fab-btn')?.classList.toggle('social-fab-active', viewId === 'social');
     if (location.hash !== '#' + viewId) location.hash = viewId;
 }
 
 function highlightNav(view) {
-    document.querySelectorAll('.nav-btn, .mobile-nav-btn').forEach(btn => {
+    document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.toggle('nav-active', btn.dataset.view === view);
     });
 }
@@ -2451,16 +2480,11 @@ document.getElementById('forgot-step3').onsubmit = async e => {
     }
 };
 
-document.getElementById('logout-btn').onclick = () => { clearToken(); stopPolling(); stopSupportPolling(); showAuth(); toast('Đã đăng xuất.'); };
+document.getElementById('logout-btn').onclick = () => { window.SideMenu?.close?.(); clearToken(); stopPolling(); stopSupportPolling(); showAuth(); toast('Đã đăng xuất.'); };
 document.getElementById('brand-btn').onclick = () => navigateTo('products');
-document.querySelectorAll('.nav-btn, .mobile-nav-btn, .category-pill[data-view], [data-view].btn-primary').forEach(b => {
+document.querySelectorAll('.nav-btn, .category-pill[data-view], [data-view].btn-primary').forEach(b => {
     b.onclick = () => navigateTo(b.dataset.view);
 });
-document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('mobile-menu').classList.toggle('hidden');
-document.getElementById('profile-mobile-btn').onclick = () => {
-    document.getElementById('mobile-menu').classList.add('hidden');
-    ShopFeatures?.openProfileModal?.('info');
-};
 document.getElementById('create-topup-btn').onclick = createTopup;
 document.getElementById('copy-topup-code').onclick = () => {
     navigator.clipboard.writeText(currentUser?.topupCode || '').then(() => toast('Đã sao chép mã CK!'));
@@ -2598,6 +2622,7 @@ window.escapeHtml = escapeHtml;
 window.toast = toast;
 window.refreshUser = refreshUser;
 window.navigateTo = navigateTo;
+window.showAdminTab = showAdminTab;
 window.api = api;
 
 /* ─── Init ─── */
