@@ -24,6 +24,9 @@
 
     let cameraStream = null;
     let pendingImage = null;
+    /** Blob video quay/chọn — dùng preview & upload, không nhét data URL vào RAM */
+    let pendingVideoBlob = null;
+    let previewObjectUrl = null;
     /** 'image' | 'video' */
     let pendingMediaType = 'image';
     let composerMode = 'photo';
@@ -37,7 +40,51 @@
     let cameraFacing = 'user';
 
     function isVideoMedia() {
-        return pendingMediaType === 'video' || (pendingImage || '').startsWith('data:video/');
+        return pendingMediaType === 'video' || !!pendingVideoBlob
+            || (pendingImage || '').startsWith('data:video/') || (pendingImage || '').startsWith('blob:');
+    }
+
+    function revokePreviewObjectUrl() {
+        if (previewObjectUrl) {
+            URL.revokeObjectURL(previewObjectUrl);
+            previewObjectUrl = null;
+        }
+    }
+
+    function setupPreviewVideoElement(vid, playUrl, blob) {
+        if (!vid || !playUrl) return;
+        vid.pause();
+        vid.removeAttribute('src');
+        vid.load();
+        vid.src = playUrl;
+        vid.muted = false;
+        vid.defaultMuted = false;
+        vid.controls = true;
+        vid.setAttribute('playsinline', '');
+        vid.preload = 'auto';
+        vid.classList.remove('hidden');
+
+        const refreshMeta = () => {
+            if (vid.duration && Number.isFinite(vid.duration) && vid.duration > 0) {
+                try { vid.currentTime = Math.min(0.05, vid.duration * 0.01); } catch (_) {}
+            }
+            if (blob) {
+                setMediaInfo([
+                    vid.duration && Number.isFinite(vid.duration)
+                        ? '<span><i class="fas fa-clock"></i> ' + formatDurationLabel(vid.duration) + '</span>'
+                        : '',
+                    '<span><i class="fas fa-database"></i> ' + formatFileSize(blob.size) + '</span>',
+                ].filter(Boolean), true);
+            }
+        };
+
+        vid.onloadedmetadata = refreshMeta;
+        vid.onloadeddata = refreshMeta;
+        vid.onerror = () => {
+            setComposerStatus('Không phát được video — thử quay lại hoặc chọn video từ máy', 'err');
+            window.toast?.('Trình duyệt không phát được video vừa quay — thử quay ngắn hơn', true, 5000);
+        };
+        vid.load();
     }
 
     function formatFileSize(bytes) {
@@ -194,14 +241,16 @@
     }
 
     function getRecorderMime() {
-        if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) {
-            return 'video/webm;codecs=vp8,opus';
+        const candidates = [
+            'video/webm;codecs=vp8',
+            'video/webm;codecs=vp9',
+            'video/webm',
+            'video/mp4',
+            'video/webm;codecs=vp8,opus',
+        ];
+        for (const mime of candidates) {
+            if (MediaRecorder.isTypeSupported(mime)) return mime;
         }
-        if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
-            return 'video/webm;codecs=vp8';
-        }
-        if (MediaRecorder.isTypeSupported('video/webm')) return 'video/webm';
-        if (MediaRecorder.isTypeSupported('video/mp4')) return 'video/mp4';
         return '';
     }
 
@@ -217,7 +266,7 @@
             video.classList.toggle('mirror-front', cameraFacing === 'user');
         }
         if (flipBtn) {
-            const showFlip = isPhoneDevice() && !!cameraStream && !pendingImage && composerMode === 'photo';
+            const showFlip = isPhoneDevice() && !!cameraStream && !pendingImage && !pendingVideoBlob && composerMode === 'photo';
             flipBtn.classList.toggle('is-visible', showFlip);
             flipBtn.title = cameraFacing === 'user' ? 'Chuyển camera sau' : 'Chuyển camera trước';
         }
@@ -298,16 +347,17 @@
     function updateShutterState() {
         const shutter = document.getElementById('social-shutter-btn');
         if (!shutter) return;
-        shutter.classList.toggle('is-live', !!cameraStream && !pendingImage);
+        const hasMedia = !!pendingImage || !!pendingVideoBlob;
+        shutter.classList.toggle('is-live', !!cameraStream && !hasMedia);
         shutter.classList.toggle('is-captured', false);
-        shutter.disabled = !!pendingImage;
+        shutter.disabled = hasMedia;
     }
 
     function updateComposerMode() {
         const studio = document.querySelector('.social-locket-studio');
         const frame = document.querySelector('.social-locket-frame');
         const controls = document.querySelector('.social-locket-controls');
-        const hasPreview = !!pendingImage;
+        const hasPreview = !!pendingImage || !!pendingVideoBlob;
         studio?.classList.toggle('has-preview', hasPreview);
         frame?.classList.toggle('has-preview', hasPreview);
         if (controls) controls.classList.toggle('hidden', hasPreview);
@@ -324,13 +374,19 @@
         return mode === when;
     }
 
-    function saveMediaToDevice(dataUrl, label) {
-        if (!dataUrl) return;
-        const isVid = dataUrl.startsWith('data:video/');
-        const ext = isVid ? (dataUrl.includes('webm') ? 'webm' : 'mp4') : 'jpg';
+    function saveMediaToDevice(dataUrlOrBlob, label) {
+        if (!dataUrlOrBlob) return;
+        const isBlob = dataUrlOrBlob instanceof Blob;
+        const isVid = isBlob
+            ? (dataUrlOrBlob.type || '').startsWith('video/')
+            : String(dataUrlOrBlob).startsWith('data:video/') || String(dataUrlOrBlob).startsWith('blob:');
+        const ext = isVid
+            ? ((isBlob ? dataUrlOrBlob.type : dataUrlOrBlob).includes('mp4') ? 'mp4' : 'webm')
+            : 'jpg';
+        let tempUrl = null;
         try {
             const a = document.createElement('a');
-            a.href = dataUrl;
+            a.href = isBlob ? (tempUrl = URL.createObjectURL(dataUrlOrBlob)) : dataUrlOrBlob;
             a.download = `shop-${isVid ? 'video' : 'anh'}-${label || 'luu'}-${Date.now()}.${ext}`;
             document.body.appendChild(a);
             a.click();
@@ -338,6 +394,8 @@
             window.toast?.(isVid ? 'Đã lưu video vào máy' : 'Đã lưu ảnh vào máy');
         } catch (_) {
             window.toast?.('Không lưu được — thử tải thủ công', true);
+        } finally {
+            if (tempUrl) URL.revokeObjectURL(tempUrl);
         }
     }
 
@@ -345,10 +403,21 @@
         saveMediaToDevice(dataUrl, label);
     }
 
-    function showPreview(src, mediaType) {
-        pendingImage = src;
-        pendingMediaType = mediaType || (src.startsWith('data:video/') ? 'video' : 'image');
-        const isVid = pendingMediaType === 'video';
+    function showPreview(src, mediaType, videoBlob) {
+        const isVid = mediaType === 'video' || !!videoBlob
+            || (src && String(src).startsWith('data:video/'));
+        pendingMediaType = isVid ? 'video' : 'image';
+        pendingImage = isVid ? null : src;
+        if (isVid && videoBlob) {
+            pendingVideoBlob = videoBlob;
+            revokePreviewObjectUrl();
+            previewObjectUrl = URL.createObjectURL(videoBlob);
+            pendingImage = previewObjectUrl;
+        } else if (!isVid) {
+            pendingVideoBlob = null;
+            revokePreviewObjectUrl();
+        }
+
         const preview = document.getElementById('social-preview');
         const previewVid = document.getElementById('social-preview-video');
         const placeholder = document.getElementById('social-preview-placeholder');
@@ -358,33 +427,49 @@
             else preview.src = '';
         }
         if (previewVid) {
-            previewVid.classList.toggle('hidden', !isVid);
             if (isVid) {
-                previewVid.src = src;
-                previewVid.load();
+                const playUrl = previewObjectUrl || src;
+                setupPreviewVideoElement(previewVid, playUrl, pendingVideoBlob);
             } else {
+                previewVid.pause?.();
                 previewVid.src = '';
+                previewVid.classList.add('hidden');
             }
         }
         placeholder?.classList.add('hidden');
         document.getElementById('social-post-row')?.classList.remove('hidden');
         const postBtn = document.getElementById('social-post-btn');
+        const cancelBtn = document.getElementById('social-cancel-preview');
         if (postBtn) postBtn.innerHTML = isVid
             ? '<i class="fas fa-paper-plane mr-1"></i>Đăng video'
             : '<i class="fas fa-paper-plane mr-1"></i>Đăng ảnh';
+        if (cancelBtn) cancelBtn.innerHTML = isVid
+            ? '<i class="fas fa-times mr-1"></i>Hủy video'
+            : '<i class="fas fa-times mr-1"></i>Hủy ảnh';
         updateShutterState();
         updateCameraUi();
         updateComposerMode();
-        setComposerStatus(isVid ? 'Đăng video, Lưu vào máy, hoặc Hủy' : 'Đăng ảnh, Lưu vào máy, hoặc Hủy', 'ok');
-        updatePreviewMediaInfo(src, pendingMediaType);
+        setComposerStatus(
+            isVid ? 'Bấm ▶ trên video để xem lại — Đăng, Lưu hoặc Hủy' : 'Đăng ảnh, Lưu vào máy, hoặc Hủy',
+            'ok'
+        );
+        if (isVid && pendingVideoBlob) {
+            setMediaInfo([
+                '<span><i class="fas fa-database"></i> ' + formatFileSize(pendingVideoBlob.size) + '</span>',
+            ], true);
+        } else if (!isVid) {
+            updatePreviewMediaInfo(src, pendingMediaType);
+        }
         if (shouldSaveWhen('capture')) {
-            saveMediaToDevice(src, isVid ? 'quay' : 'chup');
+            saveMediaToDevice(isVid ? (pendingVideoBlob || src) : src, isVid ? 'quay' : 'chup');
         }
     }
 
     function clearPreview() {
         pendingImage = null;
+        pendingVideoBlob = null;
         pendingMediaType = 'image';
+        revokePreviewObjectUrl();
         const preview = document.getElementById('social-preview');
         const previewVid = document.getElementById('social-preview-video');
         const placeholder = document.getElementById('social-preview-placeholder');
@@ -393,8 +478,12 @@
             preview.classList.add('hidden');
         }
         if (previewVid) {
+            previewVid.onloadedmetadata = null;
+            previewVid.onloadeddata = null;
+            previewVid.onerror = null;
             previewVid.pause?.();
-            previewVid.src = '';
+            previewVid.removeAttribute('src');
+            previewVid.load();
             previewVid.classList.add('hidden');
         }
         placeholder?.classList.remove('hidden');
@@ -443,7 +532,7 @@
             recBadge.classList.toggle('hidden', !recording);
             if (!recording) recBadge.innerHTML = '<span class="social-rec-dot"></span> REC';
         }
-        if (!recording && !pendingImage) clearMediaInfo();
+        if (!recording && !pendingImage && !pendingVideoBlob) clearMediaInfo();
     }
 
     async function startVideoRecord() {
@@ -476,18 +565,8 @@
                 updateComposerStatusText();
                 return;
             }
-            const reader = new FileReader();
-            reader.onload = () => {
-                const dataUrl = reader.result;
-                if (String(dataUrl).length > MAX_VIDEO_CHARS) {
-                    window.toast?.('Video quá lớn để đăng — quay ngắn hơn', true);
-                    return;
-                }
-                stopCamera();
-                showPreview(dataUrl, 'video');
-            };
-            reader.onerror = () => window.toast?.('Lỗi xử lý video', true);
-            reader.readAsDataURL(blob);
+            stopCamera();
+            showPreview(null, 'video', blob);
         };
         mediaRecorder.start(250);
         recordingTimer = setTimeout(() => {
@@ -512,7 +591,7 @@
             video.srcObject = null;
             video.classList.add('hidden');
         }
-        if (!pendingImage) {
+        if (!pendingImage && !pendingVideoBlob) {
             document.getElementById('social-preview-placeholder')?.classList.remove('hidden');
         }
         updateShutterState();
@@ -647,13 +726,12 @@
                     await stopCamera();
                     showPreview(compressed, 'image');
                 } else {
-                    const dataUrl = reader.result;
-                    if (String(dataUrl).length > MAX_VIDEO_CHARS) {
+                    if (file.size > MAX_VIDEO_FILE_MB * 1024 * 1024) {
                         window.toast?.('Video quá lớn để đăng', true);
                         return;
                     }
                     await stopCamera();
-                    showPreview(dataUrl, 'video');
+                    showPreview(null, 'video', file);
                 }
             } catch (err) {
                 window.toast?.(err.message || 'Không đọc được file', true);
@@ -665,7 +743,7 @@
     async function publishPost() {
         const user = window.currentUser;
         if (!user) return;
-        if (!pendingImage) {
+        if (!pendingImage && !pendingVideoBlob) {
             window.toast?.('Chụp/quay hoặc chọn media trước', true);
             return;
         }
@@ -684,18 +762,19 @@
         if (!confirm(confirmMsg)) return;
         const caption = document.getElementById('social-caption')?.value.trim() || '';
         const imageToPost = pendingImage;
+        const videoBlob = pendingVideoBlob;
         const btn = document.getElementById('social-post-btn');
         if (btn) btn.disabled = true;
         try {
             setComposerStatus(isVid ? 'Đang tải video lên Drive...' : 'Đang đăng ảnh...');
             const res = isVid
-                ? await uploadVideoPost(dataUrlToBlob(imageToPost), caption)
+                ? await uploadVideoPost(videoBlob || dataUrlToBlob(imageToPost), caption)
                 : await socialApi('/social/posts', {
                     method: 'POST',
                     body: JSON.stringify({ caption, imageData: imageToPost }),
                 });
             if (shouldSaveWhen('post')) {
-                saveImageToDevice(imageToPost, 'dang');
+                saveImageToDevice(isVid ? (videoBlob || imageToPost) : imageToPost, 'dang');
             }
             document.getElementById('social-caption').value = '';
             clearPreview();
@@ -1170,7 +1249,7 @@
     }
 
     async function onShutterClick() {
-        if (pendingImage) return;
+        if (pendingImage || pendingVideoBlob) return;
         if (composerMode === 'video') {
             if (!cameraStream) {
                 await startCamera();
@@ -1246,20 +1325,21 @@
     }
 
     function onSavePreviewClick() {
-        if (!pendingImage) {
-            window.toast?.('Chụp hoặc chọn ảnh trước', true);
+        if (!pendingImage && !pendingVideoBlob) {
+            window.toast?.('Chụp hoặc chọn media trước', true);
             return;
         }
-        saveImageToDevice(pendingImage, 'luu');
+        saveMediaToDevice(pendingVideoBlob || pendingImage, 'luu');
     }
 
     async function cancelPreview() {
-        if (!pendingImage) return;
-        if (!confirm('Hủy ảnh này?\nSẽ không đăng lên bảng tin.')) return;
+        if (!pendingImage && !pendingVideoBlob) return;
+        const isVid = isVideoMedia();
+        if (!confirm(isVid ? 'Hủy video này?\nSẽ không đăng lên bảng tin.' : 'Hủy ảnh này?\nSẽ không đăng lên bảng tin.')) return;
         clearPreview();
         await stopCamera();
         await startCamera();
-        window.toast?.('Đã hủy ảnh');
+        window.toast?.(isVid ? 'Đã hủy video' : 'Đã hủy ảnh');
     }
 
     function initSaveMode() {
