@@ -72,14 +72,29 @@ def get_oauth_setup_info():
     }
 
 
-def save_oauth_credentials(client_id, client_secret):
-    from database import get_conn, fetchone, execute, commit, close
+def _validate_oauth_credentials(client_id, client_secret):
     client_id = (client_id or '').strip()
     client_secret = (client_secret or '').strip()
     if not client_id:
         raise ValueError('Client ID không được để trống')
     if not client_secret:
         raise ValueError('Client Secret không được để trống')
+    if not re.match(r'^\d+-[a-zA-Z0-9_-]+\.apps\.googleusercontent\.com$', client_id):
+        raise ValueError(
+            'Client ID sai định dạng — phải kết thúc bằng .apps.googleusercontent.com '
+            '(không dán Project ID hay Client Secret vào ô này)'
+        )
+    if not re.match(r'^GOCSPX-[a-zA-Z0-9_-]+$', client_secret):
+        raise ValueError(
+            'Client Secret sai định dạng — phải bắt đầu bằng GOCSPX- '
+            '(không dán Client ID vào ô Secret)'
+        )
+    return client_id, client_secret
+
+
+def save_oauth_credentials(client_id, client_secret):
+    from database import get_conn, fetchone, execute, commit, close
+    client_id, client_secret = _validate_oauth_credentials(client_id, client_secret)
     conn = get_conn()
     for key, val in (
         ('drive_oauth_client_id', client_id),

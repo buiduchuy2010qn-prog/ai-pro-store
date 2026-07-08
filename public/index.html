@@ -512,8 +512,9 @@
                                     </button>
                                 </div>
                                 <p class="social-drive-setup-title mt-3"><i class="fas fa-key mr-1"></i>Bước 2 — Dán Client ID &amp; Secret</p>
-                                <input id="social-drive-client-id" type="text" class="social-drive-config-input" placeholder="Client ID (*.apps.googleusercontent.com)" autocomplete="off">
-                                <input id="social-drive-client-secret" type="password" class="social-drive-config-input" placeholder="Client Secret" autocomplete="off">
+                                <input id="social-drive-client-id" type="text" class="social-drive-config-input" placeholder="Client ID — vd: 123456-abc.apps.googleusercontent.com" autocomplete="off">
+                                <input id="social-drive-client-secret" type="password" class="social-drive-config-input" placeholder="Client Secret — vd: GOCSPX-xxxxxxxx" autocomplete="off">
+                                <p class="social-drive-format-hint">Client ID dài, kết thúc <code>.apps.googleusercontent.com</code> · Secret bắt đầu <code>GOCSPX-</code></p>
                                 <button type="button" id="social-drive-save-oauth" class="social-drive-save-oauth-btn">
                                     <i class="fas fa-save mr-1"></i>Lưu cấu hình OAuth
                                 </button>
@@ -835,7 +836,7 @@
 </a>
 
 <script src="/security-client.js"></script>
-<script src="/social-feed.js?v=drive4"></script>
+<script src="/social-feed.js?v=drive5"></script>
 <script src="/shop-features.js?v=mxh1"></script>
 <script>
 const API = '/api';
