@@ -52,6 +52,11 @@
     /** AudioContext im lặng — WebM chỉ video thường không phát được trên Chrome */
     let silentAudioCtx = null;
     let silentAudioCleanup = null;
+    /** Bảng tin Locket — 1 slot xoay liên tục */
+    let feedPostsCache = [];
+    let feedSlotIndex = 0;
+    let feedRotateTimer = null;
+    const FEED_ROTATE_MS = 5500;
 
     function isVideoMedia() {
         return pendingMediaType === 'video' || !!pendingVideoBlob
@@ -1645,66 +1650,94 @@
         }
     }
 
-    function renderFeed(posts) {
-        const el = document.getElementById('social-feed-list');
-        if (!el) return;
-        if (!posts.length) {
-            el.innerHTML = '<div class="social-empty"><i class="fas fa-images"></i><p>Chưa có bài đăng. Hãy đăng ảnh/video hoặc kết bạn để xem bảng tin!</p></div>';
-            return;
+    function stopFeedRotation() {
+        if (feedRotateTimer) {
+            clearInterval(feedRotateTimer);
+            feedRotateTimer = null;
         }
-        el.innerHTML = posts.map(p => {
-            const name = p.author?.fullName || p.author?.email || 'Người dùng';
-            const initial = name.charAt(0).toUpperCase();
-            const isVid = p.mediaType === 'video' || String(p.imageData).startsWith('data:video/') || !!p.mediaUrl;
-            const mediaSrc = p.mediaUrl || p.imageData || '';
-            const driveBadge = p.driveStored
-                ? '<span class="social-drive-badge" title="Video lưu trên Google Drive"><i class="fab fa-google-drive"></i> Drive</span>'
-                : '';
-            const visBadge = window.SocialCreative?.visibilityBadge(p) || '';
-            const hasCaptionOverlay = !!(p.postMeta?.captionStyle && p.caption && isVid);
-            const captionHtml = hasCaptionOverlay || !p.caption
-                ? ''
-                : `<p class="social-post-caption">${esc(p.caption)}</p>`;
-            const mediaHtml = isVid
-                ? `<video src="${esc(mediaSrc)}" class="social-post-video" controls playsinline preload="metadata"></video>`
-                : `<img src="${esc(mediaSrc)}" class="social-post-img" data-lightbox="1" alt="Ảnh bài đăng">`;
-            const wrappedMedia = window.SocialCreative?.renderFeedMediaWrap(p, mediaHtml) || mediaHtml;
-            return `
-            <article class="social-post-card" data-post-id="${p.id}">
-                <div class="social-post-header">
-                    <div class="social-avatar">${esc(initial)}</div>
-                    <div class="social-post-meta">
-                        <div class="social-post-author">${esc(name)}</div>
-                        <div class="social-post-time">${esc(fmtTime(p.createdAt))}</div>
-                    </div>
-                    <div class="social-post-actions">
-                        ${visBadge}
-                        ${driveBadge}
-                        <button type="button" class="social-save-post-btn" data-save-post="${p.id}" title="Lưu vào máy"><i class="fas fa-download"></i></button>
-                        ${p.isMine ? `<button type="button" class="social-delete-btn" data-delete-post="${p.id}" title="Hủy đăng"><i class="fas fa-times-circle mr-1"></i>Hủy đăng</button>` : ''}
-                    </div>
-                </div>
-                ${captionHtml}
-                ${wrappedMedia}
-                ${renderPostMediaMeta(p)}
+    }
+
+    function startFeedRotation() {
+        stopFeedRotation();
+        if (feedPostsCache.length <= 1) return;
+        feedRotateTimer = setInterval(() => {
+            showFeedSlot((feedSlotIndex + 1) % feedPostsCache.length, true);
+        }, FEED_ROTATE_MS);
+    }
+
+    function buildLocketBadges(p) {
+        const badges = [];
+        const meta = p.postMeta || {};
+        if (meta.bgId && meta.bgId !== 'none') {
+            badges.push(`<span class="locket-feed-badge badge-purple"><i class="fas fa-palette"></i> ${esc(meta.bgId)}</span>`);
+        }
+        const t = new Date(p.createdAt);
+        if (!isNaN(t)) {
+            const timeStr = t.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            badges.push(`<span class="locket-feed-badge"><i class="fas fa-clock"></i> ${esc(timeStr)}</span>`);
+        }
+        badges.push('<span class="locket-feed-badge"><i class="fas fa-cloud-sun"></i> 31°C</span>');
+        return badges.join('');
+    }
+
+    function renderLocketSlot(post, animate) {
+        const el = document.getElementById('social-feed-list');
+        if (!el || !post) return;
+
+        const name = post.author?.fullName || post.author?.email || 'Người dùng';
+        const isVid = post.mediaType === 'video' || String(post.imageData).startsWith('data:video/') || !!post.mediaUrl;
+        const mediaSrc = post.mediaUrl || post.imageData || '';
+        const mediaHtml = isVid
+            ? `<video src="${esc(mediaSrc)}" class="social-post-video locket-feed-media" playsinline muted loop autoplay preload="metadata"></video>`
+            : `<img src="${esc(mediaSrc)}" class="social-post-img locket-feed-media" data-lightbox="1" alt="Ảnh bài đăng">`;
+        const wrappedMedia = window.SocialCreative?.renderFeedMediaWrap(post, mediaHtml) || mediaHtml;
+        const captionPill = post.caption
+            ? `<div class="locket-feed-caption-pill">${esc(post.caption)}</div>`
+            : '';
+        const dots = feedPostsCache.map((_, i) =>
+            `<button type="button" class="locket-feed-dot${i === feedSlotIndex ? ' is-active' : ''}" data-feed-dot="${i}" aria-label="Bài ${i + 1}"></button>`
+        ).join('');
+
+        const html = `
+        <article class="locket-feed-slot${animate ? ' is-swapping' : ''}" data-post-id="${post.id}">
+            <div class="locket-feed-frame">
+                <div class="locket-feed-media-wrap">${wrappedMedia}</div>
+                <div class="locket-feed-badges">${buildLocketBadges(post)}</div>
+                ${captionPill}
+            </div>
+            <div class="locket-feed-actions-row" aria-hidden="true">
+                <span class="locket-feed-action-icon"><i class="fas fa-times"></i></span>
+                <span class="locket-feed-action-send"><i class="fas fa-paper-plane"></i></span>
+                <span class="locket-feed-action-icon"><i class="fas fa-wand-magic-sparkles"></i></span>
+            </div>
+            <div class="locket-feed-meta">
+                <span><span class="locket-feed-author">${esc(name)}</span> · ${esc(fmtTime(post.createdAt))}</span>
+                ${post.isMine ? `<button type="button" class="social-delete-btn text-xs" data-delete-post="${post.id}"><i class="fas fa-trash-alt"></i></button>` : ''}
+            </div>
+            <div class="locket-feed-dots">${dots}</div>
+            <div class="locket-feed-engage">
                 <div class="social-post-engage">
-                    ${renderReactionSummary(p)}
-                    ${renderReactionBar(p)}
-                    ${renderCommentSection(p)}
+                    ${renderReactionSummary(post)}
+                    ${renderReactionBar(post)}
+                    ${renderCommentSection(post)}
                 </div>
-            </article>`;
-        }).join('');
+            </div>
+        </article>`;
+
+        el.innerHTML = html;
+
+        if (animate) {
+            const slot = el.querySelector('.locket-feed-slot');
+            slot?.addEventListener('animationend', () => slot.classList.remove('is-swapping'), { once: true });
+        }
 
         el.querySelectorAll('[data-delete-post]').forEach(btn => {
             btn.addEventListener('click', () => deletePost(Number(btn.dataset.deletePost)));
         });
-        el.querySelectorAll('[data-save-post]').forEach(btn => {
+        el.querySelectorAll('[data-feed-dot]').forEach(btn => {
             btn.addEventListener('click', () => {
-                const card = btn.closest('[data-post-id]');
-                const img = card?.querySelector('.social-post-img');
-                const vid = card?.querySelector('.social-post-video');
-                const src = vid?.src || img?.src;
-                if (src) saveMediaToDevice(src, 'bai');
+                showFeedSlot(Number(btn.dataset.feedDot), true);
+                startFeedRotation();
             });
         });
         el.querySelectorAll('.social-post-img[data-lightbox]').forEach(img => {
@@ -1712,6 +1745,31 @@
         });
         bindFeedMediaMeta(el);
         bindEngagement(el);
+
+        const vid = el.querySelector('.locket-feed-media-wrap video');
+        if (vid) vid.play().catch(() => {});
+    }
+
+    function showFeedSlot(index, animate) {
+        if (!feedPostsCache.length) return;
+        feedSlotIndex = ((index % feedPostsCache.length) + feedPostsCache.length) % feedPostsCache.length;
+        renderLocketSlot(feedPostsCache[feedSlotIndex], animate);
+    }
+
+    function renderFeed(posts) {
+        const el = document.getElementById('social-feed-list');
+        if (!el) return;
+        stopFeedRotation();
+        feedPostsCache = posts || [];
+        feedSlotIndex = 0;
+
+        if (!feedPostsCache.length) {
+            el.innerHTML = '<div class="locket-feed-empty"><i class="fas fa-images"></i><p>Chưa có bài đăng — chụp ảnh phía trên để đăng lên đây!</p></div>';
+            return;
+        }
+
+        renderLocketSlot(feedPostsCache[0], false);
+        startFeedRotation();
     }
 
     async function loadFeed() {
@@ -2307,6 +2365,7 @@
 
     function leaveView() {
         closeSocialDrawer();
+        stopFeedRotation();
         stopCamera();
         clearPreview();
     }
