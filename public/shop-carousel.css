@@ -19,7 +19,8 @@
 /* Mọi UI tương tác nằm TRÊN canvas */
 #app,
 #toast,
-.zalo-float {
+.zalo-float,
+#social-fab-wrap {
     position: relative;
     z-index: 2;
 }

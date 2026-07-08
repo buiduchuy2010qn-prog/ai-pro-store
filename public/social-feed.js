@@ -478,6 +478,17 @@
         }
     }
 
+    function initFabButton() {
+        document.getElementById('social-fab-btn')?.addEventListener('click', () => {
+            if (typeof window.navigateTo === 'function') {
+                window.navigateTo('social');
+            } else {
+                location.hash = 'social';
+            }
+            document.getElementById('mobile-menu')?.classList.add('hidden');
+        });
+    }
+
     function initComposerEvents() {
         document.getElementById('social-file-btn')?.addEventListener('click', () => {
             document.getElementById('social-file-input')?.click();
@@ -520,6 +531,7 @@
     window.SocialFeed = { loadView, leaveView };
 
     function init() {
+        initFabButton();
         initComposerEvents();
     }
 

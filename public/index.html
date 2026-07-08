@@ -145,7 +145,6 @@
                 <button data-view="wallet" class="nav-btn nav-pill"><i class="fas fa-wallet mr-1"></i>Ví tiền</button>
                 <button data-view="orders" class="nav-btn nav-pill"><i class="fas fa-shopping-bag mr-1"></i>Đơn hàng</button>
                 <button data-view="transactions" class="nav-btn nav-pill"><i class="fas fa-clock-rotate-left mr-1"></i>Lịch sử</button>
-                <button data-view="social" class="nav-btn nav-pill"><i class="fas fa-images mr-1"></i>Bảng tin</button>
                 <button type="button" id="nav-profile-btn" class="nav-btn nav-pill"><i class="fas fa-user-circle mr-1"></i>Hồ sơ</button>
                 <button data-view="dressroom" class="nav-btn nav-pill"><i class="fas fa-shirt mr-1"></i>Phòng Thay Đồ</button>
                 <button data-view="admin" id="admin-nav-btn" class="nav-btn nav-pill hidden"><i class="fas fa-shield-alt mr-1"></i>Quản trị</button>
@@ -171,7 +170,6 @@
             <button data-view="wallet" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-wallet mr-2 w-4"></i>Ví tiền</button>
             <button data-view="orders" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-shopping-bag mr-2 w-4"></i>Đơn hàng</button>
             <button data-view="transactions" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-clock-rotate-left mr-2 w-4"></i>Lịch sử</button>
-            <button data-view="social" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-images mr-2 w-4"></i>Bảng tin</button>
             <button data-view="dressroom" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-shirt mr-2 w-4"></i>Phòng Thay Đồ</button>
             <button data-view="admin" id="admin-mobile-nav-btn" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium hidden"><i class="fas fa-shield-alt mr-2 w-4"></i>Quản trị</button>
             <button type="button" id="profile-mobile-btn" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-user-circle mr-2 w-4"></i>Hồ sơ</button>
@@ -660,7 +658,7 @@
             <div id="profile-panel-info">
                 <div class="profile-social-link mb-4">
                     <button type="button" id="profile-goto-social" class="btn-primary w-full py-2.5 text-sm">
-                        <i class="fas fa-images mr-1"></i>Mở Bảng tin ảnh (MXH)
+                        <i class="fas fa-camera mr-1"></i>Mở Chụp ảnh (MXH)
                     </button>
                 </div>
                 <div id="profile-view-mode" class="profile-info-grid">
@@ -721,6 +719,14 @@
 <!-- Toast -->
 <div id="toast" class="fixed top-6 right-6 z-50 hidden">
     <div id="toast-inner" class="toast-inner success"></div>
+</div>
+
+<!-- Nút nổi Chụp ảnh (kiểu AI Hỗ Trợ) -->
+<div id="social-fab-wrap" class="fixed bottom-24 left-4 sm:left-6 z-50 hidden">
+    <button type="button" id="social-fab-btn" class="social-fab" title="Chụp ảnh gửi bạn bè">
+        <i class="fas fa-camera text-lg"></i>
+        <span>Chụp ảnh</span>
+    </button>
 </div>
 
 <!-- AI Đức Hi Assistant -->
@@ -995,6 +1001,7 @@ function showAuth() {
     forgotOtp = '';
     document.getElementById('auth-screen').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
+    document.getElementById('social-fab-wrap')?.classList.add('hidden');
     showAuthTab('login');
 }
 
@@ -1026,11 +1033,12 @@ function updateHeader() {
 async function showApp() {
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
+    document.getElementById('social-fab-wrap')?.classList.remove('hidden');
     await refreshUser();
     navigateTo('products');
-    if (!sessionStorage.getItem('profile_hint_shown')) {
-        sessionStorage.setItem('profile_hint_shown', '1');
-        setTimeout(() => toast('Bấm "Bảng tin" trên menu để đăng ảnh và kết bạn', false, 5500), 900);
+    if (!sessionStorage.getItem('social_fab_hint_shown')) {
+        sessionStorage.setItem('social_fab_hint_shown', '1');
+        setTimeout(() => toast('Bấm nút "Chụp ảnh" góc trái dưới để đăng ảnh cho bạn bè', false, 5500), 900);
     }
 }
 
@@ -1075,6 +1083,7 @@ function navigateTo(view) {
     if (prevView === 'social' && viewId !== 'social') SocialFeed?.leaveView?.();
     if (viewId === 'social') SocialFeed?.loadView?.();
     highlightNav(viewId);
+    document.getElementById('social-fab-btn')?.classList.toggle('social-fab-active', viewId === 'social');
     if (location.hash !== '#' + viewId) location.hash = viewId;
 }
 
