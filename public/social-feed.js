@@ -592,11 +592,95 @@
         return /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || window.matchMedia('(max-width: 767px)').matches;
     }
 
-    function updateCameraUi() {
+    function isAndroidDevice() {
+        return /Android/i.test(navigator.userAgent || '');
+    }
+
+    function getCameraWrap() {
+        return document.getElementById('social-camera-wrap');
+    }
+
+    function setCameraVisible(visible) {
+        const wrap = getCameraWrap();
         const video = document.getElementById('social-camera-video');
+        if (wrap) {
+            wrap.classList.toggle('hidden', !visible);
+            wrap.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        } else if (video) {
+            video.classList.toggle('hidden', !visible);
+        }
+    }
+
+    function ensureMediaDevices() {
+        if (!navigator.mediaDevices) navigator.mediaDevices = {};
+        if (navigator.mediaDevices.getUserMedia) return true;
+        const legacy = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+        if (!legacy) return false;
+        navigator.mediaDevices.getUserMedia = (constraints) => new Promise((resolve, reject) => {
+            legacy.call(navigator, constraints, resolve, reject);
+        });
+        return true;
+    }
+
+    function waitForVideoReady(video, timeoutMs = 10000) {
+        return new Promise((resolve, reject) => {
+            const ready = () => video.readyState >= 2 && video.videoWidth > 0;
+            if (ready()) return resolve();
+            let timer = setTimeout(() => {
+                cleanup();
+                reject(new Error('Camera preview timeout'));
+            }, timeoutMs);
+            const onReady = () => {
+                if (ready()) {
+                    cleanup();
+                    resolve();
+                }
+            };
+            const cleanup = () => {
+                clearTimeout(timer);
+                video.removeEventListener('loadedmetadata', onReady);
+                video.removeEventListener('loadeddata', onReady);
+                video.removeEventListener('canplay', onReady);
+            };
+            video.addEventListener('loadedmetadata', onReady);
+            video.addEventListener('loadeddata', onReady);
+            video.addEventListener('canplay', onReady);
+        });
+    }
+
+    async function playCameraVideo(video) {
+        video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
+        video.muted = true;
+        video.playsInline = true;
+        await waitForVideoReady(video);
+        try {
+            await video.play();
+        } catch (_) {
+            await new Promise(r => setTimeout(r, isAndroidDevice() ? 200 : 80));
+            await video.play();
+        }
+    }
+
+    async function cameraRestartDelay() {
+        if (isAndroidDevice()) await new Promise(r => setTimeout(r, 280));
+    }
+
+    function scheduleAutoCameraStart(delayMs = 500) {
+        if (isPhoneDevice()) {
+            setComposerStatus('Bấm nút tròn tím để mở camera');
+            return;
+        }
+        setTimeout(() => startCamera().catch(() => {}), delayMs);
+    }
+
+    function updateCameraUi() {
+        const wrap = getCameraWrap();
+        const video = document.getElementById('social-camera-video');
+        const mirrorTarget = wrap || video;
         const flipBtn = document.getElementById('social-flip-camera');
-        if (video) {
-            video.classList.toggle('mirror-front', cameraFacing === 'user');
+        if (mirrorTarget) {
+            mirrorTarget.classList.toggle('mirror-front', cameraFacing === 'user');
         }
         if (flipBtn) {
             const showFlip = isPhoneDevice() && !!cameraStream && !pendingImage && !pendingVideoBlob && composerMode === 'photo';
@@ -994,9 +1078,10 @@
         }
         const video = document.getElementById('social-camera-video');
         if (video) {
+            video.pause();
             video.srcObject = null;
-            video.classList.add('hidden');
         }
+        setCameraVisible(false);
     }
 
     async function stopCamera() {
@@ -1023,24 +1108,54 @@
         if (name === 'SecurityError') {
             return 'Trang cần HTTPS để dùng camera — thử tải lại trang';
         }
+        if (name === 'OverconstrainedError') {
+            return 'Camera không khớp cấu hình — thử đổi camera trước/sau hoặc bấm lại nút chụp';
+        }
         return 'Không mở được camera — thử bấm Chọn ảnh hoặc cho phép quyền Camera';
+    }
+
+    function buildVideoConstraintAttempts(facing) {
+        const android = isAndroidDevice();
+        const ideal = {
+            width: { ideal: android ? 960 : 1280 },
+            height: { ideal: android ? 540 : 720 },
+        };
+        if (facing === 'environment') {
+            if (android) {
+                return [
+                    { video: { facingMode: 'environment', ...ideal } },
+                    { video: { facingMode: 'environment' } },
+                    { video: { facingMode: { exact: 'environment' }, ...ideal } },
+                    { video: { facingMode: 'user' } },
+                    { video: true },
+                ];
+            }
+            return [
+                { video: { facingMode: { exact: 'environment' }, ...ideal } },
+                { video: { facingMode: 'environment' } },
+                { video: { facingMode: 'user' } },
+                { video: true },
+            ];
+        }
+        if (android) {
+            return [
+                { video: { facingMode: 'user', ...ideal } },
+                { video: { facingMode: 'user' } },
+                { video: { facingMode: { exact: 'user' }, ...ideal } },
+                { video: true },
+            ];
+        }
+        return [
+            { video: { facingMode: { exact: 'user' }, ...ideal } },
+            { video: { facingMode: 'user' } },
+            { video: true },
+        ];
     }
 
     async function requestCameraStream() {
         const facing = cameraFacing;
         const wantAudio = composerMode === 'video';
-        const baseVideo = facing === 'environment'
-            ? [
-                { video: { facingMode: { exact: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } },
-                { video: { facingMode: 'environment' } },
-                { video: { facingMode: 'user' } },
-                { video: true },
-            ]
-            : [
-                { video: { facingMode: { exact: 'user' }, width: { ideal: 1280 }, height: { ideal: 720 } } },
-                { video: { facingMode: 'user' } },
-                { video: true },
-            ];
+        const baseVideo = buildVideoConstraintAttempts(facing);
         const attempts = [];
         if (wantAudio) {
             for (const v of baseVideo) attempts.push({ ...v, audio: true });
@@ -1075,19 +1190,18 @@
             window.toast?.('Camera chỉ hoạt động trên HTTPS', true);
             return;
         }
-        if (!navigator.mediaDevices?.getUserMedia) {
+        if (!ensureMediaDevices()) {
             window.toast?.('Trình duyệt không hỗ trợ camera — dùng Chọn ảnh', true);
             return;
         }
         try {
             await stopCamera();
+            await cameraRestartDelay();
             setComposerStatus('Đang mở camera...');
             cameraStream = await requestCameraStream();
             video.srcObject = cameraStream;
-            video.setAttribute('playsinline', '');
-            video.muted = true;
-            await video.play();
-            video.classList.remove('hidden');
+            await playCameraVideo(video);
+            setCameraVisible(true);
             document.getElementById('social-preview-placeholder')?.classList.add('hidden');
             document.getElementById('social-preview')?.classList.add('hidden');
             updateShutterState();
@@ -1234,7 +1348,7 @@
                 panel.dataset.loaded = '1';
             }
             await loadFeed();
-            setTimeout(() => startCamera().catch(() => {}), 400);
+            scheduleAutoCameraStart(400);
         } catch (err) {
             window.toast?.(err.message, true);
         } finally {
@@ -2081,7 +2195,7 @@
         clearPreview();
         await stopCamera();
         await Promise.all([loadFriendsPanel(), loadDriveStatus()]);
-        setTimeout(() => startCamera().catch(() => {}), 500);
+        scheduleAutoCameraStart(500);
     }
 
     function leaveView() {

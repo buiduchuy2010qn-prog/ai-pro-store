@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/theme.css">
-    <link rel="stylesheet" href="/auth-light.css">
+    <link rel="stylesheet" href="/auth-light.css?v=adr-camera1">
     <script>
         tailwind.config = {
             theme: {
@@ -410,7 +410,9 @@
                             </div>
                             <div class="social-locket-frame">
                                 <div id="social-camera-bg-layer" class="social-camera-bg-layer" data-bg="none" aria-hidden="true"></div>
-                                <video id="social-camera-video" class="social-locket-media hidden" autoplay playsinline muted></video>
+                                <div id="social-camera-wrap" class="social-camera-wrap hidden" aria-hidden="true">
+                                    <video id="social-camera-video" autoplay playsinline webkit-playsinline muted></video>
+                                </div>
                                 <img id="social-preview" class="social-locket-media hidden" alt="Ảnh chụp">
                                 <video id="social-preview-video" class="social-locket-media hidden" playsinline controls preload="auto"></video>
                                 <iframe id="social-preview-drive" class="social-locket-media social-preview-drive hidden" title="Xem video trên Google Drive" allow="autoplay; fullscreen" allowfullscreen></iframe>
@@ -935,7 +937,7 @@
 <script src="/security-client.js"></script>
 <link rel="stylesheet" href="/social-creative.css?v=1">
 <script src="/social-creative.js?v=1"></script>
-<script src="/social-feed.js?v=creative2"></script>
+<script src="/social-feed.js?v=adr-camera1"></script>
 <script src="/shop-features.js?v=mxh1"></script>
 <script>
 const API = '/api';
