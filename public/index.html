@@ -26,6 +26,9 @@
 </head>
 <body class="app-bg min-h-screen">
 
+<!-- Particle Background -->
+<canvas id="particle-canvas" class="fixed inset-0 pointer-events-none z-[-1] opacity-70" aria-hidden="true"></canvas>
+
 <!-- ═══ AUTH SCREEN ═══ -->
 <div id="auth-screen" class="auth-bg">
     <div class="auth-card">
@@ -2221,6 +2224,7 @@ document.getElementById('mock-transfer-btn').onclick = async () => {
     }
 })();
 </script>
+<script src="/particle-bg.js" defer></script>
 <script src="/shop-carousel.js" defer></script>
 <script src="/ai-assistant.js"></script>
 <script src="/dressroom-render.js"></script>
