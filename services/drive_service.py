@@ -903,7 +903,7 @@ def _ffmpeg_exe():
         return shutil.which('ffmpeg')
 
 
-def maybe_transcode_video_mp4(raw, mime, ext):
+def maybe_transcode_video_mp4(raw, mime, ext, fast=False):
     """Đổi WebM → MP4 — MP4 phát được trên Chrome/Windows (WebM quay từ camera thường lỗi)."""
     if ext == 'mp4' or 'mp4' in (mime or '').lower():
         return raw, mime or 'video/mp4', 'mp4'
@@ -911,6 +911,7 @@ def maybe_transcode_video_mp4(raw, mime, ext):
     if not ffmpeg:
         print('[Drive] ffmpeg not found — giữ nguyên WebM')
         return raw, mime, ext
+    preset = 'ultrafast' if fast else 'veryfast'
     try:
         import os
         import subprocess
@@ -920,7 +921,7 @@ def maybe_transcode_video_mp4(raw, mime, ext):
             inpath = inf.name
         outpath = inpath + '.mp4'
         proc = subprocess.run(
-            [ffmpeg, '-y', '-i', inpath, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '28',
+            [ffmpeg, '-y', '-i', inpath, '-c:v', 'libx264', '-preset', preset, '-crf', '30',
              '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-an', outpath],
             capture_output=True,
             timeout=120,
@@ -959,7 +960,7 @@ def upload_preview_bytes(raw, mime, ext, user_email, conn=None):
     if own_conn:
         from database import get_conn
         conn = get_conn()
-    raw, mime, ext = maybe_transcode_video_mp4(raw, mime, ext)
+    raw, mime, ext = maybe_transcode_video_mp4(raw, mime, ext, fast=True)
     slug = _user_email_slug(user_email)
     stamp = int(time.time())
     filename = f'shop-video-preview-{slug}-{stamp}.{ext}'
