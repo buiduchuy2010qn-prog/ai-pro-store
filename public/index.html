@@ -947,6 +947,7 @@ async function loadProducts() {
             </div>`;
         }).join('');
     } catch (e) {
+        grid.innerHTML = emptyState('Không tải được sản phẩm. ' + (e.message || 'Thử tải lại trang.'));
         toast(e.message, true);
     }
 }

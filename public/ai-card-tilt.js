@@ -63,27 +63,6 @@
         grid.querySelectorAll('.product-card').forEach((card, i) => tagCard(card, i));
     }
 
-    function initViewTransitions() {
-        const app = document.getElementById('app');
-        if (!app) return;
-
-        const sections = app.querySelectorAll('section[id^="view-"]');
-        const trigger = (sec) => {
-            if (sec.classList.contains('hidden')) return;
-            sec.classList.remove('bb-view-active');
-            void sec.offsetWidth;
-            sec.classList.add('bb-view-active');
-        };
-
-        sections.forEach((sec) => {
-            trigger(sec);
-            new MutationObserver(() => trigger(sec)).observe(sec, {
-                attributes: true,
-                attributeFilter: ['class'],
-            });
-        });
-    }
-
     function boot() {
         document.body.classList.add('bright-blue');
 
@@ -93,11 +72,8 @@
         }
 
         scanGrid();
-        initViewTransitions();
 
-        global.BrightBlueFX = {
-            refresh: scanGrid,
-        };
+        global.BrightBlueFX = { refresh: scanGrid };
     }
 
     if (document.readyState === 'loading') {

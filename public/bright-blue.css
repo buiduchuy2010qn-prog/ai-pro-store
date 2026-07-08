@@ -163,6 +163,7 @@ body.bright-blue .shop-hero-sub {
 
 body.bright-blue .hero-float-layer {
     display: block !important;
+    pointer-events: none !important;
 }
 
 body.bright-blue .float-card {
@@ -352,7 +353,6 @@ body.bright-blue .ai-card {
     transform-style: preserve-3d;
     will-change: transform;
     transition: border-color 0.25s ease, box-shadow 0.25s ease;
-    animation: none !important;
     position: relative;
 }
 
@@ -538,16 +538,6 @@ body.bright-blue .toast-inner.success {
     box-shadow: var(--bb-shadow-md) !important;
 }
 
-/* ─── View fade ─── */
-@keyframes bb-view-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-body.bright-blue .app-section.bb-view-active:not(.hidden) {
-    animation: bb-view-in 0.35s ease both;
-}
-
 /* ─── Shimmer loading ─── */
 body.bright-blue .anim-shimmer {
     background: linear-gradient(90deg, #eef2f8 25%, #f8fafc 50%, #eef2f8 75%) !important;
@@ -572,8 +562,7 @@ body.bright-blue .app-main {
 /* ─── Reduced motion ─── */
 @media (prefers-reduced-motion: reduce) {
     body.bright-blue .ai-logo,
-    body.bright-blue .ai-card.bb-enter,
-    body.bright-blue .app-section.bb-view-active {
+    body.bright-blue .ai-card.bb-enter {
         animation: none !important;
     }
     body.bright-blue .float-card {
