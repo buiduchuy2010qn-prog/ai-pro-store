@@ -1,0 +1,377 @@
+/**
+ * Cyber AI Universe — Glassmorphism + Neon overlay
+ * Chỉ CSS lớp phủ. Không đổi HTML/JS logic.
+ */
+
+:root {
+    --cyber-void: #030712;
+    --cyber-cyan: #22d3ee;
+    --cyber-purple: #a855f7;
+    --cyber-magenta: #ec4899;
+    --cyber-glass: rgba(8, 15, 35, 0.55);
+    --cyber-glass-light: rgba(255, 255, 255, 0.06);
+    --cyber-border: rgba(34, 211, 238, 0.28);
+    --cyber-glow-cyan: 0 0 24px rgba(34, 211, 238, 0.35), 0 0 48px rgba(34, 211, 238, 0.12);
+    --cyber-glow-purple: 0 0 24px rgba(168, 85, 247, 0.3);
+}
+
+/* ─── Canvas nền WebGL ─── */
+#webgl-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+    display: block;
+}
+
+body.cyber-universe {
+    background: var(--cyber-void) !important;
+    color: #e2e8f0;
+}
+
+body.cyber-universe::before,
+body.cyber-universe::after {
+    opacity: 0 !important;
+}
+
+/* ─── Glass 3D Card base ─── */
+body.cyber-universe .glass-card,
+body.cyber-universe .product-card,
+body.cyber-universe .auth-card,
+body.cyber-universe .modal-panel,
+body.cyber-universe .shop-hero,
+body.cyber-universe .section-header,
+body.cyber-universe .site-header,
+body.cyber-universe .nav-pill-wrap,
+body.cyber-universe .category-pill,
+body.cyber-universe .empty-state {
+    background: var(--cyber-glass) !important;
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    border: 1px solid var(--cyber-border) !important;
+    box-shadow:
+        var(--cyber-glow-cyan),
+        inset 0 1px 0 var(--cyber-glass-light),
+        0 8px 32px rgba(0, 0, 0, 0.35) !important;
+    color: #e2e8f0;
+}
+
+body.cyber-universe .app-main {
+    position: relative;
+    z-index: 1;
+}
+
+body.cyber-universe #auth-screen,
+body.cyber-universe #app,
+body.cyber-universe .zalo-float,
+body.cyber-universe #toast,
+body.cyber-universe .modal-overlay {
+    position: relative;
+    z-index: 1;
+}
+
+/* ─── Hero ─── */
+body.cyber-universe .shop-hero {
+    border-radius: 28px;
+    padding: 2.5rem 1.5rem;
+    background: linear-gradient(
+        135deg,
+        rgba(6, 182, 212, 0.12) 0%,
+        rgba(139, 92, 246, 0.1) 50%,
+        rgba(3, 7, 18, 0.6) 100%
+    ) !important;
+    overflow: hidden;
+}
+
+body.cyber-universe .shop-wordmark {
+    text-shadow: 0 0 30px rgba(34, 211, 238, 0.5), 0 0 60px rgba(168, 85, 247, 0.25);
+    color: #f8fafc !important;
+}
+
+body.cyber-universe .shop-hero-sub {
+    color: #94a3b8 !important;
+}
+
+body.cyber-universe .wm-accent,
+body.cyber-universe .brand-logo span {
+    color: var(--cyber-cyan) !important;
+}
+
+/* ─── Product cards ─── */
+body.cyber-universe .product-card {
+    border-radius: 24px !important;
+    transform-style: preserve-3d;
+    transition: box-shadow 0.35s ease;
+}
+
+body.cyber-universe .product-card.cyber-tilt-active {
+    border-color: rgba(34, 211, 238, 0.65) !important;
+    box-shadow:
+        0 0 32px rgba(34, 211, 238, 0.45),
+        0 0 64px rgba(168, 85, 247, 0.2),
+        inset 0 0 24px rgba(34, 211, 238, 0.08) !important;
+}
+
+body.cyber-universe .product-card-visual {
+    background: linear-gradient(145deg, rgba(34, 211, 238, 0.08), rgba(168, 85, 247, 0.12)) !important;
+    border: 1px solid rgba(34, 211, 238, 0.15);
+}
+
+body.cyber-universe .product-card-name { color: #f1f5f9 !important; }
+body.cyber-universe .product-card-desc { color: #94a3b8 !important; }
+body.cyber-universe .product-card-price { color: var(--cyber-cyan) !important; text-shadow: 0 0 12px rgba(34, 211, 238, 0.4); }
+
+body.cyber-universe .product-card-buy {
+    background: linear-gradient(135deg, #06b6d4, #8b5cf6) !important;
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.4) !important;
+}
+
+/* Floating animation class (GSAP sets inline too) */
+body.cyber-universe .cyber-float-card {
+    will-change: transform;
+}
+
+/* ─── Transaction Hub / Wallet ─── */
+body.cyber-universe #view-wallet .glass-card {
+    background: linear-gradient(
+        160deg,
+        rgba(6, 182, 212, 0.1) 0%,
+        rgba(3, 7, 18, 0.75) 60%,
+        rgba(168, 85, 247, 0.08) 100%
+    ) !important;
+}
+
+body.cyber-universe #wallet-balance,
+body.cyber-universe #header-balance {
+    text-shadow:
+        0 0 20px rgba(34, 211, 238, 0.8),
+        0 0 40px rgba(34, 211, 238, 0.4),
+        0 0 80px rgba(168, 85, 247, 0.25) !important;
+    color: #67e8f9 !important;
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    letter-spacing: -0.02em;
+}
+
+body.cyber-universe .cyber-hologram-panel {
+    position: relative;
+    border: 1px solid rgba(34, 211, 238, 0.4) !important;
+    background: rgba(3, 10, 28, 0.7) !important;
+    box-shadow:
+        0 0 40px rgba(34, 211, 238, 0.15),
+        inset 0 0 60px rgba(168, 85, 247, 0.05) !important;
+}
+
+body.cyber-universe .cyber-hologram-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(34, 211, 238, 0.03) 2px,
+        rgba(34, 211, 238, 0.03) 4px
+    );
+    pointer-events: none;
+    border-radius: inherit;
+    animation: holo-scan 6s linear infinite;
+}
+
+@keyframes holo-scan {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(8px); }
+}
+
+body.cyber-universe #qr-panel.cyber-qr-reveal {
+    animation: cyber-glitch-in 0.6s ease-out;
+}
+
+@keyframes cyber-glitch-in {
+    0% { opacity: 0; transform: translateY(32px) skewX(2deg); filter: hue-rotate(20deg); }
+    40% { opacity: 0.8; transform: translateY(-4px) skewX(-1deg); }
+    70% { transform: translateY(2px) skewX(0.5deg); }
+    100% { opacity: 1; transform: translateY(0) skewX(0); filter: none; }
+}
+
+body.cyber-universe #qr-image {
+    border: 2px solid rgba(34, 211, 238, 0.5) !important;
+    box-shadow: 0 0 30px rgba(34, 211, 238, 0.25);
+}
+
+body.cyber-universe #user-topup-code {
+    color: var(--cyber-cyan) !important;
+    text-shadow: 0 0 8px rgba(34, 211, 238, 0.5);
+}
+
+/* ─── Anime AI Boutique / Dressroom ─── */
+body.cyber-universe #view-dressroom {
+    position: relative;
+}
+
+body.cyber-universe .cyber-holo-chamber {
+    position: relative;
+    border: 2px solid rgba(34, 211, 238, 0.35) !important;
+    border-radius: 24px;
+    background: rgba(3, 8, 24, 0.65) !important;
+    box-shadow:
+        0 0 0 1px rgba(168, 85, 247, 0.2),
+        0 0 60px rgba(34, 211, 238, 0.12),
+        inset 0 0 80px rgba(168, 85, 247, 0.06) !important;
+    overflow: hidden;
+}
+
+body.cyber-universe .cyber-holo-chamber::before,
+body.cyber-universe .cyber-holo-chamber::after {
+    content: '';
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    border: 2px solid var(--cyber-cyan);
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+body.cyber-universe .cyber-holo-chamber::before { top: 12px; left: 12px; border-right: none; border-bottom: none; }
+body.cyber-universe .cyber-holo-chamber::after { bottom: 12px; right: 12px; border-left: none; border-top: none; }
+
+body.cyber-universe .dr-preview-frame {
+    border: 1px solid rgba(34, 211, 238, 0.25) !important;
+    background: radial-gradient(ellipse at center, rgba(34, 211, 238, 0.06), rgba(3, 7, 18, 0.9)) !important;
+}
+
+body.cyber-universe .dr-item-card {
+    background: rgba(8, 15, 35, 0.7) !important;
+    border: 1px solid rgba(34, 211, 238, 0.2) !important;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+body.cyber-universe .dr-item-card:hover,
+body.cyber-universe .dr-item-card.equipped {
+    border-color: rgba(34, 211, 238, 0.55) !important;
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.3) !important;
+    transform: translateY(-4px) translateZ(8px);
+}
+
+body.cyber-universe .cyber-ripple {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid rgba(34, 211, 238, 0.7);
+    transform: translate(-50%, -50%) scale(0);
+    animation: cyber-ripple-expand 0.65s ease-out forwards;
+    pointer-events: none;
+    z-index: 50;
+}
+
+@keyframes cyber-ripple-expand {
+    to { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+}
+
+/* ─── Admin Cyberpunk Dashboard ─── */
+body.cyber-universe #view-admin #admin-content {
+    background: rgba(3, 7, 18, 0.5);
+    border: 1px solid rgba(236, 72, 153, 0.2);
+    border-radius: 20px;
+    padding: 1.25rem;
+    box-shadow: inset 0 0 40px rgba(34, 211, 238, 0.04);
+}
+
+body.cyber-universe .admin-tab-btn {
+    background: rgba(8, 15, 35, 0.8) !important;
+    border: 1px solid rgba(34, 211, 238, 0.25) !important;
+    color: #94a3b8 !important;
+    border-radius: 10px !important;
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.04em;
+    transition: all 0.25s ease;
+}
+
+body.cyber-universe .admin-tab-btn.active {
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(168, 85, 247, 0.2)) !important;
+    border-color: var(--cyber-cyan) !important;
+    color: var(--cyber-cyan) !important;
+    box-shadow: 0 0 16px rgba(34, 211, 238, 0.3);
+}
+
+body.cyber-universe #admin-content input,
+body.cyber-universe #admin-content select,
+body.cyber-universe #admin-content textarea {
+    background: rgba(3, 10, 28, 0.9) !important;
+    border: 1px solid rgba(34, 211, 238, 0.3) !important;
+    color: #e2e8f0 !important;
+    border-radius: 10px !important;
+}
+
+body.cyber-universe #admin-content input:focus,
+body.cyber-universe #admin-content select:focus {
+    outline: none;
+    border-color: var(--cyber-magenta) !important;
+    box-shadow: 0 0 12px rgba(236, 72, 153, 0.35);
+}
+
+body.cyber-universe #admin-dashboard > div,
+body.cyber-universe #admin-content .glass-card {
+    border-left: 3px solid var(--cyber-cyan) !important;
+}
+
+/* ─── Buttons & inputs global cyber ─── */
+body.cyber-universe .btn-primary {
+    background: linear-gradient(135deg, #0891b2, #7c3aed) !important;
+    border: 1px solid rgba(34, 211, 238, 0.4) !important;
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.25) !important;
+    color: #fff !important;
+}
+
+body.cyber-universe .btn-ghost {
+    background: rgba(8, 15, 35, 0.6) !important;
+    border: 1px solid rgba(148, 163, 184, 0.25) !important;
+    color: #cbd5e1 !important;
+}
+
+body.cyber-universe .input-modern,
+body.cyber-universe input[type="email"],
+body.cyber-universe input[type="password"],
+body.cyber-universe input[type="number"],
+body.cyber-universe input[type="tel"],
+body.cyber-universe input[type="text"] {
+    background: rgba(3, 10, 28, 0.85) !important;
+    border-color: rgba(34, 211, 238, 0.25) !important;
+    color: #f1f5f9 !important;
+}
+
+body.cyber-universe .nav-btn.nav-active,
+body.cyber-universe .nav-pill.nav-active {
+    background: rgba(34, 211, 238, 0.15) !important;
+    color: var(--cyber-cyan) !important;
+    box-shadow: 0 0 12px rgba(34, 211, 238, 0.2);
+}
+
+body.cyber-universe .page-title {
+    color: #f8fafc !important;
+    text-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+}
+
+body.cyber-universe .site-header {
+    background: rgba(3, 7, 18, 0.75) !important;
+    border-bottom: 1px solid rgba(34, 211, 238, 0.15) !important;
+}
+
+body.cyber-universe .text-slate-500,
+body.cyber-universe .text-slate-600 { color: #94a3b8 !important; }
+body.cyber-universe .text-slate-800 { color: #e2e8f0 !important; }
+
+/* Tilt glow vars */
+body.cyber-universe .cyber-tilt-target {
+    --cyber-mx: 50%;
+    --cyber-my: 50%;
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    #webgl-canvas { display: none !important; }
+    body.cyber-universe .cyber-hologram-panel::before { animation: none; }
+}
