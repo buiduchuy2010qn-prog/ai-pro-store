@@ -224,6 +224,7 @@ IMAGE_PAYLOAD_KEYS = MEDIA_PAYLOAD_KEYS
 MAX_IMAGE_STRING_LEN = 800_000
 MAX_VIDEO_STRING_LEN = 12_000_000
 SOCIAL_POST_MAX_BODY = 14_000_000
+SOCIAL_VIDEO_UPLOAD_MAX_BODY = 10 * 1024 * 1024
 
 
 def scan_payload(obj, depth=0, parent_key=None):
@@ -269,6 +270,10 @@ def validate_request_body(req):
     max_bytes = SECURITY['max_body_bytes']
     if req.path == '/api/social/posts' and req.method == 'POST':
         max_bytes = max(max_bytes, SOCIAL_POST_MAX_BODY)
+    if req.path == '/api/social/posts/video' and req.method == 'POST':
+        max_bytes = max(max_bytes, SOCIAL_VIDEO_UPLOAD_MAX_BODY)
+        if not req.is_json:
+            return
     if cl > max_bytes:
         raise ValueError('Payload quá lớn.')
     if req.is_json:
@@ -513,6 +518,26 @@ def create_step_up_token(uid, email, fingerprint, ip):
         'exp': int(time.time()) + SECURITY['step_up_ttl_sec'],
     }
     return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
+
+
+def sign_media_token(user_id, post_id, hours=6):
+    payload = {
+        'type': 'social_media',
+        'userId': int(user_id),
+        'postId': int(post_id),
+        'iat': int(time.time()),
+        'exp': int(time.time()) + hours * 3600,
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
+
+
+def verify_media_token(token, post_id=None):
+    payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+    if payload.get('type') != 'social_media':
+        raise ValueError('Token media không hợp lệ.')
+    if post_id is not None and int(payload.get('postId', 0)) != int(post_id):
+        raise ValueError('Token media không khớp bài đăng.')
+    return payload
 
 
 def verify_step_up_token(token, uid, fingerprint, ip):

@@ -2362,6 +2362,78 @@ def _valid_social_media(data):
     return False
 
 
+MAX_SOCIAL_VIDEO_BYTES = 8 * 1024 * 1024
+
+
+def _social_can_view_post(conn, viewer_id, post_user_id):
+    if viewer_id == post_user_id:
+        return True
+    return post_user_id in _friend_ids(conn, viewer_id)
+
+
+def _social_drive_file_id(row):
+    fid = (row.get('drive_file_id') or '').strip()
+    if fid:
+        return fid
+    return drive.parse_drive_reference(row.get('image_data') or '')
+
+
+def _social_post_payload(row, viewer_id, conn):
+    media_type = row.get('media_type') or _social_media_type(row.get('image_data')) or 'image'
+    image_data = row.get('image_data') or ''
+    drive_file_id = _social_drive_file_id(row)
+    payload = {
+        'id': row['id'],
+        'userId': row['user_id'],
+        'caption': row.get('caption') or '',
+        'imageData': '',
+        'mediaUrl': '',
+        'mediaBytes': 0,
+        'mediaType': media_type,
+        'createdAt': format_dt_vn(row['created_at']),
+        'author': {'id': row['user_id'], 'fullName': row['name'], 'email': row['email']},
+        'isMine': row['user_id'] == viewer_id,
+        'driveStored': False,
+    }
+    if media_type == 'video' and drive_file_id:
+        token = sec.sign_media_token(viewer_id, row['id'])
+        payload['mediaUrl'] = f'/api/social/media/{row["id"]}?t={token}'
+        payload['driveStored'] = True
+        meta = drive.get_file_metadata(drive_file_id, conn)
+        if meta:
+            payload['mediaBytes'] = int(meta.get('size') or 0)
+    elif media_type == 'video' and image_data.startswith('data:video/'):
+        payload['imageData'] = image_data
+        payload['mediaBytes'] = max(0, int(len(image_data) * 0.75) - 100)
+    else:
+        payload['imageData'] = image_data
+        if image_data.startswith('data:image/'):
+            payload['mediaBytes'] = max(0, int(len(image_data) * 0.75) - 100)
+    return payload
+
+
+def _create_drive_video_post(conn, user, caption, raw, mime, ext):
+    if not drive.is_configured(conn):
+        return None, 'Đăng video cần Google Drive admin đã kết nối — liên hệ admin.'
+    if len(raw) > MAX_SOCIAL_VIDEO_BYTES:
+        return None, 'Video quá lớn (tối đa ~8MB). Quay ngắn hơn.'
+    pid = db.insert_returning_id(conn,
+        'INSERT INTO social_posts (user_id, caption, image_data, media_type) VALUES (?, ?, ?, ?)',
+        (user['id'], caption, 'drive:pending', 'video'))
+    drive_file_id, drive_error = drive.upload_media_bytes(
+        raw, mime, ext, user['email'], pid, caption=caption, conn=conn, is_video=True)
+    if not drive_file_id:
+        db.execute(conn, 'DELETE FROM social_posts WHERE id = ?', (pid,))
+        db.commit(conn)
+        return None, drive_error or 'Không tải video lên Drive được.'
+    stored = drive.drive_ref(drive_file_id)
+    db.execute(conn,
+        'UPDATE social_posts SET image_data = ?, drive_file_id = ? WHERE id = ?',
+        (stored, drive_file_id, pid))
+    db.commit(conn)
+    return pid, None
+
+
 def _social_user_brief(row):
     return {'id': row['id'], 'fullName': row['name'], 'email': row['email']}
 
@@ -2395,25 +2467,16 @@ def social_feed():
     visible = [uid] + list(_friend_ids(conn, uid))
     placeholders = ','.join(['?'] * len(visible))
     rows = db.fetchall(conn, f'''
-        SELECT p.id, p.user_id, p.caption, p.image_data, p.media_type, p.created_at,
-               u.name, u.email
+        SELECT p.id, p.user_id, p.caption, p.image_data, p.media_type, p.drive_file_id,
+               p.created_at, u.name, u.email
         FROM social_posts p
         JOIN users u ON u.id = p.user_id
         WHERE p.user_id IN ({placeholders})
         ORDER BY p.created_at DESC
         LIMIT 50
     ''', tuple(visible))
+    posts = [_social_post_payload(r, uid, conn) for r in rows]
     db.close(conn)
-    posts = [{
-        'id': r['id'],
-        'userId': r['user_id'],
-        'caption': r['caption'] or '',
-        'imageData': r['image_data'],
-        'mediaType': r.get('media_type') or _social_media_type(r['image_data']) or 'image',
-        'createdAt': format_dt_vn(r['created_at']),
-        'author': {'id': r['user_id'], 'fullName': r['name'], 'email': r['email']},
-        'isMine': r['user_id'] == uid,
-    } for r in rows]
     return jsonify({'posts': posts})
 
 
@@ -2527,6 +2590,98 @@ def social_drive_disconnect():
     return jsonify({'ok': True})
 
 
+@app.route('/api/social/posts/video', methods=['POST'])
+@auth_required
+def social_create_video_post():
+    """Đăng video — lưu trên Google Drive, không nhét base64 vào DB."""
+    video = request.files.get('video')
+    if not video:
+        return jsonify({'error': 'Thiếu file video.'}), 400
+    if (video.content_length or 0) > MAX_SOCIAL_VIDEO_BYTES:
+        return jsonify({'error': 'Video quá lớn (tối đa ~8MB). Quay ngắn hơn.'}), 400
+    caption = sec.sanitize_string(request.form.get('caption', ''), max_len=500)
+    mime = (video.mimetype or 'video/webm').lower()
+    if not mime.startswith('video/'):
+        return jsonify({'error': 'File không phải video hợp lệ.'}), 400
+    ext = 'webm' if 'webm' in mime else 'mp4'
+    raw = video.read()
+    if not raw:
+        return jsonify({'error': 'File video rỗng.'}), 400
+    if len(raw) > MAX_SOCIAL_VIDEO_BYTES:
+        return jsonify({'error': 'Video quá lớn (tối đa ~8MB). Quay ngắn hơn.'}), 400
+    conn = db.get_conn()
+    try:
+        pid, err = _create_drive_video_post(conn, request.user, caption, raw, mime, ext)
+        if err:
+            return jsonify({'error': err}), 400
+        token = sec.sign_media_token(request.user['id'], pid)
+        return jsonify({
+            'ok': True,
+            'postId': pid,
+            'driveSynced': True,
+            'mediaUrl': f'/api/social/media/{pid}?t={token}',
+        }), 201
+    finally:
+        db.close(conn)
+
+
+@app.route('/api/social/media/<int:pid>')
+def social_stream_media(pid):
+    """Phát video từ Drive cho bạn bè (token ngắn hạn trên URL)."""
+    token = (request.args.get('t') or '').strip()
+    if not token:
+        return jsonify({'error': 'Thiếu quyền xem video.'}), 401
+    try:
+        payload = sec.verify_media_token(token, post_id=pid)
+        viewer_id = int(payload['userId'])
+    except Exception:
+        return jsonify({'error': 'Link video hết hạn hoặc không hợp lệ.'}), 403
+
+    conn = db.get_conn()
+    row = db.fetchone(conn, '''
+        SELECT p.id, p.user_id, p.image_data, p.media_type, p.drive_file_id
+        FROM social_posts p WHERE p.id = ?
+    ''', (pid,))
+    if not row:
+        db.close(conn)
+        return jsonify({'error': 'Bài đăng không tồn tại.'}), 404
+    if not _social_can_view_post(conn, viewer_id, row['user_id']):
+        db.close(conn)
+        return jsonify({'error': 'Bạn không có quyền xem video này.'}), 403
+
+    media_type = row.get('media_type') or _social_media_type(row.get('image_data')) or 'image'
+    if media_type != 'video':
+        db.close(conn)
+        return jsonify({'error': 'Bài đăng không phải video.'}), 400
+
+    drive_file_id = _social_drive_file_id(row)
+    if not drive_file_id:
+        image_data = row.get('image_data') or ''
+        if image_data.startswith('data:video/'):
+            parsed = drive._parse_media_b64(image_data)
+            db.close(conn)
+            if not parsed:
+                return jsonify({'error': 'Video không hợp lệ.'}), 400
+            raw, mime, _ext = parsed
+            from flask import Response
+            return Response(raw, mimetype=mime)
+        db.close(conn)
+        return jsonify({'error': 'Video chưa có trên Drive.'}), 404
+
+    meta = drive.get_file_metadata(drive_file_id, conn) or {}
+    db.close(conn)
+    mime = meta.get('mimeType') or 'video/webm'
+    size = int(meta.get('size') or 0)
+
+    from flask import Response
+    resp = Response(drive.iter_file_chunks(drive_file_id), mimetype=mime)
+    if size > 0:
+        resp.headers['Content-Length'] = str(size)
+    resp.headers['Accept-Ranges'] = 'bytes'
+    resp.headers['Cache-Control'] = 'private, max-age=300'
+    return resp
+
+
 @app.route('/api/social/posts', methods=['POST'])
 @auth_required
 def social_create_post():
@@ -2534,29 +2689,49 @@ def social_create_post():
     caption = sec.sanitize_string(d.get('caption', ''), max_len=500)
     media = d.get('imageData') or d.get('image_data') or d.get('videoData') or d.get('video_data') or ''
     media_type = _social_media_type(media)
-    if not _valid_social_media(media):
-        return jsonify({'error': 'Ảnh/video không hợp lệ hoặc quá lớn (ảnh ~500KB, video ~20 giây).'}), 400
+    if not media_type:
+        return jsonify({'error': 'Ảnh/video không hợp lệ.'}), 400
+
     conn = db.get_conn()
-    pid = db.insert_returning_id(conn,
-        'INSERT INTO social_posts (user_id, caption, image_data, media_type) VALUES (?, ?, ?, ?)',
-        (request.user['id'], caption, media, media_type))
-    drive_file_id = None
-    drive_error = None
-    # Tự động sao lưu lên Drive admin (quản lý ảnh mọi người)
-    if drive.is_configured(conn):
-        drive_file_id, drive_error = drive.upload_post_image(
-            media, request.user['email'], pid, caption, conn=conn, media_type=media_type)
+    try:
+        if media_type == 'video':
+            parsed = drive._parse_media_b64(media)
+            if not parsed:
+                return jsonify({'error': 'Video không hợp lệ.'}), 400
+            raw, mime, ext = parsed
+            pid, err = _create_drive_video_post(conn, request.user, caption, raw, mime, ext)
+            if err:
+                return jsonify({'error': err}), 400
+            token = sec.sign_media_token(request.user['id'], pid)
+            return jsonify({
+                'ok': True,
+                'postId': pid,
+                'driveSynced': True,
+                'mediaUrl': f'/api/social/media/{pid}?t={token}',
+            }), 201
+
+        if not _valid_social_media(media):
+            return jsonify({'error': 'Ảnh không hợp lệ hoặc quá lớn (~500KB).'}), 400
+        pid = db.insert_returning_id(conn,
+            'INSERT INTO social_posts (user_id, caption, image_data, media_type) VALUES (?, ?, ?, ?)',
+            (request.user['id'], caption, media, media_type))
+        drive_file_id = None
+        drive_error = None
+        if drive.is_configured(conn):
+            drive_file_id, drive_error = drive.upload_post_image(
+                media, request.user['email'], pid, caption, conn=conn, media_type=media_type)
+            if drive_file_id:
+                db.execute(conn, 'UPDATE social_posts SET drive_file_id = ? WHERE id = ?',
+                           (drive_file_id, pid))
+        db.commit(conn)
+        resp = {'ok': True, 'postId': pid, 'driveSynced': bool(drive_file_id)}
         if drive_file_id:
-            db.execute(conn, 'UPDATE social_posts SET drive_file_id = ? WHERE id = ?',
-                       (drive_file_id, pid))
-    db.commit(conn)
-    db.close(conn)
-    resp = {'ok': True, 'postId': pid, 'driveSynced': bool(drive_file_id)}
-    if drive_file_id:
-        resp['driveFileId'] = drive_file_id
-    if drive_error:
-        resp['driveWarning'] = drive_error
-    return jsonify(resp), 201
+            resp['driveFileId'] = drive_file_id
+        if drive_error:
+            resp['driveWarning'] = drive_error
+        return jsonify(resp), 201
+    finally:
+        db.close(conn)
 
 
 @app.route('/api/social/posts/<int:pid>', methods=['DELETE'])

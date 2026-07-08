@@ -130,13 +130,42 @@
         else setMediaInfo([sizePart], true);
     }
 
-    function renderPostMediaMeta(imageData, mediaType) {
+    function renderPostMediaMeta(post) {
+        const imageData = post?.imageData || '';
+        const mediaType = post?.mediaType || 'image';
         const isVid = mediaType === 'video' || String(imageData).startsWith('data:video/');
-        const size = formatFileSize(estimateDataUrlBytes(imageData));
+        const bytes = post?.mediaBytes || estimateDataUrlBytes(imageData);
+        const size = formatFileSize(bytes);
         const sizeHtml = '<span><i class="fas fa-database"></i> ' + esc(size) + '</span>';
         if (!isVid) return '<div class="social-post-media-meta">' + sizeHtml + '</div>';
         return '<div class="social-post-media-meta" data-post-media-meta="video">' + sizeHtml
             + '<span class="social-post-dur" data-post-dur><i class="fas fa-clock"></i> …</span></div>';
+    }
+
+    function dataUrlToBlob(dataUrl) {
+        const parts = String(dataUrl).split(',');
+        const mime = (parts[0].match(/:(.*?);/) || [])[1] || 'application/octet-stream';
+        const bin = atob(parts[1] || '');
+        const arr = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        return new Blob([arr], { type: mime });
+    }
+
+    async function uploadVideoPost(blob, caption) {
+        const form = new FormData();
+        const ext = (blob.type || '').includes('mp4') ? 'mp4' : 'webm';
+        form.append('video', blob, `shop-video-${Date.now()}.${ext}`);
+        form.append('caption', caption || '');
+        const secHeaders = window.SecurityClient
+            ? await window.SecurityClient.secureHeaders()
+            : {};
+        const headers = { ...secHeaders };
+        const token = localStorage.getItem('auth_token');
+        if (token) headers.Authorization = 'Bearer ' + token;
+        const res = await fetch('/api/social/posts/video', { method: 'POST', headers, body: form });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Không đăng được video');
+        return data;
     }
 
     function bindFeedMediaMeta(root) {
@@ -372,10 +401,14 @@
 
     function updateComposerStatusText() {
         if (composerMode === 'video') {
+            if (!driveAdminBackup) {
+                setComposerStatus('Đăng video cần admin kết nối Google Drive — video sẽ lưu trên Drive, không vào bộ nhớ web', 'err');
+                return;
+            }
             setComposerStatus(
                 cameraStream
                     ? (mediaRecorder?.state === 'recording' ? 'Đang quay... bấm nút đỏ để dừng' : 'Bấm nút tròn để bắt đầu quay (tối đa 20 giây)')
-                    : 'Quay video gửi cho bạn bè — bấm nút tròn',
+                    : 'Quay video — lưu trên Google Drive, bấm nút tròn',
                 mediaRecorder?.state === 'recording' ? 'recording' : ''
             );
         } else {
@@ -628,13 +661,16 @@
             return;
         }
         const isVid = isVideoMedia();
-        const maxLen = isVid ? MAX_VIDEO_CHARS : MAX_IMAGE_CHARS;
-        if (pendingImage.length > maxLen) {
-            window.toast?.(isVid ? 'Video quá lớn — quay ngắn hơn' : 'Ảnh quá lớn — chụp lại', true);
+        if (isVid && !driveAdminBackup) {
+            window.toast?.('Đăng video cần Google Drive admin đã kết nối — liên hệ admin.', true, 6000);
+            return;
+        }
+        if (!isVid && pendingImage.length > MAX_IMAGE_CHARS) {
+            window.toast?.('Ảnh quá lớn — chụp lại', true);
             return;
         }
         const confirmMsg = isVid
-            ? 'Đăng video này lên bảng tin?\nBạn bè đã kết bạn sẽ xem được.'
+            ? 'Đăng video này lên bảng tin?\nVideo lưu trên Google Drive — bạn bè đã kết bạn sẽ xem được.'
             : 'Đăng ảnh này lên bảng tin?\nBạn bè đã kết bạn sẽ xem được.';
         if (!confirm(confirmMsg)) return;
         const caption = document.getElementById('social-caption')?.value.trim() || '';
@@ -642,17 +678,22 @@
         const btn = document.getElementById('social-post-btn');
         if (btn) btn.disabled = true;
         try {
-            const res = await socialApi('/social/posts', {
-                method: 'POST',
-                body: JSON.stringify({ caption, imageData: imageToPost }),
-            });
+            setComposerStatus(isVid ? 'Đang tải video lên Drive...' : 'Đang đăng ảnh...');
+            const res = isVid
+                ? await uploadVideoPost(dataUrlToBlob(imageToPost), caption)
+                : await socialApi('/social/posts', {
+                    method: 'POST',
+                    body: JSON.stringify({ caption, imageData: imageToPost }),
+                });
             if (shouldSaveWhen('post')) {
                 saveImageToDevice(imageToPost, 'dang');
             }
             document.getElementById('social-caption').value = '';
             clearPreview();
             const posted = isVid ? 'video' : 'ảnh';
-            if (res.driveSynced) {
+            if (isVid && res.driveSynced) {
+                window.toast?.('Đã đăng video — lưu trên Google Drive!');
+            } else if (res.driveSynced) {
                 window.toast?.('Đã đăng ' + posted + ' — admin đã sao lưu lên Drive!');
             } else if (res.driveWarning && driveAdminBackup) {
                 window.toast?.('Đã đăng ' + posted + ' nhưng Drive: ' + res.driveWarning, true, 5000);
@@ -696,6 +737,11 @@
         el.innerHTML = posts.map(p => {
             const name = p.author?.fullName || p.author?.email || 'Người dùng';
             const initial = name.charAt(0).toUpperCase();
+            const isVid = p.mediaType === 'video' || String(p.imageData).startsWith('data:video/') || !!p.mediaUrl;
+            const mediaSrc = p.mediaUrl || p.imageData || '';
+            const driveBadge = p.driveStored
+                ? '<span class="social-drive-badge" title="Video lưu trên Google Drive"><i class="fab fa-google-drive"></i> Drive</span>'
+                : '';
             return `
             <article class="social-post-card" data-post-id="${p.id}">
                 <div class="social-post-header">
@@ -705,15 +751,16 @@
                         <div class="social-post-time">${esc(fmtTime(p.createdAt))}</div>
                     </div>
                     <div class="social-post-actions">
-                        <button type="button" class="social-save-post-btn" data-save-post="${p.id}" title="Lưu ảnh vào máy"><i class="fas fa-download"></i></button>
+                        ${driveBadge}
+                        <button type="button" class="social-save-post-btn" data-save-post="${p.id}" title="Lưu vào máy"><i class="fas fa-download"></i></button>
                         ${p.isMine ? `<button type="button" class="social-delete-btn" data-delete-post="${p.id}" title="Hủy đăng"><i class="fas fa-times-circle mr-1"></i>Hủy đăng</button>` : ''}
                     </div>
                 </div>
                 ${p.caption ? `<p class="social-post-caption">${esc(p.caption)}</p>` : ''}
-                ${(p.mediaType === 'video' || String(p.imageData).startsWith('data:video/'))
-                    ? `<video src="${p.imageData}" class="social-post-video" controls playsinline preload="metadata"></video>`
-                    : `<img src="${p.imageData}" class="social-post-img" data-lightbox="1" alt="Ảnh bài đăng">`}
-                ${renderPostMediaMeta(p.imageData, p.mediaType)}
+                ${isVid
+                    ? `<video src="${esc(mediaSrc)}" class="social-post-video" controls playsinline preload="metadata"></video>`
+                    : `<img src="${esc(mediaSrc)}" class="social-post-img" data-lightbox="1" alt="Ảnh bài đăng">`}
+                ${renderPostMediaMeta(p)}
             </article>`;
         }).join('');
 
@@ -1184,6 +1231,7 @@
         const isAdmin = window.currentUser?.role === 'admin';
         if (hint) hint.classList.toggle('hidden', !isAdmin || driveAdminBackup);
         if (info) info.classList.toggle('hidden', !isAdmin || !driveAdminBackup);
+        updateComposerStatusText();
     }
 
     function toggleHistoryPanel() {

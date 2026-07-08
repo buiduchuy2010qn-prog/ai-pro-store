@@ -21,6 +21,7 @@ DRIVE_OAUTH_KEYS = ('drive_oauth_client_id', 'drive_oauth_client_secret')
 DRIVE_FOLDER_SETTING = 'drive_backup_folder_id'
 DRIVE_FOLDER_NAME_KEY = 'drive_backup_folder_name'
 DEFAULT_FOLDER_NAME = 'Shop Đức Hi - Ảnh MXH'
+DRIVE_REF_PREFIX = 'drive:'
 
 
 def _cfg():
@@ -493,6 +494,13 @@ def sync_posts_without_drive(conn=None, limit=100):
     synced = 0
     errors = 0
     for r in rows:
+        if is_drive_reference(r['image_data']):
+            fid = parse_drive_reference(r['image_data'])
+            if fid:
+                from database import execute
+                execute(conn, 'UPDATE social_posts SET drive_file_id = ? WHERE id = ?', (fid, r['id']))
+                synced += 1
+            continue
         fid, err = upload_post_image(
             r['image_data'], r['email'], r['id'], r.get('caption') or '', conn=conn)
         if fid:
@@ -594,11 +602,30 @@ def _parse_image_b64(image_data_url):
     return parsed
 
 
-def upload_post_image(image_data_url, user_email, post_id, caption='', conn=None, media_type=None):
-    """
-    Upload ảnh bài đăng vào Drive (ưu tiên OAuth admin, fallback Service Account).
-    Trả về (file_id, error_message).
-    """
+def is_drive_reference(data):
+    return isinstance(data, str) and data.startswith(DRIVE_REF_PREFIX)
+
+
+def drive_ref(file_id):
+    return f'{DRIVE_REF_PREFIX}{file_id}'
+
+
+def parse_drive_reference(data):
+    if not is_drive_reference(data):
+        return None
+    fid = data[len(DRIVE_REF_PREFIX):].strip()
+    return fid or None
+
+
+def _get_admin_drive_service(conn):
+    creds, _method = _resolve_upload_credentials(conn)
+    if not creds:
+        return None
+    return _build_drive_service(creds)
+
+
+def upload_media_bytes(raw, mime, ext, user_email, post_id, caption='', conn=None, is_video=False):
+    """Upload bytes lên Drive. Trả về (file_id, error_message)."""
     own_conn = conn is None
     if own_conn:
         from database import get_conn
@@ -609,15 +636,6 @@ def upload_post_image(image_data_url, user_email, post_id, caption='', conn=None
             from database import close
             close(conn)
         return None, 'Google Drive chưa được kết nối — admin cần liên kết tài khoản Google'
-
-    parsed = _parse_media_b64(image_data_url)
-    if not parsed:
-        if own_conn:
-            from database import close
-            close(conn)
-        return None, 'Media không hợp lệ để đồng bộ Drive'
-    raw, mime, ext = parsed
-    is_video = (media_type == 'video') or mime.startswith('video/')
 
     creds, method = _resolve_upload_credentials(conn)
     if not creds:
@@ -650,7 +668,7 @@ def upload_post_image(image_data_url, user_email, post_id, caption='', conn=None
         created = service.files().create(
             body=meta,
             media_body=media,
-            fields='id,webViewLink',
+            fields='id,webViewLink,size,mimeType',
         ).execute()
         print(f'[Drive] uploaded post={post_id} via {method} -> {folder_name} file={created.get("id")}')
         if own_conn:
@@ -663,3 +681,94 @@ def upload_post_image(image_data_url, user_email, post_id, caption='', conn=None
             from database import close
             close(conn)
         return None, 'Không upload được lên Drive — kiểm tra quyền thư mục hoặc kết nối lại Google'
+
+
+def upload_post_image(image_data_url, user_email, post_id, caption='', conn=None, media_type=None):
+    """
+    Upload ảnh/video bài đăng vào Drive (ưu tiên OAuth admin, fallback Service Account).
+    Trả về (file_id, error_message).
+    """
+    own_conn = conn is None
+    if own_conn:
+        from database import get_conn
+        conn = get_conn()
+
+    if is_drive_reference(image_data_url):
+        fid = parse_drive_reference(image_data_url)
+        if own_conn:
+            from database import close
+            close(conn)
+        return fid, None
+
+    parsed = _parse_media_b64(image_data_url)
+    if not parsed:
+        if own_conn:
+            from database import close
+            close(conn)
+        return None, 'Media không hợp lệ để đồng bộ Drive'
+    raw, mime, ext = parsed
+    is_video = (media_type == 'video') or mime.startswith('video/')
+    return upload_media_bytes(
+        raw, mime, ext, user_email, post_id, caption=caption, conn=conn, is_video=is_video)
+
+
+def get_file_metadata(file_id, conn=None):
+    own_conn = conn is None
+    if own_conn:
+        from database import get_conn
+        conn = get_conn()
+    service = _get_admin_drive_service(conn)
+    if not service:
+        if own_conn:
+            from database import close
+            close(conn)
+        return None
+    try:
+        meta = service.files().get(fileId=file_id, fields='id,size,mimeType,name').execute()
+        if own_conn:
+            from database import close
+            close(conn)
+        return meta
+    except Exception as e:
+        print(f'[Drive] metadata failed file={file_id}: {e}')
+        if own_conn:
+            from database import close
+            close(conn)
+        return None
+
+
+def iter_file_chunks(file_id, conn=None, chunk_size=262144):
+    """Stream nội dung file từ Drive theo từng chunk."""
+    own_conn = conn is None
+    if own_conn:
+        from database import get_conn
+        conn = get_conn()
+    service = _get_admin_drive_service(conn)
+    if not service:
+        if own_conn:
+            from database import close
+            close(conn)
+        return
+    try:
+        from googleapiclient.http import MediaIoBaseDownload
+    except ImportError:
+        if own_conn:
+            from database import close
+            close(conn)
+        return
+
+    request = service.files().get_media(fileId=file_id)
+    buffer = BytesIO()
+    downloader = MediaIoBaseDownload(buffer, request, chunksize=chunk_size)
+    done = False
+    while not done:
+        _, done = downloader.next_chunk()
+        buffer.seek(0)
+        data = buffer.read()
+        buffer.seek(0)
+        buffer.truncate(0)
+        if data:
+            yield data
+    if own_conn:
+        from database import close
+        close(conn)
