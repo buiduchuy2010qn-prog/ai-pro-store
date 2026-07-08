@@ -998,8 +998,18 @@ body.app-light .app-main {
 }
 
 #social-preview-video.social-locket-media {
-    object-fit: contain;
-    background: #0f172a;
+    object-fit: cover;
+    background: #e2e8f0;
+    z-index: 4;
+}
+
+.social-locket-frame.has-preview .social-locket-media,
+.social-locket-frame.is-video-preview .social-locket-media {
+    object-fit: cover;
+    background: #e2e8f0;
+}
+
+.social-locket-frame.has-preview #social-preview.social-locket-media {
     z-index: 4;
 }
 
@@ -1047,8 +1057,12 @@ body.app-light .app-main {
     display: none;
 }
 
-.social-locket-frame.has-preview .social-preview-play-btn:not(.hidden) {
-    display: flex;
+.social-locket-frame.has-preview .social-preview-play-btn {
+    display: none !important;
+}
+
+.social-locket-studio.is-post-view .social-media-info {
+    display: none !important;
 }
 
 .social-flip-camera-btn {

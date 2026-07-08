@@ -183,6 +183,7 @@
     function setupPreviewVideoElement(vid, playUrl, blob, posterUrl) {
         if (!vid || !playUrl) return;
         hideDriveEmbedPreview();
+        document.getElementById('social-preview')?.classList.add('hidden');
         const frame = document.querySelector('.social-locket-frame');
         frame?.classList.add('is-video-preview');
         bindPreviewPlayButton();
@@ -202,13 +203,14 @@
         vid.src = isStream ? playUrl + (playUrl.includes('?') ? '&' : '?') + '_=' + Date.now() : playUrl;
         vid.muted = true;
         vid.defaultMuted = true;
-        vid.controls = true;
+        vid.controls = false;
+        vid.loop = true;
         vid.setAttribute('playsinline', '');
         vid.setAttribute('webkit-playsinline', '');
         vid.playsInline = true;
         vid.preload = 'auto';
         vid.classList.remove('hidden');
-        showPreviewPlayBtn();
+        hidePreviewPlayBtn();
 
         const refreshMeta = () => {
             const dur = getVideoDurationSec(vid);
@@ -227,16 +229,19 @@
 
         vid.onloadedmetadata = refreshMeta;
         vid.onplaying = hidePreviewPlayBtn;
-        vid.onpause = () => {
-            if (vid.ended || vid.currentTime >= 0.15) showPreviewPlayBtn();
+        vid.oncanplay = () => {
+            vid.play().catch(() => showPreviewPlayBtn());
         };
-        vid.onended = showPreviewPlayBtn;
         vid.onerror = () => {
             showPreviewPlayBtn();
-            setComposerStatus('Không phát được — bấm ▶ hoặc thử Chụp lại', 'err');
+            setComposerStatus('Không phát được video — thử Chụp lại', 'err');
         };
         refreshMeta();
         vid.load();
+        waitVideoCanPlay(vid, 12000).then(() => {
+            hidePreviewPlayBtn();
+            return vid.play();
+        }).catch(() => showPreviewPlayBtn());
     }
 
     function captureCameraPoster() {
@@ -451,18 +456,21 @@
         bindPreviewPlayButton();
         const vid = document.getElementById('social-preview-video');
         const preview = document.getElementById('social-preview');
-        preview?.classList.add('hidden');
         document.getElementById('social-preview-placeholder')?.classList.add('hidden');
+        hidePreviewPlayBtn();
         if (vid) {
             vid.pause();
             vid.onerror = null;
             vid.removeAttribute('src');
             vid.load();
-            if (poster) vid.poster = poster;
-            else vid.removeAttribute('poster');
-            vid.classList.remove('hidden');
+            vid.classList.add('hidden');
         }
-        showPreviewPlayBtn();
+        if (preview && poster) {
+            preview.src = poster;
+            preview.classList.remove('hidden');
+        } else if (preview) {
+            preview.classList.add('hidden');
+        }
         if (blob) {
             const durPart = lastRecordDurationSec > 0
                 ? '<span><i class="fas fa-clock"></i> ' + formatDurationLabel(lastRecordDurationSec) + '</span>'
@@ -505,8 +513,9 @@
                 pendingPreviewMime = data.mimeType || 'video/mp4';
                 const vid = document.getElementById('social-preview-video');
                 if (vid && pendingDriveStreamUrl) {
+                    const previewImg = document.getElementById('social-preview');
+                    previewImg?.classList.add('hidden');
                     setupPreviewVideoElement(vid, pendingDriveStreamUrl, blob, poster);
-                    playPreviewVideo().catch(() => showPreviewPlayBtn());
                 }
                 setComposerStatus('Bấm ▶ để xem lại — Đăng hoặc Hủy', 'ok');
                 window.toast?.('Sẵn sàng — bấm ▶ để xem lại', false, 2500);
