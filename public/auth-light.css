@@ -997,20 +997,42 @@ body.app-light .app-main {
     font-weight: 600;
 }
 
-#social-preview-video.social-locket-media {
-    object-fit: cover;
-    background: #e2e8f0;
+#social-preview-video.social-locket-media,
+.social-locket-frame.has-preview #social-preview-video,
+.social-locket-frame.is-video-preview #social-preview-video {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none;
+    max-height: none;
+    object-fit: cover !important;
+    object-position: center center;
+    background: #e2e8f0 !important;
+    z-index: 5;
+}
+
+.social-locket-frame.has-preview #social-preview,
+.social-locket-frame.is-video-preview #social-preview {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center center;
+    background: #e2e8f0 !important;
     z-index: 4;
 }
 
 .social-locket-frame.has-preview .social-locket-media,
 .social-locket-frame.is-video-preview .social-locket-media {
-    object-fit: cover;
-    background: #e2e8f0;
+    object-fit: cover !important;
+    background: #e2e8f0 !important;
 }
 
-.social-locket-frame.has-preview #social-preview.social-locket-media {
-    z-index: 4;
+.social-locket-frame.has-preview,
+.social-locket-frame.is-video-preview {
+    background: #e2e8f0 !important;
 }
 
 #social-preview-drive.social-preview-drive {

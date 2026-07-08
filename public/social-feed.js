@@ -76,7 +76,12 @@
 
     function setPreviewPlayOverlay(visible) {
         const btn = document.getElementById('social-preview-play');
-        if (btn) btn.classList.toggle('hidden', !visible);
+        if (!btn) return;
+        if (pendingVideoBlob || pendingImage) {
+            btn.classList.add('hidden');
+            return;
+        }
+        btn.classList.toggle('hidden', !visible);
     }
 
     function hidePreviewPlayBtn() {
@@ -118,13 +123,10 @@
         if (!vid || vid.classList.contains('hidden')) return;
 
         if (!pendingDriveStreamUrl && driveUploadPromise) {
-            setComposerStatus('Đang xử lý video MP4 trên Drive...');
-            showPreviewPlayBtn();
             await driveUploadPromise.catch(() => null);
         }
-        if (!pendingDriveStreamUrl) {
-            window.toast?.('Video chưa sẵn sàng — đợi thêm vài giây rồi bấm ▶ lại', true, 3500);
-            showPreviewPlayBtn();
+        if (!pendingDriveStreamUrl && !previewObjectUrl) {
+            window.toast?.('Video chưa sẵn sàng — đợi thêm vài giây', true, 3500);
             return;
         }
         if (!/\/api\/social\/preview(-file)?\//.test(String(vid.src || ''))) {
@@ -180,10 +182,29 @@
         document.querySelector('.social-locket-frame')?.classList.remove('is-drive-embed');
     }
 
+    function setPreviewCoverImage(posterUrl) {
+        const previewImg = document.getElementById('social-preview');
+        if (!previewImg || !posterUrl) return;
+        previewImg.src = posterUrl;
+        previewImg.classList.remove('hidden');
+    }
+
+    function captureVideoFrameToPoster(vid) {
+        if (!vid?.videoWidth) return null;
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = vid.videoWidth;
+            canvas.height = vid.videoHeight;
+            canvas.getContext('2d').drawImage(vid, 0, 0);
+            return canvas.toDataURL('image/jpeg', 0.88);
+        } catch (_) {
+            return null;
+        }
+    }
+
     function setupPreviewVideoElement(vid, playUrl, blob, posterUrl) {
         if (!vid || !playUrl) return;
         hideDriveEmbedPreview();
-        document.getElementById('social-preview')?.classList.add('hidden');
         const frame = document.querySelector('.social-locket-frame');
         frame?.classList.add('is-video-preview');
         bindPreviewPlayButton();
@@ -197,13 +218,15 @@
         vid.onended = null;
         vid.onerror = null;
 
-        if (posterUrl) vid.poster = posterUrl;
-        else vid.removeAttribute('poster');
+        vid.removeAttribute('poster');
+        vid.removeAttribute('controls');
+        vid.controls = false;
+        if (posterUrl) setPreviewCoverImage(posterUrl);
+
         const isStream = String(playUrl).startsWith('/api/social/preview');
         vid.src = isStream ? playUrl + (playUrl.includes('?') ? '&' : '?') + '_=' + Date.now() : playUrl;
         vid.muted = true;
         vid.defaultMuted = true;
-        vid.controls = false;
         vid.loop = true;
         vid.setAttribute('playsinline', '');
         vid.setAttribute('webkit-playsinline', '');
@@ -228,20 +251,26 @@
         };
 
         vid.onloadedmetadata = refreshMeta;
-        vid.onplaying = hidePreviewPlayBtn;
-        vid.oncanplay = () => {
-            vid.play().catch(() => showPreviewPlayBtn());
+        vid.onloadeddata = () => {
+            if (!posterUrl) {
+                const frameUrl = captureVideoFrameToPoster(vid);
+                if (frameUrl) setPreviewCoverImage(frameUrl);
+            }
+        };
+        vid.onplaying = () => {
+            hidePreviewPlayBtn();
+            document.getElementById('social-preview')?.classList.add('hidden');
         };
         vid.onerror = () => {
-            showPreviewPlayBtn();
-            setComposerStatus('Không phát được video — thử Chụp lại', 'err');
+            vid.classList.add('hidden');
+            hidePreviewPlayBtn();
         };
         refreshMeta();
         vid.load();
-        waitVideoCanPlay(vid, 12000).then(() => {
+        waitVideoCanPlay(vid, 15000).then(() => vid.play()).catch(() => {
+            vid.classList.add('hidden');
             hidePreviewPlayBtn();
-            return vid.play();
-        }).catch(() => showPreviewPlayBtn());
+        });
     }
 
     function captureCameraPoster() {
@@ -465,12 +494,8 @@
             vid.load();
             vid.classList.add('hidden');
         }
-        if (preview && poster) {
-            preview.src = poster;
-            preview.classList.remove('hidden');
-        } else if (preview) {
-            preview.classList.add('hidden');
-        }
+        if (poster) setPreviewCoverImage(poster);
+        else preview?.classList.add('hidden');
         if (blob) {
             const durPart = lastRecordDurationSec > 0
                 ? '<span><i class="fas fa-clock"></i> ' + formatDurationLabel(lastRecordDurationSec) + '</span>'
@@ -859,6 +884,7 @@
         dotsRow?.classList.toggle('hidden', !showHistoryFeed || feedPostsCache.length <= 1);
 
         document.getElementById('social-post-row')?.classList.toggle('is-preview-active', isPreview);
+        document.getElementById('social-preview-play')?.classList.toggle('hidden', true);
 
         const studio = document.querySelector('.social-locket-studio');
         const unifiedCard = document.querySelector('.social-locket-unified');
@@ -1114,6 +1140,7 @@
         if (previewVid) {
             if (isVid) {
                 const playUrl = pendingDriveStreamUrl || previewObjectUrl || src;
+                if (previewPosterUrl) setPreviewCoverImage(previewPosterUrl);
                 setupPreviewVideoElement(previewVid, playUrl, pendingVideoBlob, previewPosterUrl);
             } else {
                 hidePreviewPlayBtn();
