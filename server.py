@@ -524,7 +524,7 @@ def register():
     token = _complete_login(user, conn, ip, ua, fingerprint)
     db.close(conn)
     sec.log_event('register', 'low', user_id=uid, ip=ip, details={'email': email})
-    return jsonify({'token': token, 'user': fmt_user(user)}), 201
+    return jsonify({'token': token, 'user': fmt_user(user), 'loginMeta': {'ip': ip}}), 201
 
 
 @app.route('/api/auth/login', methods=['POST'])
@@ -585,12 +585,12 @@ def login():
     try:
         token = _complete_login(user, conn, ip, ua, fingerprint)
         db.close(conn)
-        return jsonify({'token': token, 'user': fmt_user(user)})
+        return jsonify({'token': token, 'user': fmt_user(user), 'loginMeta': {'ip': ip}})
     except Exception as e:
         db.close(conn)
         print(f'[Login] error: {e}')
         token, _ = sec.sign_token(user['id'])
-        return jsonify({'token': token, 'user': fmt_user(user)})
+        return jsonify({'token': token, 'user': fmt_user(user), 'loginMeta': {'ip': ip}})
 
 
 @app.route('/api/auth/logout', methods=['POST'])
@@ -648,7 +648,10 @@ def me():
     conn = db.get_conn()
     user = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (request.user['id'],))
     db.close(conn)
-    return jsonify({'user': fmt_user(user)})
+    return jsonify({
+        'user': fmt_user(user),
+        'clientMeta': {'ip': sec.client_ip(request)},
+    })
 
 
 @app.route('/api/auth/forgot-password', methods=['POST'])

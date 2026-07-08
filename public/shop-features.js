@@ -77,22 +77,31 @@
         });
     }
 
-    /* ─── Fake device / IP cho lịch sử đăng nhập ─── */
+    /* ─── Thiết bị & IP thật cho lịch sử đăng nhập ─── */
 
-    const FAKE_DEVICES = [
-        'Windows 11 · Chrome',
-        'Windows 10 · Edge',
-        'macOS · Safari',
-        'Android · Chrome',
-        'iPhone · Safari',
-    ];
+    /** Nhận diện hệ điều hành + trình duyệt từ thiết bị đang dùng */
+    function getClientDevice() {
+        const ua = navigator.userAgent || '';
+        let os = 'Thiết bị khác';
+        if (/Windows NT 10/.test(ua)) os = 'Windows 10/11';
+        else if (/Windows/i.test(ua)) os = 'Windows';
+        else if (/Mac OS X|Macintosh/i.test(ua)) os = 'macOS';
+        else if (/Android/i.test(ua)) os = 'Android';
+        else if (/iPhone|iPad|iPod/i.test(ua)) os = 'iOS';
+        else if (/Linux/i.test(ua)) os = 'Linux';
 
-    function fakeDevice() {
-        return FAKE_DEVICES[Math.floor(Math.random() * FAKE_DEVICES.length)];
+        let browser = 'Trình duyệt';
+        if (/Edg\//i.test(ua)) browser = 'Edge';
+        else if (/OPR\/|Opera/i.test(ua)) browser = 'Opera';
+        else if (/Chrome\//i.test(ua) && !/Edg|OPR/i.test(ua)) browser = 'Chrome';
+        else if (/Firefox\//i.test(ua)) browser = 'Firefox';
+        else if (/Safari\//i.test(ua) && !/Chrome|Chromium/i.test(ua)) browser = 'Safari';
+
+        return `${os} · ${browser}`;
     }
 
-    function fakeIp() {
-        return `${100 + Math.floor(Math.random() * 155)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${1 + Math.floor(Math.random() * 254)}`;
+    function resolveLoginIp(meta) {
+        return meta?.ip || window._clientIp || 'Không xác định';
     }
 
     function formatDateTime(d) {
@@ -103,17 +112,25 @@
         });
     }
 
-    function recordLoginHistory(userId) {
+    function recordLoginHistory(userId, meta = {}) {
         if (!userId) return;
+        const ip = resolveLoginIp(meta);
+        window._clientIp = ip;
         const key = historyKey(userId);
         const history = readJson(key, []);
         history.unshift({
             time: new Date().toISOString(),
-            device: fakeDevice(),
-            ip: fakeIp(),
+            device: getClientDevice(),
+            ip,
             status: 'Thành công',
         });
         writeJson(key, history.slice(0, 50));
+    }
+
+    function getLastLoginIp(userId) {
+        const history = readJson(historyKey(userId), []);
+        if (history[0]?.ip) return history[0].ip;
+        return window._clientIp || 'Chưa có';
     }
 
     /* ─── Profile modal ─── */
@@ -157,6 +174,9 @@
         document.getElementById('profile-display-balance').textContent =
             typeof window.formatMoney === 'function' ? window.formatMoney(user.balance) : (user.balance + 'đ');
         document.getElementById('profile-display-joined').textContent = user.createdAt || '—';
+        document.getElementById('profile-display-device').textContent = getClientDevice();
+        document.getElementById('profile-display-ip').textContent =
+            window._clientIp || getLastLoginIp(user.id);
 
         document.getElementById('profile-edit-name').value = name;
         document.getElementById('profile-edit-phone').value = extra.phone || '';

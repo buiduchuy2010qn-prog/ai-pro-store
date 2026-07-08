@@ -599,6 +599,14 @@
                         <div class="profile-info-label">Số dư ví</div>
                         <div id="profile-display-balance" class="profile-info-value text-emerald-600">—</div>
                     </div>
+                    <div class="profile-info-item">
+                        <div class="profile-info-label">Thiết bị đăng nhập</div>
+                        <div id="profile-display-device" class="profile-info-value">—</div>
+                    </div>
+                    <div class="profile-info-item">
+                        <div class="profile-info-label">IP đăng nhập</div>
+                        <div id="profile-display-ip" class="profile-info-value font-mono text-sm">—</div>
+                    </div>
                     <div class="profile-info-item full">
                         <div class="profile-info-label">Ngày tham gia</div>
                         <div id="profile-display-joined" class="profile-info-value">—</div>
@@ -909,8 +917,9 @@ function showAuth() {
 }
 
 async function refreshUser() {
-    const { user } = await api('/auth/me');
-    setCurrentUser(user);
+    const data = await api('/auth/me');
+    setCurrentUser(data.user);
+    if (data.clientMeta?.ip) window._clientIp = data.clientMeta.ip;
     updateHeader();
 }
 
@@ -2055,7 +2064,8 @@ document.getElementById('login-form').onsubmit = async e => {
         });
         setToken(r.token);
         setCurrentUser(r.user);
-        ShopFeatures?.recordLoginHistory?.(currentUser.id);
+        if (r.loginMeta?.ip) window._clientIp = r.loginMeta.ip;
+        ShopFeatures?.recordLoginHistory?.(currentUser.id, r.loginMeta);
         errEl.classList.add('hidden');
         await showApp();
         toast('Đăng nhập thành công!');
@@ -2096,7 +2106,8 @@ document.getElementById('register-form').onsubmit = async e => {
         });
         setToken(r.token);
         setCurrentUser(r.user);
-        ShopFeatures?.recordLoginHistory?.(currentUser.id);
+        if (r.loginMeta?.ip) window._clientIp = r.loginMeta.ip;
+        ShopFeatures?.recordLoginHistory?.(currentUser.id, r.loginMeta);
         errEl.classList.add('hidden');
         await showApp();
         toast('Đăng ký thành công!');
