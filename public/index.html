@@ -413,18 +413,23 @@
                                 <img id="social-preview" class="social-locket-media hidden" alt="Ảnh chụp">
                                 <video id="social-preview-video" class="social-locket-media hidden" playsinline controls muted></video>
                                 <div id="social-preview-placeholder" class="social-locket-placeholder">
-                                    <i class="fas fa-camera"></i>
-                                    <span>Bấm nút tròn để chụp / quay</span>
+                                    <i id="social-placeholder-icon" class="fas fa-camera"></i>
+                                    <span id="social-placeholder-text">Chọn Ảnh hoặc Video bên dưới khung</span>
                                 </div>
+                                <div id="social-frame-mode-picker" class="social-frame-mode-picker">
+                                    <button type="button" id="social-mode-photo" class="social-frame-mode-btn is-active" data-mode="photo">
+                                        <i class="fas fa-camera"></i><span>Ảnh</span>
+                                    </button>
+                                    <button type="button" id="social-mode-video" class="social-frame-mode-btn" data-mode="video">
+                                        <i class="fas fa-video"></i><span>Video</span>
+                                    </button>
+                                </div>
+                                <div id="social-rec-badge" class="social-rec-badge hidden"><span class="social-rec-dot"></span> REC</div>
                                 <button type="button" id="social-flip-camera" class="social-flip-camera-btn hidden" title="Đổi camera trước / sau" aria-label="Đổi camera">
                                     <i class="fas fa-arrows-rotate"></i>
                                 </button>
                             </div>
-                            <p id="social-composer-status" class="social-composer-status">Chụp ảnh hoặc quay video gửi bạn bè</p>
-                            <div class="social-mode-toggle">
-                                <button type="button" id="social-mode-photo" class="social-mode-btn is-active"><i class="fas fa-camera mr-1"></i>Ảnh</button>
-                                <button type="button" id="social-mode-video" class="social-mode-btn"><i class="fas fa-video mr-1"></i>Video</button>
-                            </div>
+                            <p id="social-composer-status" class="social-composer-status">Chọn Ảnh/Video trên khung rồi bấm nút tròn</p>
                             <div class="social-locket-controls">
                                 <button type="button" id="social-file-btn" class="social-locket-side-btn" title="Chọn ảnh/video từ máy">
                                     <i class="fas fa-image"></i>
@@ -845,7 +850,7 @@
 </a>
 
 <script src="/security-client.js"></script>
-<script src="/social-feed.js?v=video1"></script>
+<script src="/social-feed.js?v=video2"></script>
 <script src="/shop-features.js?v=mxh1"></script>
 <script>
 const API = '/api';

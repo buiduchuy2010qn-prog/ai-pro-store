@@ -266,7 +266,9 @@
 
     function updateShutterRecordingState(recording) {
         const shutter = document.getElementById('social-shutter-btn');
+        const recBadge = document.getElementById('social-rec-badge');
         if (shutter) shutter.classList.toggle('is-recording', !!recording);
+        if (recBadge) recBadge.classList.toggle('hidden', !recording);
     }
 
     async function startVideoRecord() {
@@ -772,6 +774,22 @@
         await startCamera();
     }
 
+    function updateFramePlaceholder() {
+        const icon = document.getElementById('social-placeholder-icon');
+        const text = document.getElementById('social-placeholder-text');
+        const shutter = document.getElementById('social-shutter-btn');
+        const isVid = composerMode === 'video';
+        if (icon) icon.className = isVid ? 'fas fa-video' : 'fas fa-camera';
+        if (text) {
+            text.textContent = isVid
+                ? 'Chế độ Video — bấm nút tròn để quay'
+                : 'Chế độ Ảnh — bấm nút tròn để chụp';
+        }
+        if (shutter) {
+            shutter.setAttribute('aria-label', isVid ? 'Quay video' : 'Chụp ảnh');
+        }
+    }
+
     function setComposerMode(mode) {
         composerMode = mode === 'video' ? 'video' : 'photo';
         document.getElementById('social-mode-photo')?.classList.toggle('is-active', composerMode === 'photo');
@@ -783,6 +801,7 @@
                 ? '<i class="fas fa-film"></i>'
                 : '<i class="fas fa-image"></i>';
         }
+        updateFramePlaceholder();
         updateComposerStatusText();
     }
 
