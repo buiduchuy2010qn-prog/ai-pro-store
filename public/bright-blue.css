@@ -1,0 +1,183 @@
+/**
+ * Bright & Trust Blue — nền tĩnh sáng, spotlight logo AI
+ * Không canvas, không Three.js, không animation nền.
+ */
+
+:root {
+    --bb-canvas: #edf2f9;
+    --bb-white: #ffffff;
+    --bb-primary: #1a73e8;
+    --bb-primary-dark: #1557b0;
+    --bb-ink: #1d1d1d;
+    --bb-muted: #5f6368;
+    --bb-shadow: 0 4px 12px rgba(0, 50, 150, 0.08);
+    --bb-shadow-hover: 0 12px 28px rgba(26, 115, 232, 0.18);
+}
+
+/* ─── Nền sáng tĩnh ─── */
+body.bright-blue {
+    background: var(--bb-canvas) !important;
+    color: var(--bb-ink);
+}
+
+body.bright-blue::before,
+body.bright-blue::after {
+    display: none !important;
+}
+
+/* ─── Typography & UI chung ─── */
+body.bright-blue .page-title,
+body.bright-blue .shop-wordmark,
+body.bright-blue .brand-logo {
+    color: var(--bb-ink) !important;
+}
+
+body.bright-blue .page-subtitle,
+body.bright-blue .shop-hero-sub,
+body.bright-blue .text-slate-500,
+body.bright-blue .text-slate-600 {
+    color: var(--bb-muted) !important;
+}
+
+body.bright-blue .site-header {
+    background: var(--bb-white) !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.1) !important;
+    box-shadow: 0 1px 8px rgba(0, 50, 150, 0.06);
+}
+
+body.bright-blue .glass-card,
+body.bright-blue .auth-card,
+body.bright-blue .modal-panel,
+body.bright-blue .shop-hero,
+body.bright-blue .section-header {
+    background: var(--bb-white) !important;
+    border: 1px solid rgba(26, 115, 232, 0.08) !important;
+    box-shadow: var(--bb-shadow) !important;
+    color: var(--bb-ink);
+}
+
+body.bright-blue .btn-primary {
+    background: var(--bb-primary) !important;
+    border-color: var(--bb-primary) !important;
+    color: #fff !important;
+    box-shadow: 0 4px 14px rgba(26, 115, 232, 0.28) !important;
+}
+
+body.bright-blue .btn-primary:hover {
+    background: var(--bb-primary-dark) !important;
+}
+
+body.bright-blue .nav-btn.nav-active,
+body.bright-blue .nav-pill.nav-active {
+    background: rgba(26, 115, 232, 0.1) !important;
+    color: var(--bb-primary) !important;
+}
+
+body.bright-blue .category-pill {
+    background: var(--bb-white) !important;
+    border: 1px solid rgba(26, 115, 232, 0.12) !important;
+    color: var(--bb-ink) !important;
+}
+
+body.bright-blue .category-pill:hover {
+    border-color: var(--bb-primary) !important;
+    color: var(--bb-primary) !important;
+}
+
+/* ─── AI Product Card (.ai-card) ─── */
+body.bright-blue .ai-card {
+    background: var(--bb-white) !important;
+    border: 1px solid rgba(26, 115, 232, 0.1);
+    border-radius: 16px !important;
+    box-shadow: var(--bb-shadow) !important;
+    overflow: hidden;
+    transform-style: preserve-3d;
+    will-change: transform;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    animation: none !important;
+}
+
+body.bright-blue .ai-card:hover {
+    transform: none;
+}
+
+body.bright-blue .ai-card.ai-tilt-active {
+    border-color: var(--bb-primary) !important;
+    box-shadow: var(--bb-shadow-hover) !important;
+}
+
+body.bright-blue .ai-card .product-card-visual {
+    margin: 14px 14px 0;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #f4f8ff 0%, #ffffff 100%) !important;
+    border: 1px solid rgba(26, 115, 232, 0.08);
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body.bright-blue .ai-card .product-card-name {
+    color: var(--bb-ink) !important;
+    font-weight: 600;
+}
+
+body.bright-blue .ai-card .product-card-desc {
+    color: var(--bb-muted) !important;
+}
+
+body.bright-blue .ai-card .product-card-price {
+    color: var(--bb-primary) !important;
+    font-weight: 700;
+}
+
+body.bright-blue .ai-card .product-card-buy {
+    background: var(--bb-primary) !important;
+    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+}
+
+body.bright-blue .ai-card .product-card-buy:hover {
+    background: var(--bb-primary-dark) !important;
+}
+
+/* ─── AI Logo floating (.ai-logo) ─── */
+@keyframes ai-logo-float-bright {
+    0%, 100% {
+        transform: translateY(0) scale(1);
+    }
+    50% {
+        transform: translateY(-10px) scale(1.04);
+    }
+}
+
+body.bright-blue .ai-logo {
+    display: inline-block;
+    font-size: 3rem;
+    animation: ai-logo-float-bright 3.6s ease-in-out infinite;
+    filter: drop-shadow(0 4px 14px rgba(26, 115, 232, 0.28));
+    transition: filter 0.25s ease;
+}
+
+body.bright-blue .ai-card.ai-tilt-active .ai-logo {
+    filter: drop-shadow(0 6px 22px rgba(26, 115, 232, 0.55));
+}
+
+/* Stagger — logo không cùng nhịp */
+body.bright-blue .ai-card:nth-child(6n + 1) .ai-logo { animation-delay: 0s; }
+body.bright-blue .ai-card:nth-child(6n + 2) .ai-logo { animation-delay: 0.5s; }
+body.bright-blue .ai-card:nth-child(6n + 3) .ai-logo { animation-delay: 1s; }
+body.bright-blue .ai-card:nth-child(6n + 4) .ai-logo { animation-delay: 1.5s; }
+body.bright-blue .ai-card:nth-child(6n + 5) .ai-logo { animation-delay: 2s; }
+body.bright-blue .ai-card:nth-child(6n + 6) .ai-logo { animation-delay: 2.5s; }
+
+/* Tắt float cũ từ theme.css khi hover */
+body.bright-blue .ai-card:hover .ai-logo {
+    animation: ai-logo-float-bright 3.6s ease-in-out infinite;
+}
+
+/* ─── Reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+    body.bright-blue .ai-logo {
+        animation: none !important;
+    }
+}
