@@ -61,7 +61,6 @@
     let friendsCache = [];
     let recipientSelection = 'all';
     let historyPanelOpen = false;
-    let decorTimeInterval = null;
 
     function isVideoMedia() {
         return pendingMediaType === 'video' || !!pendingVideoBlob
@@ -914,7 +913,7 @@
         if (rightBtn) {
             if (hasPreview) {
                 rightBtn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i>';
-                rightBtn.title = 'Tuỳ chỉnh';
+                rightBtn.title = 'Tuỳ chỉnh caption';
             } else if (historyPanelOpen) {
                 rightBtn.innerHTML = '<i class="fas fa-camera"></i>';
                 rightBtn.title = 'Quay lại chụp ảnh';
@@ -928,25 +927,6 @@
         }
     }
 
-    function updateDecorTime() {
-        const span = document.querySelector('#social-decor-time span');
-        if (!span) return;
-        span.textContent = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    }
-
-    function startDecorTimeTicker() {
-        updateDecorTime();
-        if (decorTimeInterval) return;
-        decorTimeInterval = setInterval(updateDecorTime, 30000);
-    }
-
-    function stopDecorTimeTicker() {
-        if (decorTimeInterval) {
-            clearInterval(decorTimeInterval);
-            decorTimeInterval = null;
-        }
-    }
-
     function updateUnifiedSlotVisibility() {
         const mode = getUnifiedSlotMode();
         const frame = document.querySelector('.social-locket-frame');
@@ -955,8 +935,6 @@
         const metaRow = document.getElementById('social-feed-meta-row');
         const dotsRow = document.getElementById('social-feed-dots-row');
         const modePicker = document.getElementById('social-frame-mode-picker');
-        const decorWidgets = document.getElementById('social-decor-widgets');
-
         const isPreview = mode === 'preview';
         const isCapture = mode === 'capture';
         const isHistory = mode === 'history';
@@ -965,10 +943,6 @@
         frame?.classList.toggle('is-capture-mode', isCapture);
         frame?.classList.toggle('is-history-mode', isHistory && !isPreview);
         frame?.classList.toggle('has-preview', isPreview);
-        decorWidgets?.classList.toggle('hidden', !isCapture);
-        decorWidgets?.setAttribute('aria-hidden', isCapture ? 'false' : 'true');
-        if (isCapture) startDecorTimeTicker();
-        else stopDecorTimeTicker();
         feedLayer?.classList.add('hidden');
         placeholder?.classList.toggle('hidden', isPreview || isCapture || isHistory);
         modePicker?.classList.toggle('hidden', isPreview || isHistory);
@@ -2008,15 +1982,17 @@
     function buildLocketBadges(p) {
         const badges = [];
         const meta = p.postMeta || {};
+        const decoIds = meta.decorations || [];
+        if (decoIds.length) {
+            decoIds.forEach(id => {
+                const chip = window.SocialCreative?.getDecorationBadgeHtml?.(id, p.createdAt);
+                if (chip) badges.push(chip);
+            });
+            return badges.join('');
+        }
         if (meta.bgId && meta.bgId !== 'none') {
             badges.push(`<span class="locket-feed-badge badge-purple"><i class="fas fa-palette"></i> ${esc(meta.bgId)}</span>`);
         }
-        const t = new Date(p.createdAt);
-        if (!isNaN(t)) {
-            const timeStr = t.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-            badges.push(`<span class="locket-feed-badge"><i class="fas fa-clock"></i> ${esc(timeStr)}</span>`);
-        }
-        badges.push('<span class="locket-feed-badge"><i class="fas fa-cloud-sun"></i> 31°C</span>');
         return badges.join('');
     }
 
@@ -2755,7 +2731,12 @@
         document.getElementById('social-drawer-close')?.addEventListener('click', closeSocialDrawer);
         document.getElementById('social-drawer-overlay')?.addEventListener('click', closeSocialDrawer);
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape' && document.getElementById('social-side-drawer')?.classList.contains('is-open')) {
+            if (e.key !== 'Escape') return;
+            if (window.SocialCreative?.isStudioOpen?.()) {
+                window.SocialCreative.closeStudio();
+                return;
+            }
+            if (document.getElementById('social-side-drawer')?.classList.contains('is-open')) {
                 closeSocialDrawer();
             }
         });
@@ -2797,7 +2778,7 @@
         document.getElementById('social-save-btn')?.addEventListener('click', onSavePreviewClick);
         document.getElementById('social-unified-right')?.addEventListener('click', async () => {
             if (pendingImage || pendingVideoBlob) {
-                openSocialDrawer(null, 'capture');
+                window.SocialCreative?.openStudio?.();
                 return;
             }
             if (historyPanelOpen) {
@@ -2842,7 +2823,6 @@
     function leaveView() {
         closeSocialDrawer();
         stopFeedRotation();
-        stopDecorTimeTicker();
         historyPanelOpen = false;
         setHistoryViewUi(false);
         stopCamera();

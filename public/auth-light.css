@@ -1870,27 +1870,6 @@ body.app-light .app-main {
     border: none;
 }
 
-.social-decor-widgets {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    z-index: 7;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.35rem;
-    pointer-events: none;
-}
-
-.social-locket-frame.is-capture-mode .social-decor-widgets:not(.hidden) {
-    display: flex;
-}
-
-.social-locket-frame.has-preview .social-decor-widgets,
-.social-locket-frame.is-feed-mode .social-decor-widgets {
-    display: none !important;
-}
-
 /* ─── Locket Dio — laptop: nền trắng rộng, khung vuông giữa ─── */
 @media (min-width: 768px) {
     body.app-light:has(#view-social:not(.hidden)) {

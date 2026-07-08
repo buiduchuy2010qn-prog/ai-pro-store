@@ -27,6 +27,78 @@
         { id: 'cool', label: 'Lạnh' },
     ];
 
+    const STUDIO_SECTIONS = [
+        {
+            id: 'general',
+            title: 'General',
+            isNew: true,
+            pills: [
+                { id: 'text', label: 'Aa Văn bản', cls: 'pill-gray', icon: 'fa-font', caption: '' },
+                { id: 'color', label: 'Màu sắc', cls: 'pill-purple', icon: 'fa-palette' },
+                { id: 'spotify', label: 'Spotify', cls: 'pill-green', icon: 'fa-spotify' },
+                { id: 'music', label: 'Apple Music', cls: 'pill-pink', icon: 'fa-apple' },
+                { id: 'weather', label: '31°C', cls: 'pill-blue', icon: 'fa-cloud-sun', dynamic: 'weather' },
+                { id: 'review', label: 'Review', cls: 'pill-yellow', icon: 'fa-star' },
+                { id: 'time', label: '', cls: 'pill-gray', icon: 'fa-clock', dynamic: 'time' },
+                { id: 'streak', label: '🔥 1', cls: 'pill-orange' },
+                { id: 'poll', label: 'Bình chọn', cls: 'pill-purple' },
+                { id: 'location', label: 'Vị trí', cls: 'pill-teal', icon: 'fa-location-dot' },
+            ],
+        },
+        {
+            id: 'caption-season',
+            title: 'Caption Season',
+            isNew: true,
+            pills: [
+                { id: 'cap1', label: 'GEM AI', cls: 'pill-brown', caption: 'Gemini Pro ✨' },
+                { id: 'cap2', label: 'GPT PRO', cls: 'pill-green', caption: 'ChatGPT Plus 🚀' },
+                { id: 'cap3', label: 'CLAUDE', cls: 'pill-orange', caption: 'Claude AI 🤖' },
+                { id: 'cap4', label: 'GROK', cls: 'pill-red', caption: 'Grok AI ⚡' },
+                { id: 'cap5', label: 'SALE 50%', cls: 'pill-pink', caption: 'Khuyến mãi 50% 🔥' },
+                { id: 'cap6', label: 'VIP', cls: 'pill-indigo', caption: 'Tài khoản VIP 💎' },
+            ],
+        },
+        {
+            id: 'suggest',
+            title: 'Suggest Caption',
+            pills: [
+                { id: 's1', label: 'Caption', cls: 'pill-purple', caption: 'Trải nghiệm AI tuyệt vời ✨' },
+                { id: 's2', label: 'Caption', cls: 'pill-orange', caption: 'Mua tài khoản chính hãng 🚀' },
+                { id: 's3', label: 'Caption', cls: 'pill-red', caption: 'Khuyến mãi hôm nay 🔥' },
+                { id: 's4', label: 'Caption', cls: 'pill-teal', caption: 'Gemini · ChatGPT · Claude' },
+                { id: 's5', label: 'Caption', cls: 'pill-pink', caption: 'Shop Đức Hi — uy tín 💯' },
+                { id: 's6', label: 'Caption', cls: 'pill-blue', caption: 'Nạp nhanh VietQR ⚡' },
+            ],
+        },
+        {
+            id: 'decorative',
+            title: 'Decorative by Locket',
+            pills: [
+                { id: 'd1', label: 'PRIDE', cls: 'pill-purple' },
+                { id: 'd2', label: 'Good morning ☀️', cls: 'pill-orange', caption: 'Good morning ☀️' },
+                { id: 'd3', label: 'Goodnight 🌙', cls: 'pill-indigo', caption: 'Goodnight 🌙' },
+                { id: 'd4', label: 'Miss you', cls: 'pill-red', caption: 'Miss you 💕' },
+                { id: 'd5', label: 'Party Time!', cls: 'pill-green', caption: 'Party Time! 🎉' },
+                { id: 'd6', label: 'OOTD', cls: 'pill-pink' },
+            ],
+        },
+        {
+            id: 'decorative-dio',
+            title: 'Decorative by Dio',
+            isNew: true,
+            pills: [
+                { id: 'dio1', label: 'Wedding Time!', cls: 'pill-pink', caption: 'Wedding Time! 💒' },
+                { id: 'dio2', label: 'Cảm thấy hạnh phúc', cls: 'pill-orange', caption: 'Cảm thấy hạnh phúc ✨' },
+                { id: 'dio3', label: 'Coffee Time!', cls: 'pill-brown', caption: 'Coffee Time! ☕' },
+                { id: 'dio4', label: 'Locket Time!', cls: 'pill-purple', caption: 'Locket Time! 📸' },
+                { id: 'dio5', label: 'Cinema Time!', cls: 'pill-indigo', caption: 'Cinema Time! 🎬' },
+                { id: 'dio6', label: 'Chilling Time!', cls: 'pill-teal', caption: 'Chilling Time! 😎' },
+                { id: 'dio7', label: 'Shopping Time!', cls: 'pill-green', caption: 'Shopping Time! 🛍️' },
+                { id: 'dio8', label: 'Dinner Time!', cls: 'pill-red', caption: 'Dinner Time! 🍽️' },
+            ],
+        },
+    ];
+
     let state = {
         frameId: 'none',
         customFrameUrl: null,
@@ -37,7 +109,11 @@
         visibility: 'all_friends',
         audienceIds: new Set(),
         friends: [],
+        studioPills: new Set(),
+        studioOpen: false,
     };
+
+    let studioTickInterval = null;
 
     /** Vẽ khung viền lên canvas (ảnh) */
     function drawFrameOnCanvas(ctx, w, h, frameId, customImg) {
@@ -263,6 +339,187 @@
         return (window.escapeHtml || (x => String(x ?? '')))(s);
     }
 
+    function currentClock() {
+        return new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function findStudioPill(id) {
+        for (const sec of STUDIO_SECTIONS) {
+            const p = sec.pills.find(x => x.id === id);
+            if (p) return p;
+        }
+        return null;
+    }
+
+    function pillDynamicLabel(p) {
+        if (p.dynamic === 'time') return currentClock();
+        if (p.dynamic === 'weather') return '31°C';
+        return p.label || p.caption || p.id;
+    }
+
+    function pillButtonHtml(p) {
+        const label = p.dynamic === 'time' ? currentClock() : (p.label || '');
+        let iconHtml = '';
+        if (p.icon === 'fa-spotify') iconHtml = '<i class="fab fa-spotify mr-1"></i>';
+        else if (p.icon === 'fa-apple') iconHtml = '<i class="fab fa-apple mr-1"></i>';
+        else if (p.icon) iconHtml = `<i class="fas ${p.icon} mr-1"></i>`;
+        return `<button type="button" class="locket-studio-pill ${p.cls}" data-social-studio-pill="${p.id}" data-caption="${escapeHtml(p.caption || '')}">${iconHtml}${escapeHtml(label)}</button>`;
+    }
+
+    function buildSocialStudio() {
+        if (document.getElementById('social-caption-studio')) return;
+
+        const sections = STUDIO_SECTIONS.map(sec => `
+            <section class="locket-studio-section" data-section="${sec.id}">
+                <div class="locket-studio-section-head">
+                    <span class="locket-studio-section-title">${sec.title}</span>
+                    ${sec.isNew ? '<span class="locket-studio-new">New</span>' : ''}
+                </div>
+                <div class="locket-studio-pills">${sec.pills.map(pillButtonHtml).join('')}</div>
+            </section>`).join('');
+
+        const host = document.getElementById('view-social') || document.body;
+        host.insertAdjacentHTML('beforeend', `
+            <div id="social-studio-backdrop" class="locket-studio-backdrop" aria-hidden="true"></div>
+            <aside id="social-caption-studio" class="locket-studio social-caption-studio" aria-hidden="true">
+                <div class="locket-studio-header">
+                    <div class="locket-studio-logo"><i class="fas fa-wand-magic-sparkles"></i></div>
+                    <span class="locket-studio-title">CUSTOMIZE STUDIO</span>
+                    <span class="locket-studio-badge">Free</span>
+                    <button type="button" class="locket-studio-close" id="social-studio-close" aria-label="Đóng">&times;</button>
+                </div>
+                <div class="locket-studio-body pretty-scrollbar">${sections}</div>
+            </aside>`);
+
+        document.getElementById('social-studio-close')?.addEventListener('click', closeStudio);
+        document.getElementById('social-studio-backdrop')?.addEventListener('click', closeStudio);
+        document.querySelectorAll('[data-social-studio-pill]').forEach(pill => {
+            pill.addEventListener('click', () => onStudioPillClick(pill));
+        });
+    }
+
+    function setCaptionInputs(text) {
+        const inline = document.getElementById('social-caption-inline');
+        const drawer = document.getElementById('social-caption');
+        if (inline) inline.value = text;
+        if (drawer) {
+            drawer.value = text;
+            drawer.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        updateCaptionOverlay();
+    }
+
+    function onStudioPillClick(pill) {
+        const id = pill.dataset.socialStudioPill;
+        const caption = pill.dataset.caption;
+        if (caption) setCaptionInputs(caption);
+        if (state.studioPills.has(id)) {
+            state.studioPills.delete(id);
+            pill.classList.remove('is-selected');
+        } else {
+            state.studioPills.add(id);
+            pill.classList.add('is-selected');
+        }
+        renderDecoOverlay();
+        syncStudioTicker();
+    }
+
+    function buildDecoChip(p) {
+        const label = pillDynamicLabel(p);
+        let iconHtml = '';
+        if (p.icon === 'fa-spotify') iconHtml = '<i class="fab fa-spotify"></i> ';
+        else if (p.icon === 'fa-apple') iconHtml = '<i class="fab fa-apple"></i> ';
+        else if (p.icon) iconHtml = `<i class="fas ${p.icon}"></i> `;
+        return `<span class="social-deco-chip ${p.cls}">${iconHtml}${escapeHtml(label)}</span>`;
+    }
+
+    function renderDecoOverlay() {
+        const box = document.getElementById('social-deco-overlay');
+        if (!box) return;
+        const top = [];
+        const bottom = [];
+        state.studioPills.forEach(pid => {
+            const p = findStudioPill(pid);
+            if (!p) return;
+            const chip = buildDecoChip(p);
+            if (p.dynamic) bottom.push(chip);
+            else top.push(chip);
+        });
+        const hasDeco = top.length > 0 || bottom.length > 0;
+        box.innerHTML = (top.length ? `<div class="social-deco-top">${top.join('')}</div>` : '')
+            + (bottom.length ? `<div class="social-deco-bottom">${bottom.join('')}</div>` : '');
+        box.classList.toggle('hidden', !hasDeco);
+        box.setAttribute('aria-hidden', hasDeco ? 'false' : 'true');
+    }
+
+    function updateDynamicStudioPills() {
+        document.querySelectorAll('[data-social-studio-pill="time"]').forEach(el => {
+            el.innerHTML = `<i class="fas fa-clock mr-1"></i>${currentClock()}`;
+        });
+        document.querySelectorAll('[data-social-studio-pill="weather"]').forEach(el => {
+            el.innerHTML = '<i class="fas fa-cloud-sun mr-1"></i>31°C';
+        });
+    }
+
+    function hasDynamicStudioSelection() {
+        return [...state.studioPills].some(id => {
+            const p = findStudioPill(id);
+            return p?.dynamic;
+        });
+    }
+
+    function syncStudioTicker() {
+        if (state.studioOpen || hasDynamicStudioSelection()) startStudioTicker();
+        else stopStudioTicker();
+    }
+
+    function startStudioTicker() {
+        updateDynamicStudioPills();
+        renderDecoOverlay();
+        if (studioTickInterval) return;
+        studioTickInterval = setInterval(() => {
+            updateDynamicStudioPills();
+            renderDecoOverlay();
+        }, 1000);
+    }
+
+    function stopStudioTicker() {
+        if (studioTickInterval) {
+            clearInterval(studioTickInterval);
+            studioTickInterval = null;
+        }
+    }
+
+    function openStudio() {
+        const hasPreview = document.querySelector('.social-locket-studio.has-preview');
+        if (!hasPreview) {
+            window.toast?.('Chụp hoặc chọn ảnh trước, rồi bấm nút ✨ để thêm caption', true);
+            return;
+        }
+        buildSocialStudio();
+        state.studioOpen = true;
+        updateDynamicStudioPills();
+        document.getElementById('social-studio-backdrop')?.classList.add('is-open');
+        document.getElementById('social-caption-studio')?.classList.add('is-open');
+        document.getElementById('social-caption-studio')?.setAttribute('aria-hidden', 'false');
+        syncStudioTicker();
+    }
+
+    function closeStudio() {
+        state.studioOpen = false;
+        document.getElementById('social-studio-backdrop')?.classList.remove('is-open');
+        document.getElementById('social-caption-studio')?.classList.remove('is-open');
+        document.getElementById('social-caption-studio')?.setAttribute('aria-hidden', 'true');
+        syncStudioTicker();
+    }
+
+    function clearStudioDecorations() {
+        state.studioPills.clear();
+        document.querySelectorAll('[data-social-studio-pill].is-selected').forEach(p => p.classList.remove('is-selected'));
+        renderDecoOverlay();
+        stopStudioTicker();
+    }
+
     function bindUi() {
         document.querySelectorAll('.social-frame-option').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -357,6 +614,7 @@
             customFrameUrl: state.frameId === 'custom' ? state.customFrameUrl : null,
             captionStyle: { ...state.captionStyle },
             bgId: state.bgId,
+            decorations: [...state.studioPills],
         };
     }
 
@@ -393,6 +651,7 @@
 
     window.SocialCreative = {
         init() {
+            buildSocialStudio();
             bindUi();
             document.querySelector('.social-frame-option[data-frame="none"]')?.classList.add('is-active');
             document.querySelector('.social-bg-option[data-bg="none"]')?.classList.add('is-active');
@@ -403,9 +662,12 @@
             document.querySelector('.social-locket-studio')?.classList.add('is-editing');
             applyFrameClass();
             updateCaptionOverlay();
+            syncStudioTicker();
         },
 
         onPreviewCleared() {
+            closeStudio();
+            clearStudioDecorations();
             document.querySelector('.social-locket-studio')?.classList.remove('is-editing');
             state.frameId = 'none';
             state.customFrameUrl = null;
@@ -414,6 +676,10 @@
             const overlay = document.getElementById('social-caption-overlay');
             if (overlay) overlay.classList.add('hidden');
         },
+
+        openStudio,
+        closeStudio,
+        isStudioOpen() { return state.studioOpen; },
 
         onCameraStart() {
             applyCameraBackground();
@@ -452,5 +718,20 @@
         },
 
         visibilityBadge,
+
+        getDecorationBadgeHtml(pillId, createdAt) {
+            const p = findStudioPill(pillId);
+            if (!p) return '';
+            let label = pillDynamicLabel(p);
+            if (p.dynamic === 'time' && createdAt) {
+                const t = new Date(createdAt);
+                if (!isNaN(t)) {
+                    label = t.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                }
+            }
+            const icon = p.icon ? `<i class="fas ${p.icon}"></i> ` : '';
+            const cls = p.dynamic === 'weather' ? 'badge-warm' : (p.cls?.includes('purple') ? 'badge-purple' : '');
+            return `<span class="locket-feed-badge ${cls}">${icon}${escapeHtml(label)}</span>`;
+        },
     };
 })();
