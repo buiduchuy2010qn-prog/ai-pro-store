@@ -808,8 +808,9 @@
             const setup = window.currentUser?.role === 'admin' ? await loadOAuthSetup() : null;
             renderDriveConnectCard({ oauthAvailable: false }, setup);
         }
-        if (hint) hint.classList.toggle('hidden', driveAdminBackup);
-        if (info) info.classList.toggle('hidden', !driveAdminBackup);
+        const isAdmin = window.currentUser?.role === 'admin';
+        if (hint) hint.classList.toggle('hidden', !isAdmin || driveAdminBackup);
+        if (info) info.classList.toggle('hidden', !isAdmin || !driveAdminBackup);
     }
 
     function toggleHistoryPanel() {
