@@ -777,9 +777,9 @@ body.app-light .app-main {
 .social-locket-frame,
 .social-locket-square {
     position: relative;
-    width: min(100%, 360px);
+    width: min(100%, 400px);
     aspect-ratio: 1 / 1;
-    border-radius: 16px;
+    border-radius: 18px;
     overflow: hidden;
     background: #e2e8f0;
     box-shadow: 0 8px 28px rgba(15, 23, 42, 0.1);
@@ -1599,8 +1599,9 @@ body.app-light .app-main {
 
 /* ─── Bảng tin ảnh — khung gộp chụp + đăng ─── */
 .social-page {
-    max-width: 720px;
+    max-width: 480px;
     margin: 0 auto;
+    background: #fff;
 }
 
 .social-page-main {
@@ -1608,62 +1609,121 @@ body.app-light .app-main {
 }
 
 .social-locket-unified {
-    border: 1.5px solid var(--al-border);
-    border-radius: 20px;
-    overflow: hidden;
-    padding: 0 !important;
-}
-
-.social-locket-unified .social-unified-toolbar {
-    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+    border: none;
     border-radius: 0;
-    padding: 0.75rem 1rem;
-}
-
-.social-locket-unified .social-locket-studio {
-    padding: 1rem 1rem 1.25rem;
+    overflow: visible;
+    padding: 0 !important;
     background: #fff;
+    box-shadow: none;
 }
 
-.social-locket-unified.is-post-view .social-unified-toolbar {
-    display: none;
+.social-locket-topbar {
+    display: grid;
+    grid-template-columns: 44px 1fr auto;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 0.65rem 0.25rem 0.85rem;
 }
 
-.social-send-header {
+.social-locket-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #c4b5fd, #a78bfa);
+    color: #fff;
+    font-size: 0.88rem;
+    font-weight: 800;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-    width: 100%;
-    max-width: 360px;
-    font-size: 0.95rem;
-    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.social-locket-topbar-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    font-size: 0.92rem;
+    font-weight: 700;
     color: #1e293b;
-    padding: 0.15rem 0 0.35rem;
 }
 
-.social-send-header strong {
-    font-weight: 800;
+.social-locket-topbar-center i {
+    font-size: 0.82rem;
+    color: #64748b;
 }
 
-.social-send-audience-btn {
-    width: 28px;
-    height: 28px;
+.social-locket-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+}
+
+.social-locket-topbar-btn {
+    width: 36px;
+    height: 36px;
     border: none;
     background: transparent;
-    color: #64748b;
-    font-size: 0.82rem;
+    color: #1e293b;
+    font-size: 1rem;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    transition: background 0.2s, color 0.2s;
+    transition: background 0.2s;
 }
 
-.social-send-audience-btn:hover {
+.social-locket-topbar-btn:hover {
     background: #f1f5f9;
+}
+
+.social-locket-topbar-btn.has-badge {
+    position: relative;
+}
+
+.social-locket-topbar-btn.has-badge::after {
+    content: '';
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ef4444;
+}
+
+.social-send-topbar {
+    grid-template-columns: 1fr auto;
+    justify-items: center;
+}
+
+.social-send-topbar-title {
+    font-size: 0.95rem;
+    font-weight: 600;
     color: #1e293b;
+    text-align: center;
+}
+
+.social-send-topbar-title strong {
+    font-weight: 800;
+}
+
+.social-locket-unified .social-locket-studio {
+    padding: 0 0.5rem 1.5rem;
+    background: #fff;
+}
+
+.social-locket-unified.is-post-view #social-capture-header {
+    display: none;
+}
+
+.social-locket-unified:not(.is-post-view) #social-send-header {
+    display: none;
 }
 
 .social-frame-caption-bar {
@@ -1698,29 +1758,35 @@ body.app-light .app-main {
     box-shadow: 0 2px 16px rgba(0, 0, 0, 0.16);
 }
 
-.social-locket-studio.is-post-view {
-    gap: 1.1rem;
-    padding-top: 1.35rem !important;
+.social-locket-studio {
+    gap: 0.65rem;
 }
 
-.social-locket-studio.is-post-view .social-studio-meta,
-.social-locket-studio.is-post-view .social-composer-status,
-.social-locket-studio.is-post-view #social-feed-meta-row,
-.social-locket-studio.is-post-view #social-feed-dots-row,
+.social-locket-studio.is-post-view {
+    gap: 0.85rem;
+    padding-top: 0.25rem !important;
+}
+
+.social-locket-studio.is-post-view .social-capture-only,
+.social-locket-studio.is-post-view .social-history-panel,
 .social-locket-studio.is-post-view #social-caption-overlay {
+    display: none !important;
+}
+
+.social-locket-studio:not(.is-post-view) .social-recipient-strip {
     display: none !important;
 }
 
 .social-locket-studio.is-post-view .social-locket-action-btn {
     width: auto;
     height: auto;
-    min-width: 44px;
-    min-height: 44px;
+    min-width: 48px;
+    min-height: 48px;
     border: none;
     background: transparent;
     box-shadow: none;
     border-radius: 0;
-    font-size: 1.35rem;
+    font-size: 1.4rem;
     color: #0f172a;
     padding: 0.35rem;
 }
@@ -1729,6 +1795,112 @@ body.app-light .app-main {
     background: transparent;
     color: #0f172a;
     transform: none;
+}
+
+.social-locket-studio:not(.is-post-view) .social-locket-action-btn {
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    font-size: 1.2rem;
+    color: #1e293b;
+}
+
+.social-locket-studio:not(.is-post-view) .social-flip-camera-btn {
+    display: none !important;
+}
+
+.social-page .glass-card.social-locket-unified {
+    background: #fff;
+    box-shadow: none;
+    border: none;
+}
+
+.social-locket-studio:not(.is-post-view) .social-locket-shutter .social-locket-shutter-ring {
+    width: 68px;
+    height: 68px;
+    border-width: 3px;
+    border-color: #7c3aed;
+}
+
+.social-history-panel {
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding-top: 0.15rem;
+}
+
+.social-recipient-strip {
+    display: flex;
+    gap: 0.65rem;
+    overflow-x: auto;
+    width: 100%;
+    max-width: 420px;
+    padding: 0.5rem 0.25rem 0.15rem;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+}
+
+.social-recipient-strip::-webkit-scrollbar {
+    height: 4px;
+}
+
+.social-recipient-item {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    scroll-snap-align: start;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    min-width: 58px;
+}
+
+.social-recipient-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+    color: #475569;
+    font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2.5px solid transparent;
+    transition: border-color 0.2s, transform 0.2s;
+}
+
+.social-recipient-item.is-active .social-recipient-avatar {
+    border-color: #fbbf24;
+    transform: scale(1.04);
+}
+
+.social-recipient-avatar.is-private {
+    background: #f1f5f9;
+    font-size: 0.9rem;
+}
+
+.social-recipient-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #64748b;
+    max-width: 64px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.social-recipient-item.is-active .social-recipient-label {
+    color: #1e293b;
 }
 
 .social-locket-shutter.is-send-mode {

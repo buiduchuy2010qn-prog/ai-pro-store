@@ -58,6 +58,9 @@
     let feedRotateTimer = null;
     const FEED_ROTATE_MS = 5500;
     let activeDrawerTab = 'detail';
+    let friendsCache = [];
+    let recipientSelection = 'all';
+    let historyPanelOpen = false;
 
     function isVideoMedia() {
         return pendingMediaType === 'video' || !!pendingVideoBlob
@@ -722,31 +725,104 @@
         shutter.innerHTML = '<span class="social-locket-shutter-ring"></span>';
     }
 
+    function updateUserAvatar() {
+        const el = document.getElementById('social-user-avatar');
+        const user = window.currentUser;
+        if (!el || !user) return;
+        const name = user.fullName || user.email || '?';
+        el.textContent = name.charAt(0).toUpperCase();
+        el.title = name;
+    }
+
     function updateSendAudienceLabel() {
         const label = document.getElementById('social-send-audience');
         if (!label) return;
-        const selected = document.querySelector('input[name="social-visibility"]:checked')?.value;
-        if (selected === 'selected') {
-            const n = document.querySelectorAll('#social-audience-friends input[type="checkbox"]:checked').length;
-            label.textContent = n > 0 ? n + ' bạn bè' : 'chọn bạn';
-        } else {
-            label.textContent = 'tất cả';
+        if (recipientSelection === 'private') {
+            label.textContent = ' riêng tư';
+            return;
         }
+        if (recipientSelection === 'all') {
+            label.textContent = '...';
+            return;
+        }
+        const friend = friendsCache.find(f => String(f.id) === String(recipientSelection));
+        const short = (friend?.fullName || friend?.email || 'bạn').split(' ')[0];
+        label.textContent = ' ' + short + '...';
+    }
+
+    function syncAudienceFromRecipient() {
+        const allRadio = document.querySelector('input[name="social-visibility"][value="all_friends"]');
+        const selRadio = document.querySelector('input[name="social-visibility"][value="selected"]');
+        if (recipientSelection === 'all') {
+            if (allRadio) allRadio.checked = true;
+        } else {
+            if (selRadio) selRadio.checked = true;
+            document.querySelectorAll('#social-audience-friends input[type="checkbox"]').forEach(cb => {
+                const id = Number(cb.dataset.audienceId);
+                cb.checked = recipientSelection !== 'private' && String(id) === String(recipientSelection);
+                cb.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+        }
+        updateSendAudienceLabel();
+    }
+
+    function renderRecipientStrip() {
+        const strip = document.getElementById('social-recipient-strip');
+        if (!strip) return;
+        const items = [
+            { key: 'private', label: 'Riêng tư', icon: 'lock', private: true },
+            { key: 'all', label: 'Tất cả', icon: null },
+            ...friendsCache.map(f => ({
+                key: String(f.id),
+                label: (f.fullName || f.email || 'Bạn').split(' ')[0],
+                initial: (f.fullName || f.email || '?').charAt(0).toUpperCase(),
+            })),
+        ];
+        strip.innerHTML = items.map(item => {
+            const active = recipientSelection === item.key ? ' is-active' : '';
+            const avatarInner = item.icon
+                ? `<i class="fas fa-${item.icon}"></i>`
+                : (item.initial || (item.label || '?').charAt(0).toUpperCase());
+            const avatarClass = 'social-recipient-avatar' + (item.private ? ' is-private' : '');
+            return `<button type="button" class="social-recipient-item${active}" data-recipient="${item.key}">
+                <span class="${avatarClass}">${avatarInner}</span>
+                <span class="social-recipient-label">${esc(item.label)}</span>
+            </button>`;
+        }).join('');
+        strip.querySelectorAll('[data-recipient]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                recipientSelection = btn.dataset.recipient;
+                renderRecipientStrip();
+                syncAudienceFromRecipient();
+            });
+        });
+        strip.classList.toggle('hidden', !(pendingImage || pendingVideoBlob));
     }
 
     function updateUnifiedActionButtons() {
         const leftBtn = document.getElementById('social-unified-left');
-        if (!leftBtn) return;
+        const rightBtn = document.getElementById('social-unified-right');
         const hasPreview = !!pendingImage || !!pendingVideoBlob;
-        if (hasPreview) {
-            leftBtn.innerHTML = '<i class="fas fa-times"></i>';
-            leftBtn.title = 'Hủy ảnh/video';
-        } else if (cameraStream) {
-            leftBtn.innerHTML = '<i class="fas fa-times"></i>';
-            leftBtn.title = 'Đóng camera';
-        } else {
-            leftBtn.innerHTML = '<i class="fas fa-image"></i>';
-            leftBtn.title = 'Chọn ảnh/video từ máy';
+        if (leftBtn) {
+            if (hasPreview) {
+                leftBtn.innerHTML = '<i class="fas fa-times"></i>';
+                leftBtn.title = 'Hủy';
+            } else {
+                leftBtn.innerHTML = '<i class="far fa-image"></i>';
+                leftBtn.title = 'Chọn ảnh từ máy';
+            }
+        }
+        if (rightBtn) {
+            if (hasPreview) {
+                rightBtn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i>';
+                rightBtn.title = 'Tuỳ chỉnh';
+            } else if (cameraStream) {
+                rightBtn.innerHTML = '<i class="fas fa-arrows-rotate"></i>';
+                rightBtn.title = 'Đổi camera';
+            } else {
+                rightBtn.innerHTML = '<i class="fas fa-arrows-rotate"></i>';
+                rightBtn.title = 'Đổi camera';
+            }
         }
     }
 
@@ -768,25 +844,41 @@
         feedLayer?.classList.toggle('hidden', !isFeed);
         placeholder?.classList.toggle('hidden', isPreview || isCapture || isFeed);
         modePicker?.classList.toggle('hidden', isPreview || isFeed);
-        metaRow?.classList.toggle('hidden', !isFeed);
-        dotsRow?.classList.toggle('hidden', !isFeed || feedPostsCache.length <= 1);
+        const showHistoryFeed = isFeed && historyPanelOpen;
+        metaRow?.classList.toggle('hidden', !showHistoryFeed);
+        dotsRow?.classList.toggle('hidden', !showHistoryFeed || feedPostsCache.length <= 1);
 
         document.getElementById('social-post-row')?.classList.toggle('is-preview-active', isPreview);
 
         const studio = document.querySelector('.social-locket-studio');
         const unifiedCard = document.querySelector('.social-locket-unified');
         studio?.classList.toggle('is-post-view', isPreview);
+        studio?.classList.toggle('is-capture-mode', !isPreview);
         unifiedCard?.classList.toggle('is-post-view', isPreview);
 
+        document.getElementById('social-capture-header')?.classList.toggle('hidden', isPreview);
         document.getElementById('social-send-header')?.classList.toggle('hidden', !isPreview);
         document.getElementById('social-frame-caption-bar')?.classList.toggle('hidden', !isPreview);
+        document.getElementById('social-history-panel')?.classList.toggle('hidden', isPreview || !historyPanelOpen);
 
         updateUnifiedActionButtons();
         updateShutterState();
-        if (isPreview) updateSendAudienceLabel();
+        renderRecipientStrip();
+        if (isPreview) {
+            updateSendAudienceLabel();
+            syncAudienceFromRecipient();
+        }
 
         if (isFeed) startFeedRotation();
         else stopFeedRotation();
+    }
+
+    function toggleHistoryPanel() {
+        historyPanelOpen = !historyPanelOpen;
+        const btn = document.getElementById('social-history-toggle');
+        btn?.classList.toggle('is-open', historyPanelOpen);
+        if (historyPanelOpen && !feedPostsCache.length) loadFeed();
+        else updateUnifiedSlotVisibility();
     }
 
     async function exitCameraToFeed() {
@@ -803,11 +895,9 @@
         if (pendingImage || pendingVideoBlob) return;
         if (feedPostsCache.length > 0) {
             updateUnifiedSlotVisibility();
-            setComposerStatus('Bấm nút tròn để chụp ảnh mới');
             return;
         }
         if (isPhoneDevice()) {
-            setComposerStatus('Bấm nút tròn tím để mở camera');
             updateUnifiedSlotVisibility();
             return;
         }
@@ -1010,6 +1100,7 @@
             }
         }
         placeholder?.classList.add('hidden');
+        recipientSelection = 'all';
         const postBtn = document.getElementById('social-post-btn');
         const cancelBtn = document.getElementById('social-cancel-preview');
         if (postBtn) postBtn.innerHTML = isVid
@@ -2071,11 +2162,13 @@
             updateToolbarInviteBadge();
             const countEl = document.getElementById('social-friend-count-num');
             if (countEl) countEl.textContent = String((data.friends || []).length);
-            window.SocialCreative?.setFriendsList((data.friends || []).map(item => ({
+            friendsCache = (data.friends || []).map(item => ({
                 id: item.user?.id,
                 fullName: item.user?.fullName,
                 email: item.user?.email,
-            })));
+            }));
+            window.SocialCreative?.setFriendsList(friendsCache);
+            renderRecipientStrip();
         } catch (err) {
             if (friendsEl) friendsEl.innerHTML = '<div class="social-hint">' + esc(err.message) + '</div>';
         }
@@ -2419,7 +2512,8 @@
         const chatBtn = document.getElementById('social-toolbar-chat');
         if (!chatBtn) return;
         const n = parseInt(badge?.textContent || '0', 10);
-        chatBtn.classList.toggle('has-badge', n > 0 && !badge?.classList.contains('hidden'));
+        const has = n > 0 && !badge?.classList.contains('hidden');
+        chatBtn.classList.toggle('has-badge', has);
     }
 
     function setDrawerTab(tab) {
@@ -2489,17 +2583,24 @@
     }
 
     function initFeedToolbar() {
-        document.getElementById('social-feed-folder')?.addEventListener('click', () => {
-            if (!feedPostsCache.length) loadFeed();
-            else showFeedSlot(0, true);
+        document.getElementById('social-toolbar-refresh')?.addEventListener('click', async () => {
+            if (pendingImage || pendingVideoBlob) return;
+            if (cameraStream) {
+                await stopCamera();
+                await startCamera();
+            } else {
+                await loadFeed();
+                if (!cameraStream && !feedPostsCache.length && !isPhoneDevice()) {
+                    scheduleAutoCameraStart(200);
+                }
+            }
         });
         document.getElementById('social-toolbar-menu')?.addEventListener('click', () => openSocialDrawer());
         document.getElementById('social-toolbar-chat')?.addEventListener('click', () => {
             openSocialDrawer('social-pending-in', 'social');
         });
-        document.getElementById('social-unified-studio')?.addEventListener('click', () => {
-            openSocialDrawer(null, pendingImage || pendingVideoBlob ? 'capture' : 'detail');
-        });
+        document.getElementById('social-history-toggle')?.addEventListener('click', toggleHistoryPanel);
+        document.getElementById('social-save-top-btn')?.addEventListener('click', onSavePreviewClick);
         document.getElementById('social-drawer-close')?.addEventListener('click', closeSocialDrawer);
         document.getElementById('social-drawer-overlay')?.addEventListener('click', closeSocialDrawer);
         document.addEventListener('keydown', e => {
@@ -2526,10 +2627,6 @@
                 await cancelPreview();
                 return;
             }
-            if (cameraStream) {
-                await exitCameraToFeed();
-                return;
-            }
             document.getElementById('social-file-input')?.click();
         });
         document.getElementById('social-file-btn')?.addEventListener('click', () => {
@@ -2547,8 +2644,16 @@
         document.getElementById('social-flip-camera')?.addEventListener('click', flipCamera);
         document.getElementById('social-post-btn')?.addEventListener('click', publishPost);
         document.getElementById('social-save-btn')?.addEventListener('click', onSavePreviewClick);
-        document.getElementById('social-send-audience-btn')?.addEventListener('click', () => {
-            openSocialDrawer(null, 'capture');
+        document.getElementById('social-unified-right')?.addEventListener('click', () => {
+            if (pendingImage || pendingVideoBlob) {
+                openSocialDrawer(null, 'capture');
+                return;
+            }
+            if (cameraStream) {
+                flipCamera();
+            } else {
+                startCamera().catch(() => {});
+            }
         });
         initCaptionSync();
         bindPreviewPlayButton();
@@ -2570,6 +2675,10 @@
         handleDriveCallbackParams();
         clearPreview();
         await stopCamera();
+        updateUserAvatar();
+        recipientSelection = 'all';
+        historyPanelOpen = false;
+        document.getElementById('social-history-toggle')?.classList.remove('is-open');
         await Promise.all([loadFriendsPanel(), loadDriveStatus()]);
         await loadFeed();
         scheduleAutoCameraStart(500);
