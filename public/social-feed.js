@@ -61,6 +61,7 @@
     let friendsCache = [];
     let recipientSelection = 'all';
     let historyPanelOpen = false;
+    let decorTimeInterval = null;
 
     function isVideoMedia() {
         return pendingMediaType === 'video' || !!pendingVideoBlob
@@ -860,6 +861,25 @@
         }
     }
 
+    function updateDecorTime() {
+        const span = document.querySelector('#social-decor-time span');
+        if (!span) return;
+        span.textContent = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function startDecorTimeTicker() {
+        updateDecorTime();
+        if (decorTimeInterval) return;
+        decorTimeInterval = setInterval(updateDecorTime, 30000);
+    }
+
+    function stopDecorTimeTicker() {
+        if (decorTimeInterval) {
+            clearInterval(decorTimeInterval);
+            decorTimeInterval = null;
+        }
+    }
+
     function updateUnifiedSlotVisibility() {
         const mode = getUnifiedSlotMode();
         const frame = document.querySelector('.social-locket-frame');
@@ -868,14 +888,20 @@
         const metaRow = document.getElementById('social-feed-meta-row');
         const dotsRow = document.getElementById('social-feed-dots-row');
         const modePicker = document.getElementById('social-frame-mode-picker');
+        const decorWidgets = document.getElementById('social-decor-widgets');
 
         const isPreview = mode === 'preview';
         const isCapture = mode === 'capture';
         const isFeed = mode === 'feed';
 
         frame?.classList.toggle('is-feed-mode', isFeed);
+        frame?.classList.toggle('is-capture-mode', isCapture);
         frame?.classList.toggle('is-history-mode', historyPanelOpen && !isPreview);
         frame?.classList.toggle('has-preview', isPreview);
+        decorWidgets?.classList.toggle('hidden', !isCapture);
+        decorWidgets?.setAttribute('aria-hidden', isCapture ? 'false' : 'true');
+        if (isCapture) startDecorTimeTicker();
+        else stopDecorTimeTicker();
         feedLayer?.classList.toggle('hidden', !isFeed);
         placeholder?.classList.toggle('hidden', isPreview || isCapture || isFeed);
         modePicker?.classList.toggle('hidden', isPreview || isFeed);
