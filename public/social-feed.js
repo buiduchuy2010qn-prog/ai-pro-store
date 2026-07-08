@@ -90,7 +90,7 @@
         placeholder?.classList.remove('hidden');
         document.getElementById('social-post-btn')?.classList.add('hidden');
         document.getElementById('social-retake-btn')?.classList.add('hidden');
-        setComposerStatus('Chọn ảnh từ máy hoặc chụp bằng camera');
+        setComposerStatus('Bấm Camera bên dưới hoặc Chọn ảnh bên phải');
     }
 
     async function stopCamera() {

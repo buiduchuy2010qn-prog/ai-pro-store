@@ -406,23 +406,31 @@
                 <div class="xl:col-span-2 space-y-5">
                     <div class="glass-card padded social-composer-card">
                         <div class="social-composer-badge"><i class="fas fa-pen-fancy"></i> Tạo bài đăng mới</div>
-                        <textarea id="social-caption" class="social-caption-input" rows="2" maxlength="500" placeholder="Viết chú thích cho ảnh..."></textarea>
-                        <div class="social-preview-wrap">
-                            <video id="social-camera-video" class="social-preview-video hidden" autoplay playsinline muted></video>
-                            <img id="social-preview" class="social-preview-img hidden" alt="Xem trước ảnh">
-                            <div id="social-preview-placeholder" class="social-preview-placeholder">
-                                <i class="fas fa-image"></i>
-                                <span>Chọn ảnh hoặc chụp bằng camera</span>
+                        <div class="social-composer-layout">
+                            <div class="social-camera-side">
+                                <div class="social-preview-wrap">
+                                    <video id="social-camera-video" class="social-preview-video hidden" autoplay playsinline muted></video>
+                                    <img id="social-preview" class="social-preview-img hidden" alt="Xem trước ảnh">
+                                    <div id="social-preview-placeholder" class="social-preview-placeholder">
+                                        <i class="fas fa-camera"></i>
+                                        <span>Chụp ảnh</span>
+                                    </div>
+                                </div>
+                                <p id="social-composer-status" class="social-composer-status">Bấm Camera bên dưới</p>
+                                <div class="social-camera-actions">
+                                    <button type="button" id="social-camera-start" class="social-action-btn outline w-full"><i class="fas fa-video mr-1"></i>Camera</button>
+                                    <button type="button" id="social-camera-capture" class="social-action-btn primary w-full hidden"><i class="fas fa-camera mr-1"></i>Chụp ảnh</button>
+                                </div>
                             </div>
-                        </div>
-                        <p id="social-composer-status" class="social-composer-status">Chọn ảnh từ máy hoặc chụp bằng camera</p>
-                        <div class="social-composer-actions">
-                            <input type="file" id="social-file-input" accept="image/*" class="hidden">
-                            <button type="button" id="social-file-btn" class="social-action-btn outline"><i class="fas fa-folder-open mr-1"></i>Chọn ảnh</button>
-                            <button type="button" id="social-camera-start" class="social-action-btn outline"><i class="fas fa-camera mr-1"></i>Camera</button>
-                            <button type="button" id="social-camera-capture" class="social-action-btn outline hidden"><i class="fas fa-camera-retro mr-1"></i>Chụp ảnh</button>
-                            <button type="button" id="social-retake-btn" class="social-action-btn outline hidden"><i class="fas fa-redo mr-1"></i>Chọn lại</button>
-                            <button type="button" id="social-post-btn" class="social-action-btn primary hidden"><i class="fas fa-paper-plane mr-1"></i>Đăng bài</button>
+                            <div class="social-compose-side">
+                                <textarea id="social-caption" class="social-caption-input" rows="4" maxlength="500" placeholder="Viết chú thích cho ảnh..."></textarea>
+                                <input type="file" id="social-file-input" accept="image/*" class="hidden">
+                                <div class="social-composer-actions">
+                                    <button type="button" id="social-file-btn" class="social-action-btn outline"><i class="fas fa-folder-open mr-1"></i>Chọn ảnh</button>
+                                    <button type="button" id="social-retake-btn" class="social-action-btn outline hidden"><i class="fas fa-redo mr-1"></i>Chọn lại</button>
+                                    <button type="button" id="social-post-btn" class="social-action-btn primary hidden"><i class="fas fa-paper-plane mr-1"></i>Đăng bài</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div id="social-feed-list" class="social-feed-list"></div>
@@ -750,7 +758,7 @@
 </a>
 
 <script src="/security-client.js"></script>
-<script src="/social-feed.js?v=mxh2"></script>
+<script src="/social-feed.js?v=mxh3"></script>
 <script src="/shop-features.js?v=mxh1"></script>
 <script>
 const API = '/api';
