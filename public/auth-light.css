@@ -330,12 +330,20 @@ body.app-light .app-main {
     background: linear-gradient(135deg, #eff6ff, #f5f3ff);
     border: 1px solid var(--al-border);
     cursor: pointer;
+    position: relative;
+    z-index: 2;
+    pointer-events: auto;
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .btn-profile:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+}
+
+#profile-modal {
+    z-index: 80 !important;
+    pointer-events: auto;
 }
 
 .profile-modal-panel {
@@ -349,6 +357,7 @@ body.app-light .app-main {
     background: rgba(255, 255, 255, 0.98);
     border: 1px solid var(--al-border);
     box-shadow: var(--al-shadow);
+    pointer-events: auto;
 }
 
 .profile-modal-header {

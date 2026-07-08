@@ -118,9 +118,15 @@
 
     /* ─── Profile modal ─── */
 
-    function openProfileModal() {
-        const user = window.currentUser;
-        if (!user) return;
+    async function openProfileModal() {
+        let user = window.currentUser;
+        if (!user && typeof window.refreshUser === 'function') {
+            try { await window.refreshUser(); user = window.currentUser; } catch (_) {}
+        }
+        if (!user) {
+            window.toast?.('Không tải được hồ sơ. Vui lòng đăng nhập lại.', true);
+            return;
+        }
         const modal = document.getElementById('profile-modal');
         if (!modal) return;
         renderProfileInfo(user);

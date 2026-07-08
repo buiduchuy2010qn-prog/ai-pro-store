@@ -678,10 +678,17 @@
 </a>
 
 <script src="/security-client.js"></script>
+<script src="/shop-features.js"></script>
 <script>
 const API = '/api';
 
 let currentUser = null;
+/** Đồng bộ cho shop-features.js (module ngoài scope inline script) */
+function setCurrentUser(user) {
+    currentUser = user;
+    window.currentUser = user;
+}
+setCurrentUser(null);
 let currentView = 'products';
 let currentAdminTab = 'dashboard';
 let activeTopupId = null;
@@ -893,7 +900,7 @@ function showAuth() {
     stopPolling();
     stopSupportPolling();
     stopOrderSupportPolling();
-    currentUser = null;
+    setCurrentUser(null);
     forgotEmail = '';
     forgotOtp = '';
     document.getElementById('auth-screen').classList.remove('hidden');
@@ -903,7 +910,7 @@ function showAuth() {
 
 async function refreshUser() {
     const { user } = await api('/auth/me');
-    currentUser = user;
+    setCurrentUser(user);
     updateHeader();
 }
 
@@ -2047,7 +2054,7 @@ document.getElementById('login-form').onsubmit = async e => {
             }),
         });
         setToken(r.token);
-        currentUser = r.user;
+        setCurrentUser(r.user);
         ShopFeatures?.recordLoginHistory?.(currentUser.id);
         errEl.classList.add('hidden');
         await showApp();
@@ -2088,7 +2095,7 @@ document.getElementById('register-form').onsubmit = async e => {
             }),
         });
         setToken(r.token);
-        currentUser = r.user;
+        setCurrentUser(r.user);
         ShopFeatures?.recordLoginHistory?.(currentUser.id);
         errEl.classList.add('hidden');
         await showApp();
@@ -2287,6 +2294,13 @@ document.getElementById('mock-transfer-btn').onclick = async () => {
     }
 };
 
+/* Expose helpers cho shop-features.js */
+window.updateHeader = updateHeader;
+window.formatMoney = formatMoney;
+window.escapeHtml = escapeHtml;
+window.toast = toast;
+window.refreshUser = refreshUser;
+
 /* ─── Init ─── */
 (async () => {
     if (window.SecurityClient) {
@@ -2314,7 +2328,6 @@ document.getElementById('mock-transfer-btn').onclick = async () => {
     }
 })();
 </script>
-<script src="/shop-features.js"></script>
 <script src="/particle-bg.js" defer></script>
 <script src="/ai-assistant.js"></script>
 <script src="/dressroom-render.js"></script>
