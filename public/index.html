@@ -836,7 +836,7 @@
 </a>
 
 <script src="/security-client.js"></script>
-<script src="/social-feed.js?v=drive8"></script>
+<script src="/social-feed.js?v=vn1"></script>
 <script src="/shop-features.js?v=mxh1"></script>
 <script>
 const API = '/api';
@@ -907,6 +907,23 @@ function escapeHtml(s) {
 
 function formatMoney(n) {
     return Number(n || 0).toLocaleString('vi-VN') + 'đ';
+}
+
+/** Giờ Việt Nam (UTC+7) — server lưu UTC, hiển thị theo Asia/Ho_Chi_Minh */
+function formatDateTimeVN(d) {
+    if (!d) return '';
+    const s = String(d).trim();
+    if (!s) return '';
+    if (/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/.test(s)) return s;
+    let iso = s;
+    if (!/[zZ]|[+-]\d{2}/.test(s)) iso = s.replace(' ', 'T') + 'Z';
+    const dt = new Date(iso);
+    if (isNaN(dt)) return s;
+    return dt.toLocaleString('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+    });
 }
 
 function toast(msg, err = false, duration = 3500) {
@@ -2475,6 +2492,7 @@ document.getElementById('mock-transfer-btn').onclick = async () => {
 /* Expose helpers cho shop-features.js */
 window.updateHeader = updateHeader;
 window.formatMoney = formatMoney;
+window.formatDateTimeVN = formatDateTimeVN;
 window.escapeHtml = escapeHtml;
 window.toast = toast;
 window.refreshUser = refreshUser;

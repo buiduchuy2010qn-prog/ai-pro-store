@@ -4,7 +4,7 @@ import re
 import secrets
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from pathlib import Path
 
@@ -29,6 +29,22 @@ from services import decoration_service as deco
 from services import drive_service as drive
 BASE = Path(__file__).parent
 PUBLIC = BASE / 'public'
+VN_TZ = timezone(timedelta(hours=7))
+
+
+def format_dt_vn(val):
+    """Chuyển timestamp DB (UTC) sang chuỗi giờ Việt Nam."""
+    if val is None or val == '':
+        return ''
+    s = str(val).strip()
+    try:
+        clean = s.replace('Z', '').split('.')[0].replace(' ', 'T')
+        dt = datetime.fromisoformat(clean)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(VN_TZ).strftime('%d/%m/%Y %H:%M')
+    except Exception:
+        return s
 app = Flask(__name__, static_folder=str(PUBLIC), static_url_path='')
 app.config['SECRET_KEY'] = JWT_SECRET
 
@@ -39,7 +55,7 @@ def fmt_user(row):
     return {
         'id': row['id'], 'fullName': row['name'], 'email': row['email'],
         'role': row['role'], 'balance': row['balance'], 'topupCode': row['topup_code'],
-        'isBlocked': bool(row.get('is_blocked')), 'createdAt': str(row.get('created_at', ''))
+        'isBlocked': bool(row.get('is_blocked')), 'createdAt': format_dt_vn(row.get('created_at'))
     }
 
 
@@ -2381,7 +2397,7 @@ def social_feed():
         'userId': r['user_id'],
         'caption': r['caption'] or '',
         'imageData': r['image_data'],
-        'createdAt': str(r['created_at']),
+        'createdAt': format_dt_vn(r['created_at']),
         'author': {'id': r['user_id'], 'fullName': r['name'], 'email': r['email']},
         'isMine': r['user_id'] == uid,
     } for r in rows]
@@ -2410,7 +2426,7 @@ def social_drive_status():
         resp['isAdmin'] = True
         resp['connected'] = bool(row and row.get('google_drive_refresh_token'))
         resp['googleEmail'] = row.get('google_drive_email') if row else None
-        resp['connectedAt'] = str(row.get('google_drive_connected_at') or '') if row else None
+        resp['connectedAt'] = format_dt_vn(row.get('google_drive_connected_at')) if row else None
     return jsonify(resp)
 
 

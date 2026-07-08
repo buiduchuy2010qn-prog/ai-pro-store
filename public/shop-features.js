@@ -128,8 +128,22 @@
     }
 
     function formatDateTime(d) {
+        if (typeof window.formatDateTimeVN === 'function') {
+            const base = window.formatDateTimeVN(d);
+            if (!base) return '';
+            const dt = new Date(/^\d{2}\/\d{2}\/\d{4}/.test(String(d || '')) ? String(d) : d);
+            if (!isNaN(dt)) {
+                return dt.toLocaleString('vi-VN', {
+                    timeZone: 'Asia/Ho_Chi_Minh',
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit',
+                });
+            }
+            return base + ':00';
+        }
         const dt = d instanceof Date ? d : new Date(d);
         return dt.toLocaleString('vi-VN', {
+            timeZone: 'Asia/Ho_Chi_Minh',
             year: 'numeric', month: '2-digit', day: '2-digit',
             hour: '2-digit', minute: '2-digit', second: '2-digit',
         });

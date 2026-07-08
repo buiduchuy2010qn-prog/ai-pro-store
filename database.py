@@ -25,7 +25,10 @@ def _pg_url():
 
 
 def sql_now():
-    return 'NOW()' if IS_PG else "datetime('now')"
+    """Thời gian hiện tại theo giờ Việt Nam (UTC+7)."""
+    if IS_PG:
+        return "timezone('Asia/Ho_Chi_Minh', now())"
+    return "datetime('now', '+7 hours')"
 
 
 def bool_val(v):
