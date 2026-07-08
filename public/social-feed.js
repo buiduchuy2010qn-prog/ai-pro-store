@@ -40,6 +40,9 @@
     let searchTimer = null;
     /** 'user' = trước, 'environment' = sau */
     let cameraFacing = 'user';
+    /** AudioContext im lặng — WebM chỉ video thường không phát được trên Chrome */
+    let silentAudioCtx = null;
+    let silentAudioCleanup = null;
 
     function isVideoMedia() {
         return pendingMediaType === 'video' || !!pendingVideoBlob
@@ -66,12 +69,38 @@
         setPreviewPlayOverlay(true);
     }
 
+    function waitVideoCanPlay(vid, timeoutMs = 4000) {
+        return new Promise((resolve, reject) => {
+            if (!vid) return reject(new Error('no video'));
+            if (vid.readyState >= 3) return resolve();
+            let done = false;
+            const finish = (ok, err) => {
+                if (done) return;
+                done = true;
+                vid.removeEventListener('canplay', onReady);
+                vid.removeEventListener('loadeddata', onReady);
+                vid.removeEventListener('error', onErr);
+                clearTimeout(timer);
+                ok ? resolve() : reject(err || new Error('cannot play'));
+            };
+            const onReady = () => finish(true);
+            const onErr = () => finish(false, vid.error || new Error('decode error'));
+            const timer = setTimeout(() => {
+                finish(vid.readyState >= 2, vid.error || new Error('timeout'));
+            }, timeoutMs);
+            vid.addEventListener('canplay', onReady);
+            vid.addEventListener('loadeddata', onReady);
+            vid.addEventListener('error', onErr);
+            if (vid.readyState < 2) vid.load();
+        });
+    }
+
     async function playPreviewVideo() {
         const vid = document.getElementById('social-preview-video');
         if (!vid || vid.classList.contains('hidden')) return;
         hidePreviewPlayBtn();
         try {
-            if (vid.readyState < 2) vid.load();
+            await waitVideoCanPlay(vid);
             vid.currentTime = 0;
             vid.muted = true;
             await vid.play();
@@ -83,7 +112,7 @@
             } catch (err) {
                 console.warn('[SocialFeed] preview play:', err);
                 showPreviewPlayBtn();
-                window.toast?.('Không phát được — bấm ▶ trên thanh điều khiển dưới video', true, 4500);
+                window.toast?.('Không phát được — thử Lưu video rồi mở bằng trình phát trên máy', true, 4500);
             }
         }
     }
@@ -178,11 +207,6 @@
         } catch (_) {
             return null;
         }
-    }
-
-    function cleanRecorderMime(mime) {
-        const base = (mime || 'video/webm').split(';')[0].toLowerCase();
-        return base === 'video/mp4' ? 'video/mp4' : 'video/webm';
     }
 
     function formatFileSize(bytes) {
@@ -342,11 +366,54 @@
         });
     }
 
+    function releaseSilentAudio() {
+        if (silentAudioCleanup) {
+            try { silentAudioCleanup(); } catch (_) {}
+            silentAudioCleanup = null;
+        }
+        silentAudioCtx = null;
+    }
+
+    /** Gắn track âm thanh im lặng để container WebM/MP4 phát được sau khi quay */
+    function buildRecordStream(videoStream) {
+        releaseSilentAudio();
+        if (!videoStream) return null;
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return videoStream;
+        try {
+            const ctx = new AudioCtx();
+            const dest = ctx.createMediaStreamDestination();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            gain.gain.value = 0.0001;
+            osc.frequency.value = 440;
+            osc.connect(gain);
+            gain.connect(dest);
+            osc.start();
+            const audioTrack = dest.stream.getAudioTracks()[0];
+            if (!audioTrack) {
+                ctx.close();
+                return videoStream;
+            }
+            silentAudioCtx = ctx;
+            silentAudioCleanup = () => {
+                try { osc.stop(); } catch (_) {}
+                try { osc.disconnect(); gain.disconnect(); } catch (_) {}
+                try { audioTrack.stop(); } catch (_) {}
+                if (ctx.state !== 'closed') ctx.close();
+            };
+            return new MediaStream([...videoStream.getVideoTracks(), audioTrack]);
+        } catch (e) {
+            console.warn('[SocialFeed] silent audio:', e);
+            return videoStream;
+        }
+    }
+
     function getRecorderMime() {
         const isApple = /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
         const candidates = isApple
-            ? ['video/mp4', 'video/webm;codecs=vp8', 'video/webm', 'video/webm;codecs=vp9']
-            : ['video/webm;codecs=vp8', 'video/webm;codecs=vp9', 'video/webm', 'video/mp4'];
+            ? ['video/mp4', 'video/webm;codecs=vp8,opus', 'video/webm;codecs=vp8', 'video/webm', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp9']
+            : ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8', 'video/webm;codecs=vp9', 'video/webm', 'video/mp4'];
         for (const mime of candidates) {
             if (MediaRecorder.isTypeSupported(mime)) return mime;
         }
@@ -578,6 +645,7 @@
         lastRecordDurationSec = 0;
         previewPosterUrl = null;
         revokePreviewObjectUrl();
+        releaseSilentAudio();
         hidePreviewPlayBtn();
         document.querySelector('.social-locket-frame')?.classList.remove('is-video-preview');
         const preview = document.getElementById('social-preview');
@@ -655,12 +723,17 @@
             return;
         }
         recordChunks = [];
+        const recordStream = buildRecordStream(cameraStream);
+        if (silentAudioCtx?.state === 'suspended') {
+            try { await silentAudioCtx.resume(); } catch (_) {}
+        }
         try {
-            mediaRecorder = new MediaRecorder(cameraStream, {
+            mediaRecorder = new MediaRecorder(recordStream, {
                 mimeType: mime,
                 videoBitsPerSecond: 900000,
             });
         } catch (e) {
+            releaseSilentAudio();
             window.toast?.('Không quay được video trên thiết bị này', true);
             return;
         }
@@ -668,11 +741,12 @@
             if (e.data && e.data.size) recordChunks.push(e.data);
         };
         mediaRecorder.onstop = async () => {
-            const blobType = cleanRecorderMime(mime);
+            const blobType = mediaRecorder.mimeType || mime;
             const blob = new Blob(recordChunks, { type: blobType });
             const poster = captureCameraPoster();
             recordChunks = [];
             mediaRecorder = null;
+            releaseSilentAudio();
             if (blob.size < 2048) {
                 window.toast?.('Video quá ngắn — giữ nút quay ít nhất 1–2 giây', true);
                 lastRecordDurationSec = 0;
@@ -704,6 +778,7 @@
     }
 
     function stopCameraTracksOnly() {
+        releaseSilentAudio();
         if (cameraStream) {
             cameraStream.getTracks().forEach(t => t.stop());
             cameraStream = null;

@@ -980,6 +980,7 @@ body.app-light .app-main {
 #social-preview-video.social-locket-media {
     object-fit: contain;
     background: #0f172a;
+    z-index: 4;
 }
 
 .social-preview-play-btn {
