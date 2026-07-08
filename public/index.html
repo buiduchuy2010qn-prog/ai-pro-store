@@ -180,11 +180,12 @@
                 <button data-view="wallet" class="nav-btn nav-pill"><i class="fas fa-wallet mr-1"></i>Ví tiền</button>
                 <button data-view="orders" class="nav-btn nav-pill"><i class="fas fa-shopping-bag mr-1"></i>Đơn hàng</button>
                 <button data-view="transactions" class="nav-btn nav-pill"><i class="fas fa-clock-rotate-left mr-1"></i>Lịch sử</button>
+                <button type="button" id="nav-profile-btn" class="nav-btn nav-pill"><i class="fas fa-user-circle mr-1"></i>Hồ sơ</button>
                 <button data-view="dressroom" class="nav-btn nav-pill"><i class="fas fa-shirt mr-1"></i>Phòng Thay Đồ</button>
                 <button data-view="admin" id="admin-nav-btn" class="nav-btn nav-pill hidden"><i class="fas fa-shield-alt mr-1"></i>Quản trị</button>
             </div>
             <div class="flex items-center gap-2 sm:gap-3">
-                <div class="text-right hidden sm:block">
+                <div class="text-right hidden sm:block cursor-pointer hover:opacity-80" id="user-name-wrap" title="Mở hồ sơ">
                     <div id="user-name" class="text-sm font-semibold text-slate-800"></div>
                     <div id="header-balance" class="user-balance-pill"></div>
                 </div>
@@ -617,13 +618,35 @@
         </div>
         <div class="profile-modal-body pretty-scrollbar">
             <div id="profile-panel-info">
-                <div id="profile-view-mode" class="profile-info-grid">
-                    <div class="profile-info-item full profile-login-photo-wrap">
-                        <div class="profile-info-label">Ảnh đăng nhập gần nhất</div>
-                        <div id="profile-last-login-photo" class="profile-last-login-photo">
-                            <div class="profile-no-photo"><i class="fas fa-camera"></i><span>Chưa có ảnh</span></div>
+                <!-- Chụp ảnh xác minh ngay trong Hồ sơ (kiểu Loket) -->
+                <div id="profile-camera-section" class="login-camera-box mb-4">
+                    <div class="login-camera-label"><i class="fas fa-camera mr-1"></i>Chụp ảnh xác minh (Loket)</div>
+                    <div class="profile-camera-split">
+                        <div class="login-camera-frame">
+                            <video id="profile-camera-video" class="login-camera-video hidden" autoplay playsinline muted></video>
+                            <img id="profile-camera-snapshot" class="login-camera-snapshot hidden" alt="Ảnh xác minh">
+                            <div id="profile-camera-placeholder" class="login-camera-placeholder">
+                                <i class="fas fa-user-circle"></i>
+                                <span>Bật camera</span>
+                            </div>
+                        </div>
+                        <div id="profile-last-login-photo" class="profile-last-login-photo profile-last-side">
+                            <div class="profile-no-photo"><i class="fas fa-image"></i><span>Ảnh gần nhất</span></div>
                         </div>
                     </div>
+                    <div class="login-camera-actions">
+                        <button type="button" id="profile-camera-start" class="login-camera-btn outline"><i class="fas fa-video mr-1"></i>Bật camera</button>
+                        <button type="button" id="profile-camera-capture" class="login-camera-btn primary hidden"><i class="fas fa-camera mr-1"></i>Chụp ảnh</button>
+                        <button type="button" id="profile-camera-save" class="login-camera-btn primary hidden"><i class="fas fa-save mr-1"></i>Lưu vào lịch sử</button>
+                        <button type="button" id="profile-camera-retake" class="login-camera-btn outline hidden"><i class="fas fa-redo mr-1"></i>Chụp lại</button>
+                    </div>
+                    <p id="profile-camera-status" class="login-camera-status">Chụp ảnh khuôn mặt để lưu IP &amp; thiết bị vào lịch sử</p>
+                    <div class="profile-ip-device-bar">
+                        <span><i class="fas fa-globe mr-1"></i>IP: <strong id="profile-bar-ip">—</strong></span>
+                        <span><i class="fas fa-laptop mr-1"></i><span id="profile-bar-device">—</span></span>
+                    </div>
+                </div>
+                <div id="profile-view-mode" class="profile-info-grid">
                     <div class="profile-info-item full">
                         <div class="profile-info-label">Họ và tên</div>
                         <div id="profile-display-name" class="profile-info-value">—</div>
@@ -727,7 +750,7 @@
 </a>
 
 <script src="/security-client.js"></script>
-<script src="/shop-features.js"></script>
+<script src="/shop-features.js?v=profile-loket"></script>
 <script>
 const API = '/api';
 
@@ -990,6 +1013,10 @@ async function showApp() {
     document.getElementById('app').classList.remove('hidden');
     await refreshUser();
     navigateTo('products');
+    if (!sessionStorage.getItem('profile_hint_shown')) {
+        sessionStorage.setItem('profile_hint_shown', '1');
+        setTimeout(() => toast('Bấm "Hồ sơ" trên menu để xem IP & chụp ảnh Loket', false, 5500), 900);
+    }
 }
 
 function navigateTo(view) {
@@ -2242,7 +2269,7 @@ document.querySelectorAll('.nav-btn, .mobile-nav-btn, .category-pill[data-view],
 document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('mobile-menu').classList.toggle('hidden');
 document.getElementById('profile-mobile-btn').onclick = () => {
     document.getElementById('mobile-menu').classList.add('hidden');
-    ShopFeatures?.openProfileModal?.();
+    ShopFeatures?.openProfileModal?.('info');
 };
 document.getElementById('create-topup-btn').onclick = createTopup;
 document.getElementById('copy-topup-code').onclick = () => {

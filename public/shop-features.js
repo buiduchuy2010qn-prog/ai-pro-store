@@ -162,13 +162,21 @@
             toggle(startBtn, true);
             toggle(captureBtn, false);
             toggle(retakeBtn, false);
-            setStatus(`Camera tự bật — nhìn vào khung tròn rồi bấm ${actionLabel === 'đăng ký' ? 'Tạo tài khoản' : 'Đăng nhập'}`);
+            if (scope === 'profile') {
+                document.getElementById('profile-camera-save')?.classList.add('hidden');
+                setStatus('Chụp ảnh khuôn mặt để lưu IP & thiết bị vào lịch sử');
+            } else {
+                setStatus(`Camera tự bật — nhìn vào khung tròn rồi bấm ${actionLabel === 'đăng ký' ? 'Tạo tài khoản' : 'Đăng nhập'}`);
+            }
         }
 
         function fullReset() {
             stopStream();
             state.cameraDenied = false;
             resetUi();
+            if (scope === 'profile') {
+                document.getElementById('profile-camera-save')?.classList.add('hidden');
+            }
         }
 
         async function startCamera() {
@@ -221,6 +229,10 @@
                 toggle(startBtn, false);
                 await stopStream();
                 setStatus(`Đã chụp ảnh — có thể ${actionLabel}`, 'ok');
+                if (scope === 'profile') {
+                    document.getElementById('profile-camera-save')?.classList.remove('hidden');
+                    setStatus('Bấm "Lưu vào lịch sử" để ghi nhận IP & thiết bị', 'ok');
+                }
             } catch (_) {
                 setStatus('Lỗi xử lý ảnh, thử chụp lại', 'err');
             }
@@ -411,9 +423,59 @@
         return window._clientIp || 'Chưa có';
     }
 
+    function appendVerifyHistory(userId, photo) {
+        if (!userId || !photo) return;
+        const key = historyKey(userId);
+        const history = readJson(key, []);
+        history.unshift({
+            time: new Date().toISOString(),
+            device: getClientDevice(),
+            ip: window._clientIp || 'Không xác định',
+            photo,
+            status: 'Xác minh hồ sơ',
+        });
+        try {
+            writeJson(key, history.slice(0, MAX_LOGIN_HISTORY));
+        } catch (_) {
+            const trimmed = history.slice(0, 10).map((h, i) => (i === 0 ? h : { ...h, photo: null }));
+            writeJson(key, trimmed);
+        }
+    }
+
+    function updateProfileBar(user) {
+        const ipEl = document.getElementById('profile-bar-ip');
+        const devEl = document.getElementById('profile-bar-device');
+        if (ipEl) ipEl.textContent = window._clientIp || getLastLoginIp(user?.id) || '—';
+        if (devEl) devEl.textContent = getClientDevice();
+    }
+
+    function initProfileCamera() {
+        if (authCameras.profile) return;
+        const cam = createAuthCamera('profile');
+        if (!cam) return;
+        authCameras.profile = cam;
+        document.getElementById('profile-camera-save')?.addEventListener('click', () => {
+            const user = window.currentUser;
+            if (!user) return;
+            const photo = cam.getPhoto();
+            if (!photo) {
+                window.toast?.('Chụp ảnh trước khi lưu', true);
+                return;
+            }
+            cam.consumePhoto();
+            appendVerifyHistory(user.id, photo);
+            renderLastLoginPhoto(user.id);
+            renderLoginHistory(user.id);
+            renderProfileInfo(user);
+            window.toast?.('Đã lưu ảnh + IP vào lịch sử!');
+            cam.fullReset();
+            setTimeout(() => cam.startCamera(), 400);
+        });
+    }
+
     /* ─── Profile modal ─── */
 
-    async function openProfileModal() {
+    async function openProfileModal(tab = 'info') {
         let user = window.currentUser;
         if (!user && typeof window.refreshUser === 'function') {
             try { await window.refreshUser(); user = window.currentUser; } catch (_) {}
@@ -424,13 +486,23 @@
         }
         const modal = document.getElementById('profile-modal');
         if (!modal) return;
+        initProfileCamera();
         renderProfileInfo(user);
         renderLoginHistory(user.id);
-        showProfileTab('info');
+        updateProfileBar(user);
+        showProfileTab(tab === 'history' ? 'history' : 'info');
         modal.classList.remove('hidden');
+        document.getElementById('mobile-menu')?.classList.add('hidden');
+        setTimeout(async () => {
+            const cam = authCameras.profile;
+            if (cam && !cam.getPhoto() && !cam.state.stream && !cam.state.cameraDenied) {
+                await cam.startCamera();
+            }
+        }, 350);
     }
 
     function closeProfileModal() {
+        authCameras.profile?.fullReset?.();
         document.getElementById('profile-modal')?.classList.add('hidden');
         cancelProfileEdit();
     }
@@ -526,7 +598,10 @@
     }
 
     function initProfileEvents() {
-        document.getElementById('profile-btn')?.addEventListener('click', openProfileModal);
+        const openProfile = () => openProfileModal('info');
+        document.getElementById('profile-btn')?.addEventListener('click', openProfile);
+        document.getElementById('nav-profile-btn')?.addEventListener('click', openProfile);
+        document.getElementById('user-name-wrap')?.addEventListener('click', openProfile);
         document.getElementById('profile-modal-close')?.addEventListener('click', closeProfileModal);
         document.getElementById('profile-modal')?.addEventListener('click', e => {
             if (e.target.id === 'profile-modal') closeProfileModal();
