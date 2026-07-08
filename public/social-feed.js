@@ -35,6 +35,8 @@
     let recordingTimer = null;
     let recordTickInterval = null;
     let recordStartedAt = 0;
+    let lastRecordDurationSec = 0;
+    let previewPosterUrl = null;
     let searchTimer = null;
     /** 'user' = trước, 'environment' = sau */
     let cameraFacing = 'user';
@@ -51,40 +53,109 @@
         }
     }
 
-    function setupPreviewVideoElement(vid, playUrl, blob) {
+    function hidePreviewPlayBtn() {
+        document.getElementById('social-preview-play')?.classList.add('hidden');
+    }
+
+    function showPreviewPlayBtn() {
+        const btn = document.getElementById('social-preview-play');
+        if (btn) btn.classList.remove('hidden');
+    }
+
+    function playPreviewVideo() {
+        const vid = document.getElementById('social-preview-video');
+        if (!vid || vid.classList.contains('hidden')) return;
+        hidePreviewPlayBtn();
+        vid.muted = false;
+        const p = vid.play();
+        if (p && typeof p.catch === 'function') {
+            p.catch(() => showPreviewPlayBtn());
+        }
+    }
+
+    function getVideoDurationSec(vid) {
+        const d = vid?.duration;
+        if (d && Number.isFinite(d) && d > 0 && d !== Infinity) return d;
+        return lastRecordDurationSec > 0 ? lastRecordDurationSec : 0;
+    }
+
+    function setupPreviewVideoElement(vid, playUrl, blob, posterUrl) {
         if (!vid || !playUrl) return;
+        const playBtn = document.getElementById('social-preview-play');
+
         vid.pause();
         vid.removeAttribute('src');
+        if (posterUrl) vid.poster = posterUrl;
+        else vid.removeAttribute('poster');
         vid.load();
         vid.src = playUrl;
         vid.muted = false;
         vid.defaultMuted = false;
         vid.controls = true;
         vid.setAttribute('playsinline', '');
+        vid.setAttribute('webkit-playsinline', '');
         vid.preload = 'auto';
         vid.classList.remove('hidden');
+        showPreviewPlayBtn();
 
         const refreshMeta = () => {
-            if (vid.duration && Number.isFinite(vid.duration) && vid.duration > 0) {
-                try { vid.currentTime = Math.min(0.05, vid.duration * 0.01); } catch (_) {}
+            const dur = getVideoDurationSec(vid);
+            if (dur > 0) {
+                try { vid.currentTime = Math.min(0.05, dur * 0.01); } catch (_) {}
             }
             if (blob) {
+                const durPart = dur > 0
+                    ? '<span><i class="fas fa-clock"></i> ' + formatDurationLabel(dur) + '</span>'
+                    : '';
                 setMediaInfo([
-                    vid.duration && Number.isFinite(vid.duration)
-                        ? '<span><i class="fas fa-clock"></i> ' + formatDurationLabel(vid.duration) + '</span>'
-                        : '',
+                    durPart,
                     '<span><i class="fas fa-database"></i> ' + formatFileSize(blob.size) + '</span>',
                 ].filter(Boolean), true);
             }
         };
 
         vid.onloadedmetadata = refreshMeta;
-        vid.onloadeddata = refreshMeta;
-        vid.onerror = () => {
-            setComposerStatus('Không phát được video — thử quay lại hoặc chọn video từ máy', 'err');
-            window.toast?.('Trình duyệt không phát được video vừa quay — thử quay ngắn hơn', true, 5000);
+        vid.onloadeddata = () => {
+            refreshMeta();
+            hidePreviewPlayBtn();
         };
+        vid.onplaying = hidePreviewPlayBtn;
+        vid.onpause = () => {
+            if (!vid.ended && vid.currentTime < 0.1) showPreviewPlayBtn();
+        };
+        vid.onended = showPreviewPlayBtn;
+        vid.onerror = () => {
+            showPreviewPlayBtn();
+            setComposerStatus('Bấm nút ▶ giữa khung để xem video — hoặc quay lại', 'err');
+        };
+        vid.onclick = () => playPreviewVideo();
+        if (playBtn) playBtn.onclick = e => { e.stopPropagation(); playPreviewVideo(); };
+        refreshMeta();
         vid.load();
+    }
+
+    function captureCameraPoster() {
+        const video = document.getElementById('social-camera-video');
+        if (!video?.videoWidth) return null;
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            if (cameraFacing === 'user') {
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+            }
+            ctx.drawImage(video, 0, 0);
+            return canvas.toDataURL('image/jpeg', 0.82);
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function cleanRecorderMime(mime) {
+        const base = (mime || 'video/webm').split(';')[0].toLowerCase();
+        return base === 'video/mp4' ? 'video/mp4' : 'video/webm';
     }
 
     function formatFileSize(bytes) {
@@ -139,14 +210,18 @@
 
     function updateRecordingMediaInfo() {
         const elapsed = (Date.now() - recordStartedAt) / 1000;
+        lastRecordDurationSec = Math.floor(elapsed);
         const recBadge = document.getElementById('social-rec-badge');
         if (recBadge) {
             recBadge.innerHTML = '<span class="social-rec-dot"></span> REC ' + formatDurationClock(elapsed);
         }
+        const sizePart = getRecordedBytes() > 0
+            ? '<span><i class="fas fa-database"></i> ' + formatFileSize(getRecordedBytes()) + '</span>'
+            : '';
         setMediaInfo([
             '<span><i class="fas fa-clock"></i> ' + formatDurationLabel(elapsed) + '</span>',
-            '<span><i class="fas fa-database"></i> ' + formatFileSize(getRecordedBytes()) + '</span>',
-        ], true);
+            sizePart,
+        ].filter(Boolean), true);
     }
 
     function startRecordingTicker() {
@@ -241,13 +316,10 @@
     }
 
     function getRecorderMime() {
-        const candidates = [
-            'video/webm;codecs=vp8',
-            'video/webm;codecs=vp9',
-            'video/webm',
-            'video/mp4',
-            'video/webm;codecs=vp8,opus',
-        ];
+        const isApple = /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+        const candidates = isApple
+            ? ['video/mp4', 'video/webm;codecs=vp8', 'video/webm', 'video/webm;codecs=vp9']
+            : ['video/webm;codecs=vp8', 'video/webm;codecs=vp9', 'video/webm', 'video/mp4'];
         for (const mime of candidates) {
             if (MediaRecorder.isTypeSupported(mime)) return mime;
         }
@@ -403,17 +475,19 @@
         saveMediaToDevice(dataUrl, label);
     }
 
-    function showPreview(src, mediaType, videoBlob) {
+    function showPreview(src, mediaType, videoBlob, posterUrl) {
         const isVid = mediaType === 'video' || !!videoBlob
             || (src && String(src).startsWith('data:video/'));
         pendingMediaType = isVid ? 'video' : 'image';
         pendingImage = isVid ? null : src;
         if (isVid && videoBlob) {
             pendingVideoBlob = videoBlob;
+            previewPosterUrl = posterUrl || previewPosterUrl || null;
             revokePreviewObjectUrl();
             previewObjectUrl = URL.createObjectURL(videoBlob);
             pendingImage = previewObjectUrl;
         } else if (!isVid) {
+            previewPosterUrl = null;
             pendingVideoBlob = null;
             revokePreviewObjectUrl();
         }
@@ -429,8 +503,9 @@
         if (previewVid) {
             if (isVid) {
                 const playUrl = previewObjectUrl || src;
-                setupPreviewVideoElement(previewVid, playUrl, pendingVideoBlob);
+                setupPreviewVideoElement(previewVid, playUrl, pendingVideoBlob, previewPosterUrl);
             } else {
+                hidePreviewPlayBtn();
                 previewVid.pause?.();
                 previewVid.src = '';
                 previewVid.classList.add('hidden');
@@ -454,9 +529,13 @@
             'ok'
         );
         if (isVid && pendingVideoBlob) {
+            const durPart = lastRecordDurationSec > 0
+                ? '<span><i class="fas fa-clock"></i> ' + formatDurationLabel(lastRecordDurationSec) + '</span>'
+                : '';
             setMediaInfo([
+                durPart,
                 '<span><i class="fas fa-database"></i> ' + formatFileSize(pendingVideoBlob.size) + '</span>',
-            ], true);
+            ].filter(Boolean), true);
         } else if (!isVid) {
             updatePreviewMediaInfo(src, pendingMediaType);
         }
@@ -469,7 +548,10 @@
         pendingImage = null;
         pendingVideoBlob = null;
         pendingMediaType = 'image';
+        lastRecordDurationSec = 0;
+        previewPosterUrl = null;
         revokePreviewObjectUrl();
+        hidePreviewPlayBtn();
         const preview = document.getElementById('social-preview');
         const previewVid = document.getElementById('social-preview-video');
         const placeholder = document.getElementById('social-preview-placeholder');
@@ -519,6 +601,7 @@
         recordingTimer = null;
         stopRecordingTicker();
         if (mediaRecorder && mediaRecorder.state === 'recording') {
+            try { mediaRecorder.requestData(); } catch (_) {}
             mediaRecorder.stop();
         }
         updateShutterRecordingState(false);
@@ -557,18 +640,30 @@
             if (e.data && e.data.size) recordChunks.push(e.data);
         };
         mediaRecorder.onstop = async () => {
-            const blob = new Blob(recordChunks, { type: mime.split(';')[0] });
+            const blobType = cleanRecorderMime(mime);
+            const blob = new Blob(recordChunks, { type: blobType });
+            const poster = captureCameraPoster();
             recordChunks = [];
             mediaRecorder = null;
-            if (blob.size > MAX_VIDEO_FILE_MB * 1024 * 1024) {
-                window.toast?.('Video quá lớn — quay ngắn hơn (tối đa ~20 giây)', true);
+            if (blob.size < 2048) {
+                window.toast?.('Video quá ngắn — giữ nút quay ít nhất 1–2 giây', true);
+                lastRecordDurationSec = 0;
+                stopCameraTracksOnly();
                 updateComposerStatusText();
                 return;
             }
-            stopCamera();
-            showPreview(null, 'video', blob);
+            if (blob.size > MAX_VIDEO_FILE_MB * 1024 * 1024) {
+                window.toast?.('Video quá lớn — quay ngắn hơn (tối đa ~20 giây)', true);
+                lastRecordDurationSec = 0;
+                stopCameraTracksOnly();
+                updateComposerStatusText();
+                return;
+            }
+            stopCameraTracksOnly();
+            showPreview(null, 'video', blob, poster);
         };
-        mediaRecorder.start(250);
+        lastRecordDurationSec = 0;
+        mediaRecorder.start();
         recordingTimer = setTimeout(() => {
             if (mediaRecorder?.state === 'recording') {
                 stopVideoRecord();
@@ -580,8 +675,7 @@
         setComposerStatus('Đang quay... bấm nút đỏ để dừng', 'recording');
     }
 
-    async function stopCamera() {
-        stopVideoRecord();
+    function stopCameraTracksOnly() {
         if (cameraStream) {
             cameraStream.getTracks().forEach(t => t.stop());
             cameraStream = null;
@@ -591,6 +685,11 @@
             video.srcObject = null;
             video.classList.add('hidden');
         }
+    }
+
+    async function stopCamera() {
+        stopVideoRecord();
+        stopCameraTracksOnly();
         if (!pendingImage && !pendingVideoBlob) {
             document.getElementById('social-preview-placeholder')?.classList.remove('hidden');
         }

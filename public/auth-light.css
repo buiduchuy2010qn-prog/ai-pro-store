@@ -982,6 +982,41 @@ body.app-light .app-main {
     background: #0f172a;
 }
 
+.social-preview-play-btn {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    width: 58px;
+    height: 58px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    color: #6d28d9;
+    font-size: 1.35rem;
+    cursor: pointer;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 0.15rem;
+    transition: transform 0.15s, background 0.15s;
+}
+
+.social-preview-play-btn:hover {
+    transform: translate(-50%, -50%) scale(1.06);
+    background: #fff;
+}
+
+.social-preview-play-btn.hidden {
+    display: none;
+}
+
+.social-locket-frame.has-preview .social-preview-play-btn:not(.hidden) {
+    display: flex;
+}
+
 .social-flip-camera-btn {
     position: absolute;
     top: 10px;
