@@ -1,22 +1,34 @@
 /**
- * Bright & Trust Blue — nền tĩnh sáng, spotlight logo AI
- * Không canvas, không Three.js, không animation nền.
+ * Bright & Trust Blue — Premium Polish
+ * Nền tĩnh, không canvas / Three.js. Hiệu ứng nhẹ, tập trung UX.
  */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
     --bb-canvas: #edf2f9;
     --bb-white: #ffffff;
     --bb-primary: #1a73e8;
     --bb-primary-dark: #1557b0;
-    --bb-ink: #1d1d1d;
+    --bb-primary-light: #e8f1fd;
+    --bb-ink: #1d1d1f;
     --bb-muted: #5f6368;
+    --bb-border: rgba(26, 115, 232, 0.1);
     --bb-shadow: 0 4px 12px rgba(0, 50, 150, 0.08);
-    --bb-shadow-hover: 0 12px 28px rgba(26, 115, 232, 0.18);
+    --bb-shadow-md: 0 8px 24px rgba(0, 50, 150, 0.1);
+    --bb-shadow-hover: 0 16px 40px rgba(26, 115, 232, 0.18);
+    --bb-radius: 16px;
+    --bb-radius-lg: 24px;
+    --bb-font: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
 }
 
-/* ─── Nền sáng tĩnh ─── */
+/* ─── Nền tĩnh — gradient mesh + dot grid ─── */
 body.bright-blue {
-    background: var(--bb-canvas) !important;
+    font-family: var(--bb-font) !important;
+    background:
+        radial-gradient(ellipse 70% 45% at 10% -5%, rgba(26, 115, 232, 0.09), transparent 55%),
+        radial-gradient(ellipse 55% 40% at 95% 5%, rgba(99, 102, 241, 0.07), transparent 50%),
+        radial-gradient(ellipse 50% 35% at 50% 100%, rgba(26, 115, 232, 0.05), transparent 55%),
+        var(--bb-canvas) !important;
     color: var(--bb-ink);
 }
 
@@ -25,76 +37,340 @@ body.bright-blue::after {
     display: none !important;
 }
 
-/* ─── Typography & UI chung ─── */
-body.bright-blue .page-title,
-body.bright-blue .shop-wordmark,
+body.bright-blue #app,
+body.bright-blue #auth-screen {
+    position: relative;
+}
+
+/* ─── Header — sticky, sạch ─── */
+body.bright-blue .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.88) !important;
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    border-bottom: 1px solid var(--bb-border) !important;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8), 0 4px 20px rgba(0, 50, 150, 0.06);
+}
+
 body.bright-blue .brand-logo {
+    font-weight: 800 !important;
+    letter-spacing: -0.04em;
     color: var(--bb-ink) !important;
 }
 
-body.bright-blue .page-subtitle,
-body.bright-blue .shop-hero-sub,
-body.bright-blue .text-slate-500,
-body.bright-blue .text-slate-600 {
+body.bright-blue .brand-dot {
+    background: var(--bb-primary) !important;
+    box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.15) !important;
+}
+
+body.bright-blue .brand-tagline {
     color: var(--bb-muted) !important;
 }
 
-body.bright-blue .site-header {
-    background: var(--bb-white) !important;
-    border-bottom: 1px solid rgba(26, 115, 232, 0.1) !important;
-    box-shadow: 0 1px 8px rgba(0, 50, 150, 0.06);
+body.bright-blue .user-balance-pill {
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5) !important;
+    color: #047857 !important;
+    border: 1px solid #a7f3d0 !important;
+    font-weight: 600;
 }
 
-body.bright-blue .glass-card,
-body.bright-blue .auth-card,
-body.bright-blue .modal-panel,
-body.bright-blue .shop-hero,
-body.bright-blue .section-header {
-    background: var(--bb-white) !important;
-    border: 1px solid rgba(26, 115, 232, 0.08) !important;
-    box-shadow: var(--bb-shadow) !important;
-    color: var(--bb-ink);
+body.bright-blue .nav-pill-wrap {
+    background: var(--bb-primary-light) !important;
+    border: 1px solid var(--bb-border);
+    padding: 5px !important;
 }
 
-body.bright-blue .btn-primary {
+body.bright-blue .nav-pill {
+    font-weight: 600 !important;
+    border-radius: 999px !important;
+    transition: all 0.22s ease !important;
+}
+
+body.bright-blue .nav-pill.nav-active,
+body.bright-blue .mobile-nav-btn.nav-active {
     background: var(--bb-primary) !important;
-    border-color: var(--bb-primary) !important;
     color: #fff !important;
-    box-shadow: 0 4px 14px rgba(26, 115, 232, 0.28) !important;
+    box-shadow: 0 4px 14px rgba(26, 115, 232, 0.35) !important;
 }
 
-body.bright-blue .btn-primary:hover {
-    background: var(--bb-primary-dark) !important;
+body.bright-blue #mobile-menu {
+    background: rgba(255, 255, 255, 0.96) !important;
+    border-top: 1px solid var(--bb-border) !important;
 }
 
-body.bright-blue .nav-btn.nav-active,
-body.bright-blue .nav-pill.nav-active {
-    background: rgba(26, 115, 232, 0.1) !important;
+/* ─── Hero banner ─── */
+body.bright-blue .shop-hero {
+    position: relative;
+    text-align: center;
+    padding: 3rem 1.5rem 2.5rem !important;
+    margin-bottom: 2.5rem !important;
+    background: linear-gradient(145deg, #ffffff 0%, #f5f9ff 45%, #eef4fd 100%) !important;
+    border: 1px solid var(--bb-border) !important;
+    border-radius: var(--bb-radius-lg) !important;
+    box-shadow: var(--bb-shadow-md) !important;
+    overflow: hidden;
+}
+
+body.bright-blue .shop-hero::before {
+    content: '';
+    position: absolute;
+    width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(26, 115, 232, 0.12), transparent 70%);
+    top: -120px;
+    right: -60px;
+    pointer-events: none;
+}
+
+body.bright-blue .shop-hero::after {
+    content: '';
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.1), transparent 70%);
+    bottom: -80px;
+    left: -40px;
+    pointer-events: none;
+}
+
+body.bright-blue .shop-wordmark {
+    font-size: clamp(2rem, 5vw, 3rem) !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.05em;
+    color: var(--bb-ink) !important;
+    background: linear-gradient(135deg, var(--bb-ink) 30%, var(--bb-primary) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+body.bright-blue .wm-accent {
+    -webkit-text-fill-color: var(--bb-primary) !important;
     color: var(--bb-primary) !important;
 }
 
+body.bright-blue .shop-hero-sub {
+    color: var(--bb-muted) !important;
+    font-size: 15px !important;
+    max-width: 480px;
+    margin: 0 auto 1.5rem;
+    line-height: 1.5;
+}
+
+body.bright-blue .hero-float-layer {
+    display: block !important;
+}
+
+body.bright-blue .float-card {
+    background: var(--bb-white) !important;
+    border: 1px solid var(--bb-border) !important;
+    box-shadow: var(--bb-shadow) !important;
+    color: var(--bb-primary) !important;
+    opacity: 0.9;
+    font-size: 1.35rem;
+}
+
+body.bright-blue .float-card.fc-2 { color: #6366f1 !important; }
+body.bright-blue .float-card.fc-3 { color: #0ea5e9 !important; }
+
 body.bright-blue .category-pill {
     background: var(--bb-white) !important;
-    border: 1px solid rgba(26, 115, 232, 0.12) !important;
+    border: 1px solid var(--bb-border) !important;
     color: var(--bb-ink) !important;
+    font-weight: 500;
+    box-shadow: var(--bb-shadow) !important;
+    transition: all 0.22s ease !important;
 }
 
 body.bright-blue .category-pill:hover {
     border-color: var(--bb-primary) !important;
     color: var(--bb-primary) !important;
+    transform: translateY(-2px);
+    box-shadow: var(--bb-shadow-md) !important;
 }
 
-/* ─── AI Product Card (.ai-card) ─── */
+body.bright-blue .category-pill .pill-icon {
+    background: var(--bb-primary-light) !important;
+    color: var(--bb-primary) !important;
+}
+
+/* ─── Section headers ─── */
+body.bright-blue .section-header {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding-left: 14px;
+    border-left: 4px solid var(--bb-primary) !important;
+    margin-bottom: 1.25rem !important;
+}
+
+body.bright-blue .page-title {
+    font-weight: 700 !important;
+    font-size: 1.25rem !important;
+    color: var(--bb-ink) !important;
+}
+
+body.bright-blue .page-subtitle,
+body.bright-blue .text-slate-500,
+body.bright-blue .text-slate-600 {
+    color: var(--bb-muted) !important;
+}
+
+/* ─── Cards chung ─── */
+body.bright-blue .glass-card,
+body.bright-blue .elevated-card,
+body.bright-blue .dress-room-bg {
+    background: var(--bb-white) !important;
+    border: 1px solid var(--bb-border) !important;
+    border-radius: var(--bb-radius-lg) !important;
+    box-shadow: var(--bb-shadow) !important;
+    transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+body.bright-blue .hover-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--bb-shadow-md) !important;
+}
+
+body.bright-blue #wallet-balance,
+body.bright-blue .gradient-text {
+    background: linear-gradient(135deg, var(--bb-primary), #4f46e5) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
+    font-weight: 800 !important;
+}
+
+/* ─── Buttons & inputs ─── */
+body.bright-blue .btn-primary {
+    background: linear-gradient(135deg, var(--bb-primary), #2563eb) !important;
+    border: none !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 16px rgba(26, 115, 232, 0.32) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+body.bright-blue .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 22px rgba(26, 115, 232, 0.4) !important;
+    background: linear-gradient(135deg, var(--bb-primary-dark), #1d4ed8) !important;
+}
+
+body.bright-blue .btn-ghost {
+    background: var(--bb-white) !important;
+    border: 1px solid var(--bb-border) !important;
+    color: var(--bb-ink) !important;
+    border-radius: 12px !important;
+    font-weight: 500;
+}
+
+body.bright-blue .btn-ghost:hover {
+    border-color: var(--bb-primary) !important;
+    color: var(--bb-primary) !important;
+    background: var(--bb-primary-light) !important;
+}
+
+body.bright-blue .input-modern,
+body.bright-blue input[type="email"],
+body.bright-blue input[type="password"],
+body.bright-blue input[type="number"],
+body.bright-blue input[type="tel"],
+body.bright-blue input[type="text"],
+body.bright-blue select,
+body.bright-blue textarea {
+    background: var(--bb-white) !important;
+    border: 1.5px solid #dde3ed !important;
+    border-radius: 12px !important;
+    color: var(--bb-ink) !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
+}
+
+body.bright-blue .input-modern:focus,
+body.bright-blue input:focus,
+body.bright-blue select:focus,
+body.bright-blue textarea:focus {
+    border-color: var(--bb-primary) !important;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.15) !important;
+    outline: none !important;
+}
+
+body.bright-blue .input-icon {
+    color: var(--bb-primary) !important;
+    opacity: 0.7;
+}
+
+/* ─── Auth screen ─── */
+body.bright-blue .auth-bg {
+    background:
+        radial-gradient(ellipse 60% 50% at 50% 0%, rgba(26, 115, 232, 0.1), transparent),
+        var(--bb-canvas) !important;
+}
+
+body.bright-blue .auth-card {
+    border-radius: var(--bb-radius-lg) !important;
+    border: 1px solid var(--bb-border) !important;
+    box-shadow: var(--bb-shadow-md) !important;
+    overflow: hidden;
+}
+
+body.bright-blue .auth-hero {
+    background: linear-gradient(180deg, var(--bb-primary-light), var(--bb-white)) !important;
+    border-bottom: 1px solid var(--bb-border) !important;
+}
+
+body.bright-blue .auth-hero-icon {
+    background: var(--bb-white) !important;
+    color: var(--bb-primary) !important;
+    box-shadow: var(--bb-shadow) !important;
+    border: 1px solid var(--bb-border);
+}
+
+body.bright-blue .auth-tab.active {
+    color: var(--bb-primary) !important;
+    border-bottom-color: var(--bb-primary) !important;
+    font-weight: 600;
+}
+
+/* ─── AI Product Card ─── */
+body.bright-blue #products-grid {
+    gap: 1.25rem !important;
+}
+
 body.bright-blue .ai-card {
     background: var(--bb-white) !important;
-    border: 1px solid rgba(26, 115, 232, 0.1);
-    border-radius: 16px !important;
+    border: 1px solid var(--bb-border);
+    border-radius: var(--bb-radius) !important;
     box-shadow: var(--bb-shadow) !important;
     overflow: hidden;
     transform-style: preserve-3d;
     will-change: transform;
     transition: border-color 0.25s ease, box-shadow 0.25s ease;
     animation: none !important;
+    position: relative;
+}
+
+body.bright-blue .ai-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--bb-primary), #6366f1);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+body.bright-blue .ai-card.ai-tilt-active::before,
+body.bright-blue .ai-card:hover::before {
+    opacity: 1;
 }
 
 body.bright-blue .ai-card:hover {
@@ -108,76 +384,199 @@ body.bright-blue .ai-card.ai-tilt-active {
 
 body.bright-blue .ai-card .product-card-visual {
     margin: 14px 14px 0;
-    border-radius: 12px;
-    background: linear-gradient(180deg, #f4f8ff 0%, #ffffff 100%) !important;
+    border-radius: 14px;
+    background: linear-gradient(160deg, #f0f6ff 0%, #ffffff 60%, #f8faff 100%) !important;
     border: 1px solid rgba(26, 115, 232, 0.08);
     aspect-ratio: 1;
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+}
+
+body.bright-blue .ai-card .product-card-visual::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at 50% 60%, rgba(26, 115, 232, 0.06), transparent 65%);
+    pointer-events: none;
 }
 
 body.bright-blue .ai-card .product-card-name {
     color: var(--bb-ink) !important;
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 15px;
 }
 
 body.bright-blue .ai-card .product-card-desc {
     color: var(--bb-muted) !important;
+    line-height: 1.45;
 }
 
 body.bright-blue .ai-card .product-card-price {
     color: var(--bb-primary) !important;
-    font-weight: 700;
+    font-weight: 800;
+    font-size: 17px;
 }
 
 body.bright-blue .ai-card .product-card-buy {
-    background: var(--bb-primary) !important;
-    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+    background: linear-gradient(135deg, var(--bb-primary), #2563eb) !important;
+    box-shadow: 0 4px 14px rgba(26, 115, 232, 0.35);
+    transition: transform 0.2s ease !important;
 }
 
 body.bright-blue .ai-card .product-card-buy:hover {
-    background: var(--bb-primary-dark) !important;
+    transform: scale(1.08) !important;
+    background: linear-gradient(135deg, var(--bb-primary-dark), #1d4ed8) !important;
 }
 
-/* ─── AI Logo floating (.ai-logo) ─── */
+/* Card entrance */
+@keyframes bb-card-rise {
+    from { opacity: 0; transform: translateY(32px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+body.bright-blue .ai-card.bb-enter {
+    animation: bb-card-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ─── AI Logo floating ─── */
 @keyframes ai-logo-float-bright {
-    0%, 100% {
-        transform: translateY(0) scale(1);
-    }
-    50% {
-        transform: translateY(-10px) scale(1.04);
-    }
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-11px) scale(1.05); }
 }
 
 body.bright-blue .ai-logo {
     display: inline-block;
-    font-size: 3rem;
+    font-size: 3.2rem;
+    position: relative;
+    z-index: 1;
     animation: ai-logo-float-bright 3.6s ease-in-out infinite;
-    filter: drop-shadow(0 4px 14px rgba(26, 115, 232, 0.28));
+    filter: drop-shadow(0 6px 16px rgba(26, 115, 232, 0.3));
     transition: filter 0.25s ease;
 }
 
 body.bright-blue .ai-card.ai-tilt-active .ai-logo {
-    filter: drop-shadow(0 6px 22px rgba(26, 115, 232, 0.55));
+    filter: drop-shadow(0 8px 26px rgba(26, 115, 232, 0.55));
 }
 
-/* Stagger — logo không cùng nhịp */
 body.bright-blue .ai-card:nth-child(6n + 1) .ai-logo { animation-delay: 0s; }
-body.bright-blue .ai-card:nth-child(6n + 2) .ai-logo { animation-delay: 0.5s; }
-body.bright-blue .ai-card:nth-child(6n + 3) .ai-logo { animation-delay: 1s; }
-body.bright-blue .ai-card:nth-child(6n + 4) .ai-logo { animation-delay: 1.5s; }
-body.bright-blue .ai-card:nth-child(6n + 5) .ai-logo { animation-delay: 2s; }
-body.bright-blue .ai-card:nth-child(6n + 6) .ai-logo { animation-delay: 2.5s; }
+body.bright-blue .ai-card:nth-child(6n + 2) .ai-logo { animation-delay: 0.45s; }
+body.bright-blue .ai-card:nth-child(6n + 3) .ai-logo { animation-delay: 0.9s; }
+body.bright-blue .ai-card:nth-child(6n + 4) .ai-logo { animation-delay: 1.35s; }
+body.bright-blue .ai-card:nth-child(6n + 5) .ai-logo { animation-delay: 1.8s; }
+body.bright-blue .ai-card:nth-child(6n + 6) .ai-logo { animation-delay: 2.25s; }
 
-/* Tắt float cũ từ theme.css khi hover */
 body.bright-blue .ai-card:hover .ai-logo {
     animation: ai-logo-float-bright 3.6s ease-in-out infinite;
 }
 
+/* ─── Wallet / QR ─── */
+body.bright-blue #qr-panel {
+    border: 1px solid var(--bb-border) !important;
+    border-radius: var(--bb-radius-lg) !important;
+}
+
+body.bright-blue #qr-image {
+    border: 2px solid var(--bb-primary-light) !important;
+    box-shadow: var(--bb-shadow) !important;
+}
+
+body.bright-blue #user-topup-code {
+    color: var(--bb-primary) !important;
+}
+
+/* ─── Dressroom ─── */
+body.bright-blue .dr-preview-frame {
+    background: linear-gradient(180deg, #f5f9ff, #ffffff) !important;
+    border: 1px solid var(--bb-border) !important;
+    border-radius: var(--bb-radius) !important;
+}
+
+body.bright-blue .dr-item-card {
+    border-radius: 14px !important;
+    border: 1px solid var(--bb-border) !important;
+    transition: all 0.2s ease !important;
+}
+
+body.bright-blue .dr-item-card:hover {
+    border-color: var(--bb-primary) !important;
+    box-shadow: var(--bb-shadow) !important;
+}
+
+body.bright-blue .dr-item-card.equipped {
+    border: 2px solid var(--bb-primary) !important;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.12) !important;
+}
+
+body.bright-blue .dr-cat-btn.active {
+    background: var(--bb-primary) !important;
+}
+
+/* ─── Admin ─── */
+body.bright-blue .admin-tab-btn.active {
+    background: var(--bb-primary) !important;
+    color: #fff !important;
+    border-color: var(--bb-primary) !important;
+}
+
+body.bright-blue .admin-tab-btn {
+    border-radius: 10px !important;
+    font-weight: 600;
+}
+
+/* ─── Modal & Toast ─── */
+body.bright-blue .modal-panel {
+    border-radius: var(--bb-radius-lg) !important;
+    box-shadow: 0 24px 60px rgba(0, 50, 150, 0.18) !important;
+}
+
+body.bright-blue .toast-inner.success {
+    background: linear-gradient(135deg, var(--bb-primary), #2563eb) !important;
+    border-radius: 14px !important;
+    box-shadow: var(--bb-shadow-md) !important;
+}
+
+/* ─── View fade ─── */
+@keyframes bb-view-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+body.bright-blue .app-section.bb-view-active:not(.hidden) {
+    animation: bb-view-in 0.35s ease both;
+}
+
+/* ─── Shimmer loading ─── */
+body.bright-blue .anim-shimmer {
+    background: linear-gradient(90deg, #eef2f8 25%, #f8fafc 50%, #eef2f8 75%) !important;
+    background-size: 200% 100% !important;
+    border-radius: var(--bb-radius) !important;
+    border: 1px solid var(--bb-border) !important;
+}
+
+/* ─── Zalo float ─── */
+body.bright-blue .zalo-float a {
+    box-shadow: 0 6px 24px rgba(26, 115, 232, 0.35) !important;
+}
+
+/* ─── App main spacing ─── */
+body.bright-blue .app-main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+    width: 100%;
+}
+
 /* ─── Reduced motion ─── */
 @media (prefers-reduced-motion: reduce) {
-    body.bright-blue .ai-logo {
+    body.bright-blue .ai-logo,
+    body.bright-blue .ai-card.bb-enter,
+    body.bright-blue .app-section.bb-view-active {
+        animation: none !important;
+    }
+    body.bright-blue .float-card {
         animation: none !important;
     }
 }
