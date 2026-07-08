@@ -1,0 +1,469 @@
+/**
+ * Shop Carousel — Dark futuristic + 3D horizontal infinite scroll
+ * Overlay UI only. Logic shop giữ nguyên trong index.html.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+
+:root {
+    --sc-bg: #09090b;
+    --sc-surface: rgba(24, 24, 27, 0.85);
+    --sc-blue: #3b82f6;
+    --sc-blue-light: #60a5fa;
+    --sc-purple: #8b5cf6;
+    --sc-magenta: #c026d3;
+    --sc-text: #f4f4f5;
+    --sc-muted: #a1a1aa;
+    --sc-glass: rgba(255, 255, 255, 0.06);
+    --sc-border: rgba(96, 165, 250, 0.2);
+    --sc-glow: 0 0 30px rgba(59, 130, 246, 0.35);
+}
+
+/* ─── Dark base ─── */
+body.shop-carousel-theme {
+    font-family: 'Outfit', system-ui, sans-serif !important;
+    background: var(--sc-bg) !important;
+    color: var(--sc-text);
+}
+
+body.shop-carousel-theme::before,
+body.shop-carousel-theme::after {
+    display: none !important;
+}
+
+body.shop-carousel-theme #app,
+body.shop-carousel-theme #auth-screen {
+    position: relative;
+    z-index: 1;
+}
+
+/* Ambient static glow (no animation) */
+body.shop-carousel-theme #app::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        radial-gradient(ellipse 50% 40% at 15% 10%, rgba(59, 130, 246, 0.12), transparent 55%),
+        radial-gradient(ellipse 45% 35% at 85% 20%, rgba(139, 92, 246, 0.1), transparent 50%),
+        radial-gradient(ellipse 60% 30% at 50% 100%, rgba(192, 38, 211, 0.06), transparent 55%);
+}
+
+body.shop-carousel-theme .app-main {
+    position: relative;
+    z-index: 1;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 1rem 3rem;
+}
+
+/* ─── Header ─── */
+body.shop-carousel-theme .site-header {
+    background: rgba(9, 9, 11, 0.9) !important;
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--sc-border) !important;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+body.shop-carousel-theme .brand-logo {
+    color: var(--sc-text) !important;
+    font-weight: 800 !important;
+}
+
+body.shop-carousel-theme .brand-dot {
+    background: linear-gradient(135deg, var(--sc-blue), var(--sc-purple)) !important;
+    box-shadow: var(--sc-glow) !important;
+}
+
+body.shop-carousel-theme .nav-pill-wrap {
+    background: rgba(39, 39, 42, 0.8) !important;
+    border: 1px solid var(--sc-border);
+}
+
+body.shop-carousel-theme .nav-pill.nav-active,
+body.shop-carousel-theme .mobile-nav-btn.nav-active {
+    background: linear-gradient(135deg, var(--sc-blue), var(--sc-purple)) !important;
+    color: #fff !important;
+    box-shadow: var(--sc-glow) !important;
+}
+
+body.shop-carousel-theme .user-balance-pill {
+    background: rgba(59, 130, 246, 0.15) !important;
+    color: var(--sc-blue-light) !important;
+    border: 1px solid var(--sc-border) !important;
+}
+
+/* ─── Hero ─── */
+.carousel-hero {
+    position: relative;
+    text-align: center;
+    padding: 3.5rem 1.5rem 3rem !important;
+    margin-bottom: 2rem !important;
+    border-radius: 28px !important;
+    overflow: hidden;
+    background: linear-gradient(
+        135deg,
+        #0f172a 0%,
+        #1e1b4b 35%,
+        #312e81 60%,
+        #1e3a5f 100%
+    ) !important;
+    border: 1px solid rgba(96, 165, 250, 0.25) !important;
+    box-shadow:
+        0 0 60px rgba(59, 130, 246, 0.15),
+        0 20px 50px rgba(0, 0, 0, 0.4) !important;
+}
+
+.carousel-hero-glow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 30% 40%, rgba(59, 130, 246, 0.25), transparent 45%),
+        radial-gradient(circle at 70% 60%, rgba(192, 38, 211, 0.2), transparent 40%);
+}
+
+.carousel-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--sc-blue-light);
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(96, 165, 250, 0.3);
+    margin-bottom: 1.25rem;
+    position: relative;
+    z-index: 2;
+}
+
+.carousel-hero-title {
+    position: relative;
+    z-index: 2;
+    font-size: clamp(2rem, 6vw, 3.5rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: #fff;
+    margin-bottom: 0.75rem;
+}
+
+.carousel-hero-title span {
+    background: linear-gradient(90deg, var(--sc-blue-light), var(--sc-magenta));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.carousel-hero-sub {
+    position: relative;
+    z-index: 2;
+    font-size: 1.05rem;
+    color: rgba(228, 228, 231, 0.85) !important;
+    max-width: 520px;
+    margin: 0 auto 1.75rem;
+    line-height: 1.55;
+}
+
+.carousel-cta-btn {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--sc-blue), var(--sc-purple));
+    box-shadow:
+        0 0 24px rgba(59, 130, 246, 0.45),
+        0 8px 24px rgba(139, 92, 246, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.carousel-cta-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow:
+        0 0 36px rgba(59, 130, 246, 0.55),
+        0 12px 32px rgba(192, 38, 211, 0.35);
+}
+
+body.shop-carousel-theme .carousel-hero .category-row {
+    position: relative;
+    z-index: 2;
+    margin-top: 1.75rem;
+}
+
+body.shop-carousel-theme .carousel-hero .category-pill {
+    background: rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #e4e4e7 !important;
+}
+
+body.shop-carousel-theme .carousel-hero .category-pill:hover {
+    border-color: var(--sc-blue-light) !important;
+    color: #fff !important;
+    background: rgba(59, 130, 246, 0.2) !important;
+}
+
+body.shop-carousel-theme .carousel-hero .pill-icon {
+    background: rgba(59, 130, 246, 0.25) !important;
+    color: var(--sc-blue-light) !important;
+}
+
+body.shop-carousel-theme .carousel-hero .hero-float-layer,
+body.shop-carousel-theme .carousel-hero .shop-wordmark,
+body.shop-carousel-theme .carousel-hero .shop-hero-sub:not(.carousel-hero-sub) {
+    display: none !important;
+}
+
+/* ─── Carousel section ─── */
+.carousel-section-header {
+    border-left: 4px solid var(--sc-blue) !important;
+    padding-left: 14px !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    margin-bottom: 1rem !important;
+}
+
+body.shop-carousel-theme .carousel-section-header .page-title {
+    color: var(--sc-text) !important;
+    font-weight: 700 !important;
+    font-size: 1.35rem !important;
+}
+
+body.shop-carousel-theme .carousel-section-header .fa-chevron-right {
+    color: var(--sc-purple) !important;
+}
+
+.carousel-hint {
+    text-align: center;
+    font-size: 12px;
+    color: var(--sc-muted);
+    margin-top: 1rem;
+    letter-spacing: 0.02em;
+}
+
+.carousel-hint i {
+    color: var(--sc-blue-light);
+    margin: 0 4px;
+}
+
+/* ─── 3D Carousel viewport ─── */
+#products-carousel-viewport #products-grid:not(.carousel-track) {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 1.5rem;
+    overflow-x: auto;
+    padding: 1rem 0;
+}
+
+.carousel-viewport {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    padding: 2rem 0 2.5rem;
+    perspective: 1200px;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    cursor: grab;
+    touch-action: pan-y;
+}
+
+.carousel-viewport.is-dragging {
+    cursor: grabbing;
+}
+
+.carousel-viewport.is-dragging .carousel-track {
+    transition: none !important;
+}
+
+.carousel-track {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 1.5rem;
+    width: max-content;
+    will-change: transform;
+    transition: transform 0.08s linear;
+    padding: 0 2rem;
+}
+
+/* ─── Product cards in carousel ─── */
+body.shop-carousel-theme .carousel-track .product-card {
+    flex: 0 0 auto;
+    width: min(280px, 78vw);
+    background: linear-gradient(160deg, rgba(39, 39, 42, 0.95), rgba(24, 24, 27, 0.98)) !important;
+    border: 1px solid var(--sc-border) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35) !important;
+    overflow: hidden;
+    transform-style: preserve-3d;
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+    animation: none !important;
+    backface-visibility: hidden;
+}
+
+body.shop-carousel-theme .carousel-track .product-card.is-center {
+    border-color: rgba(96, 165, 250, 0.55) !important;
+    box-shadow:
+        0 0 40px rgba(59, 130, 246, 0.3),
+        0 16px 48px rgba(139, 92, 246, 0.2) !important;
+}
+
+body.shop-carousel-theme .carousel-track .product-card:hover {
+    border-color: var(--sc-magenta) !important;
+    box-shadow:
+        0 0 50px rgba(192, 38, 211, 0.35),
+        0 20px 50px rgba(59, 130, 246, 0.25) !important;
+}
+
+body.shop-carousel-theme .carousel-track .product-card-visual {
+    margin: 14px 14px 0;
+    border-radius: 16px;
+    background: linear-gradient(145deg, rgba(59, 130, 246, 0.12), rgba(139, 92, 246, 0.08)) !important;
+    border: 1px solid rgba(96, 165, 250, 0.15);
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body.shop-carousel-theme .carousel-track .product-card-visual > i {
+    font-size: 3.2rem;
+    filter: drop-shadow(0 0 20px rgba(96, 165, 250, 0.5));
+    animation: sc-logo-float 3.5s ease-in-out infinite;
+}
+
+@keyframes sc-logo-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+body.shop-carousel-theme .carousel-track .product-card:nth-child(6n+1) .product-card-visual > i { animation-delay: 0s; }
+body.shop-carousel-theme .carousel-track .product-card:nth-child(6n+2) .product-card-visual > i { animation-delay: 0.5s; }
+body.shop-carousel-theme .carousel-track .product-card:nth-child(6n+3) .product-card-visual > i { animation-delay: 1s; }
+body.shop-carousel-theme .carousel-track .product-card:nth-child(6n+4) .product-card-visual > i { animation-delay: 1.5s; }
+body.shop-carousel-theme .carousel-track .product-card:nth-child(6n+5) .product-card-visual > i { animation-delay: 2s; }
+body.shop-carousel-theme .carousel-track .product-card:nth-child(6n+6) .product-card-visual > i { animation-delay: 2.5s; }
+
+body.shop-carousel-theme .carousel-track .product-card-name {
+    color: var(--sc-text) !important;
+    font-weight: 700;
+}
+
+body.shop-carousel-theme .carousel-track .product-card-desc {
+    color: var(--sc-muted) !important;
+}
+
+body.shop-carousel-theme .carousel-track .product-card-price {
+    color: var(--sc-blue-light) !important;
+    font-weight: 800;
+    text-shadow: 0 0 12px rgba(96, 165, 250, 0.4);
+}
+
+body.shop-carousel-theme .carousel-track .product-card-buy {
+    background: linear-gradient(135deg, var(--sc-blue), var(--sc-purple)) !important;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+}
+
+body.shop-carousel-theme .carousel-track .anim-shimmer {
+    flex: 0 0 auto;
+    width: min(280px, 78vw);
+    min-height: 320px !important;
+    border-radius: 20px !important;
+    background: linear-gradient(90deg, #27272a 25%, #3f3f46 50%, #27272a 75%) !important;
+    background-size: 200% 100% !important;
+    border: 1px solid var(--sc-border) !important;
+}
+
+/* ─── Other views (wallet, auth...) dark glass ─── */
+body.shop-carousel-theme .glass-card,
+body.shop-carousel-theme .auth-card,
+body.shop-carousel-theme .modal-panel,
+body.shop-carousel-theme .dress-room-bg {
+    background: var(--sc-surface) !important;
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--sc-border) !important;
+    color: var(--sc-text);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+}
+
+body.shop-carousel-theme .page-title {
+    color: var(--sc-text) !important;
+}
+
+body.shop-carousel-theme .text-slate-500,
+body.shop-carousel-theme .text-slate-600 {
+    color: var(--sc-muted) !important;
+}
+
+body.shop-carousel-theme .btn-primary {
+    background: linear-gradient(135deg, var(--sc-blue), var(--sc-purple)) !important;
+    border: none !important;
+    box-shadow: var(--sc-glow) !important;
+}
+
+body.shop-carousel-theme .btn-ghost {
+    background: rgba(39, 39, 42, 0.8) !important;
+    border: 1px solid var(--sc-border) !important;
+    color: var(--sc-text) !important;
+}
+
+body.shop-carousel-theme .input-modern,
+body.shop-carousel-theme input,
+body.shop-carousel-theme select,
+body.shop-carousel-theme textarea {
+    background: rgba(24, 24, 27, 0.9) !important;
+    border-color: var(--sc-border) !important;
+    color: var(--sc-text) !important;
+}
+
+body.shop-carousel-theme .input-modern:focus,
+body.shop-carousel-theme input:focus {
+    border-color: var(--sc-blue-light) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+}
+
+body.shop-carousel-theme .auth-bg {
+    background: var(--sc-bg) !important;
+}
+
+body.shop-carousel-theme #wallet-balance,
+body.shop-carousel-theme .gradient-text {
+    background: linear-gradient(135deg, var(--sc-blue-light), var(--sc-magenta)) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+}
+
+body.shop-carousel-theme .empty-state {
+    color: var(--sc-muted) !important;
+    width: 100%;
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+body.shop-carousel-theme .toast-inner.success {
+    background: linear-gradient(135deg, var(--sc-blue), var(--sc-purple)) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .carousel-track {
+        transition: none;
+    }
+    body.shop-carousel-theme .carousel-track .product-card-visual > i {
+        animation: none !important;
+    }
+}
