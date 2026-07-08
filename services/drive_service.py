@@ -43,13 +43,18 @@ def _oauth_from_db():
         return '', ''
 
 
+def _clean_oauth_value(val):
+    """Bỏ mọi khoảng trắng — hay bị dính khi copy/paste từ Google Console."""
+    return re.sub(r'\s+', '', (val or '').strip())
+
+
 def get_oauth_credentials():
     """Ưu tiên biến môi trường, fallback cấu hình admin lưu trên web."""
     c = _cfg()
     db_id, db_secret = _oauth_from_db()
     return {
-        'client_id': (c.get('oauth_client_id') or db_id or '').strip(),
-        'client_secret': (c.get('oauth_client_secret') or db_secret or '').strip(),
+        'client_id': _clean_oauth_value(c.get('oauth_client_id') or db_id),
+        'client_secret': _clean_oauth_value(c.get('oauth_client_secret') or db_secret),
         'redirect_uri': (c.get('oauth_redirect_uri') or '').strip(),
     }
 
@@ -59,7 +64,33 @@ def oauth_available():
     return bool(creds['client_id'] and creds['client_secret'] and creds['redirect_uri'])
 
 
+def normalize_stored_oauth_credentials():
+    """Sửa Client ID/Secret đã lưu bị dính khoảng trắng."""
+    from database import get_conn, fetchall, fetchone, execute, commit, close
+    conn = get_conn()
+    rows = {
+        r['key']: r['value']
+        for r in fetchall(conn, f'''
+            SELECT key, value FROM ai_settings
+            WHERE key IN ({",".join("?" * len(DRIVE_OAUTH_KEYS))})
+        ''', DRIVE_OAUTH_KEYS)
+    }
+    changed = False
+    for key in DRIVE_OAUTH_KEYS:
+        raw = rows.get(key) or ''
+        cleaned = _clean_oauth_value(raw)
+        if raw and cleaned != raw:
+            if fetchone(conn, 'SELECT key FROM ai_settings WHERE key = ?', (key,)):
+                execute(conn, 'UPDATE ai_settings SET value = ? WHERE key = ?', (cleaned, key))
+            changed = True
+    if changed:
+        commit(conn)
+    close(conn)
+    return changed
+
+
 def get_oauth_setup_info():
+    normalize_stored_oauth_credentials()
     creds = get_oauth_credentials()
     has_secret = bool(creds['client_secret'])
     return {
@@ -73,8 +104,8 @@ def get_oauth_setup_info():
 
 
 def _validate_oauth_credentials(client_id, client_secret):
-    client_id = (client_id or '').strip()
-    client_secret = (client_secret or '').strip()
+    client_id = _clean_oauth_value(client_id)
+    client_secret = _clean_oauth_value(client_secret)
     if not client_id:
         raise ValueError('Client ID không được để trống')
     if not client_secret:

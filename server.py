@@ -2439,6 +2439,7 @@ def social_drive_oauth_setup_post():
 @app.route('/api/social/drive/connect')
 @admin_required
 def social_drive_connect():
+    drive.normalize_stored_oauth_credentials()
     if not drive.oauth_available():
         return jsonify({'error': 'Chưa cấu hình Google OAuth trên server (CLIENT_ID / SECRET).'}), 400
     try:
