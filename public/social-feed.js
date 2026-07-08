@@ -9,6 +9,7 @@
     const MAX_IMAGE_CHARS = 520000;
     const MAX_VIDEO_CHARS = 10_000_000;
     const MAX_VIDEO_SEC = 20;
+    const MIN_RECORD_SEC = 2;
     const MAX_VIDEO_FILE_MB = 8;
     const LS_SAVE_MODE = 'social_save_mode';
     const REACTION_DEFS = [
@@ -103,21 +104,38 @@
     async function playPreviewVideo() {
         const vid = document.getElementById('social-preview-video');
         if (!vid || vid.classList.contains('hidden')) return;
+
+        if (!pendingDriveStreamUrl && driveUploadPromise) {
+            setComposerStatus('Đang xử lý video MP4 trên Drive...');
+            showPreviewPlayBtn();
+            await driveUploadPromise.catch(() => null);
+        }
+        if (!pendingDriveStreamUrl) {
+            window.toast?.('Video chưa sẵn sàng — đợi thêm vài giây rồi bấm ▶ lại', true, 3500);
+            showPreviewPlayBtn();
+            return;
+        }
+        if (!String(vid.src || '').includes('/api/social/preview/')) {
+            setupPreviewVideoElement(vid, pendingDriveStreamUrl, pendingVideoBlob, previewPosterUrl);
+        }
         hidePreviewPlayBtn();
         try {
-            await waitVideoCanPlay(vid);
+            await waitVideoCanPlay(vid, 15000);
             vid.currentTime = 0;
             vid.muted = true;
+            vid.playsInline = true;
             await vid.play();
             vid.muted = false;
         } catch (_) {
             try {
-                vid.muted = false;
+                vid.muted = true;
                 await vid.play();
+                vid.muted = false;
             } catch (err) {
                 console.warn('[SocialFeed] preview play:', err);
                 showPreviewPlayBtn();
-                window.toast?.('Chưa phát được — đợi vài giây (đang tải MP4 từ Drive) rồi bấm ▶ lại', true, 4500);
+                setComposerStatus('Bấm ▶ lại hoặc Chụp lại (giữ quay ≥2 giây)', 'err');
+                window.toast?.('Chưa phát được — thử bấm ▶ lại sau vài giây', true, 4000);
             }
         }
     }
@@ -403,53 +421,78 @@
         return data;
     }
 
-    function isMp4Blob(blob) {
-        return (blob?.type || '').toLowerCase().includes('mp4');
-    }
-
-    function startBackgroundDriveUpload(blob, poster) {
-        driveUploadPromise = uploadVideoPreviewToDrive(blob)
-            .then(data => {
-                pendingDriveFileId = data.driveFileId || null;
-                pendingDriveStreamUrl = data.previewUrl || null;
-                pendingPreviewMime = data.mimeType || 'video/mp4';
-                if (!isMp4Blob(blob) && pendingDriveStreamUrl) {
-                    const vid = document.getElementById('social-preview-video');
-                    if (vid) {
-                        setupPreviewVideoElement(vid, pendingDriveStreamUrl, blob, poster);
-                        playPreviewVideo().catch(() => {});
-                    }
-                    window.toast?.('Đã chuyển MP4 từ Drive — bấm ▶ xem', false, 2200);
-                }
-                setComposerStatus('Video đã lưu Drive — Đăng hoặc Hủy', 'ok');
-                return data;
-            })
-            .catch(err => {
-                console.warn('[SocialFeed] drive bg upload:', err);
-                setComposerStatus('Xem lại được — Drive sẽ lưu khi bấm Đăng', 'err');
-                return null;
-            });
-        return driveUploadPromise;
+    function setupPreviewWaiting(poster, blob) {
+        hideDriveEmbedPreview();
+        const frame = document.querySelector('.social-locket-frame');
+        frame?.classList.add('is-video-preview');
+        bindPreviewPlayButton();
+        const vid = document.getElementById('social-preview-video');
+        const preview = document.getElementById('social-preview');
+        preview?.classList.add('hidden');
+        document.getElementById('social-preview-placeholder')?.classList.add('hidden');
+        if (vid) {
+            vid.pause();
+            vid.onerror = null;
+            vid.removeAttribute('src');
+            vid.load();
+            if (poster) vid.poster = poster;
+            else vid.removeAttribute('poster');
+            vid.classList.remove('hidden');
+        }
+        showPreviewPlayBtn();
+        if (blob) {
+            const durPart = lastRecordDurationSec > 0
+                ? '<span><i class="fas fa-clock"></i> ' + formatDurationLabel(lastRecordDurationSec) + '</span>'
+                : '';
+            setMediaInfo([
+                durPart,
+                '<span><i class="fas fa-database"></i> ' + formatFileSize(blob.size) + '</span>',
+                '<span><i class="fas fa-spinner fa-spin"></i> Đang xử lý MP4</span>',
+            ].filter(Boolean), true);
+        }
     }
 
     function prepareVideoPreviewFast(blob, poster) {
         pendingDriveFileId = null;
         pendingDriveStreamUrl = null;
         driveUploadPromise = null;
-        showPreview(null, 'video', blob, poster);
-        const localMp4 = isMp4Blob(blob);
-        setComposerStatus(
-            localMp4
-                ? 'Xem lại ngay — đang sao lưu Drive nền...'
-                : 'Đang chuyển MP4 trên Drive — chờ vài giây...',
-            localMp4 ? 'ok' : ''
-        );
-        if (localMp4) {
-            requestAnimationFrame(() => {
-                playPreviewVideo().catch(() => showPreviewPlayBtn());
+        pendingVideoBlob = blob;
+        previewPosterUrl = poster;
+        pendingMediaType = 'video';
+        revokePreviewObjectUrl();
+        previewObjectUrl = null;
+        pendingImage = null;
+
+        setupPreviewWaiting(poster, blob);
+        document.getElementById('social-post-row')?.classList.remove('hidden');
+        const postBtn = document.getElementById('social-post-btn');
+        const cancelBtn = document.getElementById('social-cancel-preview');
+        if (postBtn) postBtn.innerHTML = '<i class="fas fa-paper-plane mr-1"></i>Đăng video';
+        if (cancelBtn) cancelBtn.innerHTML = '<i class="fas fa-times mr-1"></i>Hủy video';
+        updateShutterState();
+        updateCameraUi();
+        updateComposerMode();
+        setComposerStatus('Đang xử lý video MP4 trên Drive — chờ xong rồi bấm ▶');
+
+        driveUploadPromise = uploadVideoPreviewToDrive(blob)
+            .then(data => {
+                pendingDriveFileId = data.driveFileId || null;
+                pendingDriveStreamUrl = data.previewUrl || null;
+                pendingPreviewMime = data.mimeType || 'video/mp4';
+                const vid = document.getElementById('social-preview-video');
+                if (vid && pendingDriveStreamUrl) {
+                    setupPreviewVideoElement(vid, pendingDriveStreamUrl, blob, poster);
+                }
+                setComposerStatus('Bấm ▶ để xem lại — Đăng hoặc Hủy', 'ok');
+                window.toast?.('Sẵn sàng — bấm ▶ để xem lại', false, 2500);
+                return data;
+            })
+            .catch(err => {
+                console.warn('[SocialFeed] drive preview:', err);
+                setComposerStatus('Lỗi xử lý video — thử Chụp lại (≥2 giây)', 'err');
+                window.toast?.(err.message || 'Không xử lý được video trên Drive', true);
+                return null;
             });
-        }
-        startBackgroundDriveUpload(blob, poster);
     }
 
     function bindFeedMediaMeta(root) {
@@ -824,6 +867,10 @@
     }
 
     function stopVideoRecord() {
+        if (recordStartedAt && (Date.now() - recordStartedAt) < MIN_RECORD_SEC * 1000) {
+            window.toast?.('Giữ nút quay ít nhất ' + MIN_RECORD_SEC + ' giây', true, 2800);
+            return;
+        }
         clearTimeout(recordingTimer);
         recordingTimer = null;
         stopRecordingTicker();
@@ -883,8 +930,8 @@
             recordChunks = [];
             mediaRecorder = null;
             releaseSilentAudio();
-            if (blob.size < 2048) {
-                window.toast?.('Video quá ngắn — giữ nút quay ít nhất 1–2 giây', true);
+            if (lastRecordDurationSec < MIN_RECORD_SEC || blob.size < 4096) {
+                window.toast?.('Video quá ngắn — giữ nút quay ít nhất ' + MIN_RECORD_SEC + ' giây', true);
                 lastRecordDurationSec = 0;
                 stopCameraTracksOnly();
                 updateComposerStatusText();
@@ -905,7 +952,7 @@
             }
         };
         lastRecordDurationSec = 0;
-        mediaRecorder.start();
+        mediaRecorder.start(500);
         recordingTimer = setTimeout(() => {
             if (mediaRecorder?.state === 'recording') {
                 stopVideoRecord();

@@ -903,46 +903,67 @@ def _ffmpeg_exe():
         return shutil.which('ffmpeg')
 
 
-def maybe_transcode_video_mp4(raw, mime, ext, fast=False):
-    """Đổi WebM → MP4 — MP4 phát được trên Chrome/Windows (WebM quay từ camera thường lỗi)."""
-    if ext == 'mp4' or 'mp4' in (mime or '').lower():
-        return raw, mime or 'video/mp4', 'mp4'
+def _ffmpeg_run(ffmpeg, inpath, outpath, cmd_extra, timeout=120):
+    import subprocess
+    proc = subprocess.run(
+        [ffmpeg, '-y', '-i', inpath, *cmd_extra, outpath],
+        capture_output=True,
+        timeout=timeout,
+    )
+    return proc
+
+
+def ensure_playable_mp4(raw, mime, ext, fast=False):
+    """Luôn trả MP4 faststart — phát được trên mobile/desktop qua stream."""
+    mime_l = (mime or '').lower()
+    ext_l = (ext or 'webm').lower()
     ffmpeg = _ffmpeg_exe()
     if not ffmpeg:
-        print('[Drive] ffmpeg not found — giữ nguyên WebM')
+        if ext_l == 'mp4' or 'mp4' in mime_l:
+            return raw, 'video/mp4', 'mp4'
         return raw, mime, ext
     preset = 'ultrafast' if fast else 'veryfast'
     try:
         import os
-        import subprocess
         import tempfile
-        with tempfile.NamedTemporaryFile(suffix='.webm', delete=False) as inf:
+        suffix = '.mp4' if ext_l == 'mp4' or 'mp4' in mime_l else '.webm'
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as inf:
             inf.write(raw)
             inpath = inf.name
-        outpath = inpath + '.mp4'
-        proc = subprocess.run(
-            [ffmpeg, '-y', '-i', inpath, '-c:v', 'libx264', '-preset', preset, '-crf', '30',
-             '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-an', outpath],
-            capture_output=True,
-            timeout=120,
-        )
+        outpath = inpath + '.out.mp4'
+        if suffix == '.mp4':
+            cmd_extra = ['-c', 'copy', '-movflags', '+faststart']
+            label = 'remux mp4 faststart'
+        else:
+            cmd_extra = ['-c:v', 'libx264', '-preset', preset, '-crf', '30',
+                         '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-an']
+            label = 'transcode webm→mp4'
+        proc = _ffmpeg_run(ffmpeg, inpath, outpath, cmd_extra)
         if proc.returncode != 0:
             err = (proc.stderr or b'').decode('utf-8', errors='replace')[-400:]
-            print(f'[Drive] ffmpeg failed: {err}')
+            print(f'[Drive] ffmpeg {label} failed: {err}')
             os.unlink(inpath)
             if os.path.exists(outpath):
                 os.unlink(outpath)
+            if ext_l == 'mp4' or 'mp4' in mime_l:
+                return raw, 'video/mp4', 'mp4'
             return raw, mime, ext
         with open(outpath, 'rb') as outf:
             out = outf.read()
         os.unlink(inpath)
         os.unlink(outpath)
         if out:
-            print(f'[Drive] transcoded webm→mp4 ({len(raw)} → {len(out)} bytes)')
+            print(f'[Drive] {label} ({len(raw)} → {len(out)} bytes)')
             return out, 'video/mp4', 'mp4'
     except Exception as e:
-        print(f'[Drive] transcode skip: {e}')
+        print(f'[Drive] ensure_playable_mp4 skip: {e}')
+    if ext_l == 'mp4' or 'mp4' in mime_l:
+        return raw, 'video/mp4', 'mp4'
     return raw, mime, ext
+
+
+def maybe_transcode_video_mp4(raw, mime, ext, fast=False):
+    return ensure_playable_mp4(raw, mime, ext, fast=fast)
 
 
 def user_owns_drive_filename(meta, user_email, prefixes=('shop-video', 'shop-video-preview')):
@@ -960,7 +981,7 @@ def upload_preview_bytes(raw, mime, ext, user_email, conn=None):
     if own_conn:
         from database import get_conn
         conn = get_conn()
-    raw, mime, ext = maybe_transcode_video_mp4(raw, mime, ext, fast=True)
+    raw, mime, ext = ensure_playable_mp4(raw, mime, ext, fast=True)
     slug = _user_email_slug(user_email)
     stamp = int(time.time())
     filename = f'shop-video-preview-{slug}-{stamp}.{ext}'
@@ -1029,7 +1050,7 @@ def upload_media_bytes(raw, mime, ext, user_email, post_id, caption='', conn=Non
 
     safe_email = _user_email_slug(user_email)
     if is_video:
-        raw, mime, ext = maybe_transcode_video_mp4(raw, mime, ext)
+        raw, mime, ext = ensure_playable_mp4(raw, mime, ext)
     if filename_override:
         filename = filename_override
     else:
