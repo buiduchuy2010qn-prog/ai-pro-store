@@ -838,6 +838,11 @@ body.app-light .app-main {
     font-weight: 600;
 }
 
+.social-composer-status.err {
+    color: #dc2626;
+    font-weight: 600;
+}
+
 .social-composer-actions {
     display: flex;
     flex-wrap: wrap;

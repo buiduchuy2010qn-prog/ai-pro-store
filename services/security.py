@@ -89,7 +89,8 @@ def apply_security_headers(response, req):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-    response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
+    # camera=(self) — cho phép MXH chụp ảnh trên cùng domain; mic/geo vẫn tắt
+    response.headers['Permissions-Policy'] = 'camera=(self), microphone=(), geolocation=()'
     response.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
     response.headers['Cross-Origin-Resource-Policy'] = 'same-site'
     response.headers['X-XSS-Protection'] = '0'

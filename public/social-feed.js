@@ -107,28 +107,71 @@
         document.getElementById('social-camera-capture')?.classList.add('hidden');
     }
 
+    function cameraErrorMessage(err) {
+        const name = err?.name || '';
+        if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+            return 'Trình duyệt chặn camera — bấm biểu tượng 🔒 trên thanh địa chỉ và cho phép Camera';
+        }
+        if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+            return 'Không tìm thấy webcam trên máy';
+        }
+        if (name === 'NotReadableError' || name === 'TrackStartError') {
+            return 'Camera đang được app khác dùng — đóng app đó rồi thử lại';
+        }
+        if (name === 'SecurityError') {
+            return 'Trang cần HTTPS để dùng camera — thử tải lại trang';
+        }
+        return 'Không mở được camera — thử bấm Chọn ảnh hoặc cho phép quyền Camera';
+    }
+
+    async function requestCameraStream() {
+        const constraints = [
+            { video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+            { video: { facingMode: 'user' }, audio: false },
+            { video: true, audio: false },
+        ];
+        let lastErr;
+        for (const c of constraints) {
+            try {
+                return await navigator.mediaDevices.getUserMedia(c);
+            } catch (e) {
+                lastErr = e;
+            }
+        }
+        throw lastErr;
+    }
+
     async function startCamera() {
         const video = document.getElementById('social-camera-video');
+        if (!video) return;
+        if (!window.isSecureContext) {
+            window.toast?.('Camera chỉ hoạt động trên HTTPS', true);
+            return;
+        }
         if (!navigator.mediaDevices?.getUserMedia) {
-            window.toast?.('Thiết bị không hỗ trợ camera', true);
+            window.toast?.('Trình duyệt không hỗ trợ camera — dùng Chọn ảnh', true);
             return;
         }
         try {
             await stopCamera();
-            cameraStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 720 } },
-                audio: false,
-            });
+            setComposerStatus('Đang mở camera...');
+            cameraStream = await requestCameraStream();
             video.srcObject = cameraStream;
+            video.setAttribute('playsinline', '');
+            video.muted = true;
             await video.play();
             video.classList.remove('hidden');
             document.getElementById('social-preview-placeholder')?.classList.add('hidden');
             document.getElementById('social-preview')?.classList.add('hidden');
             document.getElementById('social-camera-start')?.classList.add('hidden');
             document.getElementById('social-camera-capture')?.classList.remove('hidden');
-            setComposerStatus('Căn khung hình rồi bấm Chụp ảnh');
-        } catch (_) {
-            window.toast?.('Không mở được camera', true);
+            setComposerStatus('Căn khung hình rồi bấm Chụp ảnh', 'ok');
+        } catch (err) {
+            console.warn('[SocialFeed] camera:', err);
+            await stopCamera();
+            const msg = cameraErrorMessage(err);
+            setComposerStatus(msg, 'err');
+            window.toast?.(msg, true, 6000);
         }
     }
 
