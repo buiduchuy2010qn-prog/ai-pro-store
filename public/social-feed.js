@@ -53,24 +53,52 @@
         }
     }
 
+    function setPreviewPlayOverlay(visible) {
+        const btn = document.getElementById('social-preview-play');
+        if (btn) btn.classList.toggle('hidden', !visible);
+    }
+
     function hidePreviewPlayBtn() {
-        document.getElementById('social-preview-play')?.classList.add('hidden');
+        setPreviewPlayOverlay(false);
     }
 
     function showPreviewPlayBtn() {
-        const btn = document.getElementById('social-preview-play');
-        if (btn) btn.classList.remove('hidden');
+        setPreviewPlayOverlay(true);
     }
 
-    function playPreviewVideo() {
+    async function playPreviewVideo() {
         const vid = document.getElementById('social-preview-video');
         if (!vid || vid.classList.contains('hidden')) return;
         hidePreviewPlayBtn();
-        vid.muted = false;
-        const p = vid.play();
-        if (p && typeof p.catch === 'function') {
-            p.catch(() => showPreviewPlayBtn());
+        try {
+            if (vid.readyState < 2) vid.load();
+            vid.currentTime = 0;
+            vid.muted = true;
+            await vid.play();
+            vid.muted = false;
+        } catch (_) {
+            try {
+                vid.muted = false;
+                await vid.play();
+            } catch (err) {
+                console.warn('[SocialFeed] preview play:', err);
+                showPreviewPlayBtn();
+                window.toast?.('Không phát được — bấm ▶ trên thanh điều khiển dưới video', true, 4500);
+            }
         }
+    }
+
+    function bindPreviewPlayButton() {
+        const btn = document.getElementById('social-preview-play');
+        if (!btn || btn.dataset.bound) return;
+        btn.dataset.bound = '1';
+        const run = e => {
+            e.preventDefault();
+            e.stopPropagation();
+            playPreviewVideo();
+        };
+        btn.addEventListener('click', run);
+        btn.addEventListener('touchend', run, { passive: false });
     }
 
     function getVideoDurationSec(vid) {
@@ -81,28 +109,33 @@
 
     function setupPreviewVideoElement(vid, playUrl, blob, posterUrl) {
         if (!vid || !playUrl) return;
-        const playBtn = document.getElementById('social-preview-play');
+        const frame = document.querySelector('.social-locket-frame');
+        frame?.classList.add('is-video-preview');
+        bindPreviewPlayButton();
 
         vid.pause();
-        vid.removeAttribute('src');
+        vid.onloadedmetadata = null;
+        vid.onloadeddata = null;
+        vid.onplaying = null;
+        vid.onpause = null;
+        vid.onended = null;
+        vid.onerror = null;
+
         if (posterUrl) vid.poster = posterUrl;
         else vid.removeAttribute('poster');
-        vid.load();
         vid.src = playUrl;
-        vid.muted = false;
+        vid.muted = true;
         vid.defaultMuted = false;
         vid.controls = true;
         vid.setAttribute('playsinline', '');
         vid.setAttribute('webkit-playsinline', '');
+        vid.playsInline = true;
         vid.preload = 'auto';
         vid.classList.remove('hidden');
         showPreviewPlayBtn();
 
         const refreshMeta = () => {
             const dur = getVideoDurationSec(vid);
-            if (dur > 0) {
-                try { vid.currentTime = Math.min(0.05, dur * 0.01); } catch (_) {}
-            }
             if (blob) {
                 const durPart = dur > 0
                     ? '<span><i class="fas fa-clock"></i> ' + formatDurationLabel(dur) + '</span>'
@@ -115,21 +148,15 @@
         };
 
         vid.onloadedmetadata = refreshMeta;
-        vid.onloadeddata = () => {
-            refreshMeta();
-            hidePreviewPlayBtn();
-        };
         vid.onplaying = hidePreviewPlayBtn;
         vid.onpause = () => {
-            if (!vid.ended && vid.currentTime < 0.1) showPreviewPlayBtn();
+            if (vid.ended || vid.currentTime >= 0.15) showPreviewPlayBtn();
         };
         vid.onended = showPreviewPlayBtn;
         vid.onerror = () => {
             showPreviewPlayBtn();
-            setComposerStatus('Bấm nút ▶ giữa khung để xem video — hoặc quay lại', 'err');
+            setComposerStatus('Bấm nút ▶ giữa khung hoặc thanh điều khiển dưới video', 'err');
         };
-        vid.onclick = () => playPreviewVideo();
-        if (playBtn) playBtn.onclick = e => { e.stopPropagation(); playPreviewVideo(); };
         refreshMeta();
         vid.load();
     }
@@ -552,6 +579,7 @@
         previewPosterUrl = null;
         revokePreviewObjectUrl();
         hidePreviewPlayBtn();
+        document.querySelector('.social-locket-frame')?.classList.remove('is-video-preview');
         const preview = document.getElementById('social-preview');
         const previewVid = document.getElementById('social-preview-video');
         const placeholder = document.getElementById('social-preview-placeholder');
@@ -1713,6 +1741,7 @@
         document.getElementById('social-post-btn')?.addEventListener('click', publishPost);
         document.getElementById('social-save-btn')?.addEventListener('click', onSavePreviewClick);
         document.getElementById('social-history-toggle')?.addEventListener('click', toggleHistoryPanel);
+        bindPreviewPlayButton();
 
         const searchInput = document.getElementById('social-search');
         searchInput?.addEventListener('input', () => {
