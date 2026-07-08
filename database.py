@@ -90,8 +90,8 @@ def _safe_alter(conn, sql):
     try:
         execute(conn, sql)
         commit(conn)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f'[Migrate] {e} | {sql[:80]}')
 
 
 def migrate(conn):
@@ -137,7 +137,64 @@ def migrate(conn):
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN trust_score INTEGER DEFAULT 100')
     for row in fetchall(conn, "SELECT id FROM orders WHERE order_code IS NULL OR order_code = ''"):
         execute(conn, 'UPDATE orders SET order_code = ? WHERE id = ?', (f"DH{row['id']:06d}", row['id']))
+    _ensure_security_tables(conn)
     commit(conn)
+
+
+def _ensure_security_tables(conn):
+    """Đảm bảo bảng/cột bảo mật tồn tại trên DB đã deploy trước đó."""
+    n = sql_now()
+    stmts = []
+    if IS_PG:
+        stmts = [
+            '''CREATE TABLE IF NOT EXISTS login_attempts (
+                id SERIAL PRIMARY KEY, email TEXT NOT NULL, ip TEXT, user_agent TEXT,
+                fingerprint TEXT, success BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS user_sessions (
+                id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
+                jti TEXT NOT NULL UNIQUE, ip TEXT, user_agent TEXT, fingerprint TEXT,
+                revoked BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(), last_seen TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS trusted_devices (
+                id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
+                fingerprint TEXT NOT NULL, label TEXT, ip TEXT,
+                trusted_at TIMESTAMP NOT NULL DEFAULT NOW(), last_used TIMESTAMP NOT NULL DEFAULT NOW(),
+                UNIQUE(user_id, fingerprint))''',
+            '''CREATE TABLE IF NOT EXISTS security_events (
+                id SERIAL PRIMARY KEY, event_type TEXT NOT NULL, severity TEXT NOT NULL,
+                user_id INTEGER, ip TEXT, details TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+        ]
+    else:
+        stmts = [
+            f'''CREATE TABLE IF NOT EXISTS login_attempts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL, ip TEXT,
+                user_agent TEXT, fingerprint TEXT, success INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT ({n}))''',
+            f'''CREATE TABLE IF NOT EXISTS user_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+                jti TEXT NOT NULL UNIQUE, ip TEXT, user_agent TEXT, fingerprint TEXT,
+                revoked INTEGER DEFAULT 0, created_at TEXT DEFAULT ({n}),
+                last_seen TEXT DEFAULT ({n}),
+                FOREIGN KEY (user_id) REFERENCES users(id))''',
+            f'''CREATE TABLE IF NOT EXISTS trusted_devices (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+                fingerprint TEXT NOT NULL, label TEXT, ip TEXT,
+                trusted_at TEXT DEFAULT ({n}), last_used TEXT DEFAULT ({n}),
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                UNIQUE(user_id, fingerprint))''',
+            f'''CREATE TABLE IF NOT EXISTS security_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, event_type TEXT NOT NULL,
+                severity TEXT NOT NULL, user_id INTEGER, ip TEXT, details TEXT,
+                created_at TEXT DEFAULT ({n}))''',
+        ]
+    for stmt in stmts:
+        try:
+            execute(conn, stmt)
+            commit(conn)
+        except Exception as e:
+            print(f'[SecurityTables] {e}')
 
 
 def init_schema():

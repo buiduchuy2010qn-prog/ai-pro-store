@@ -546,7 +546,13 @@ def login():
         return jsonify({'error': 'Xác minh CAPTCHA thất bại. Thử lại.'}), 400
 
     conn = db.get_conn()
-    fail_email, fail_ip = sec.get_failed_attempts(conn, email, ip)
+    try:
+        fail_email, fail_ip = sec.get_failed_attempts(conn, email, ip)
+    except Exception as e:
+        db.close(conn)
+        print(f'[Login] get_failed_attempts: {e}')
+        return jsonify({'error': 'Hệ thống đang khởi tạo bảo mật. Thử lại sau 1 phút.'}), 503
+
     if fail_email >= SECURITY['lockout_attempts'] or fail_ip >= SECURITY['lockout_attempts'] * 2:
         db.close(conn)
         sec.log_event('login_rate_blocked', 'high', ip=ip, details={'email': email})
@@ -590,7 +596,13 @@ def login():
             db.close(conn)
             return jsonify({'error': 'Mã 2FA không đúng.'}), 401
 
-    risks, penalty = sec.check_account_transfer_risk(conn, user, fingerprint, ip)
+    try:
+        risks, penalty = sec.check_account_transfer_risk(conn, user, fingerprint, ip)
+    except Exception as e:
+        db.close(conn)
+        print(f'[Login] transfer_risk: {e}')
+        risks, penalty = [], 0
+
     if penalty:
         sec.adjust_trust_score(conn, user['id'], penalty)
         db.commit(conn)
@@ -601,7 +613,14 @@ def login():
                 'error': 'Tài khoản bị khóa do hoạt động bất thường. Liên hệ Zalo ' + ZALO_PHONE,
             }), 403
 
-    if sec.needs_step_up(conn, user, fingerprint) or risks:
+    try:
+        need_step = sec.needs_step_up(conn, user, fingerprint)
+    except Exception as e:
+        db.close(conn)
+        print(f'[Login] needs_step_up: {e}')
+        return jsonify({'error': 'Hệ thống bảo mật đang khởi tạo. Thử lại sau 1 phút.'}), 503
+
+    if need_step or risks:
         step_token = sec.create_step_up_token(user['id'], email, fingerprint, ip)
         since = (datetime.utcnow() - timedelta(hours=1)).isoformat()
         cnt = db.fetchone(conn,
@@ -631,9 +650,17 @@ def login():
             'risks': risks,
         }), 200
 
-    token = _complete_login(user, conn, ip, ua, fingerprint)
-    db.close(conn)
-    return jsonify({'token': token, 'user': fmt_user(user)})
+    try:
+        token = _complete_login(user, conn, ip, ua, fingerprint)
+        db.close(conn)
+        return jsonify({'token': token, 'user': fmt_user(user)})
+    except Exception as e:
+        db.close(conn)
+        print(f'[Login] complete_login error: {e}')
+        import traceback
+        traceback.print_exc()
+        sec.log_event('login_server_error', 'critical', user_id=user['id'], ip=ip, details={'error': str(e)})
+        return jsonify({'error': 'Lỗi server khi đăng nhập. Đã ghi log — thử lại sau 1 phút.'}), 500
 
 
 @app.route('/api/auth/step-up', methods=['POST'])

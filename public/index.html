@@ -1942,7 +1942,13 @@ document.getElementById('login-form').onsubmit = async e => {
                 totpCode: document.getElementById('login-totp').value.trim(),
             }),
         });
-        const r = await res.json().catch(() => ({}));
+        const rawText = await res.text();
+        let r = {};
+        try { r = JSON.parse(rawText); } catch (_) {
+            throw new Error(res.status === 500
+                ? 'Lỗi server (500). Hệ thống đang khắc phục — thử lại sau 1 phút.'
+                : 'Không nhận được phản hồi từ server.');
+        }
         if (r.requires2FA) {
             document.getElementById('login-2fa-wrap').classList.remove('hidden');
             errEl.textContent = r.message || 'Nhập mã 2FA.';

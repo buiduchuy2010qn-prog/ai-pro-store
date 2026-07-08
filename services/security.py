@@ -341,13 +341,23 @@ def is_session_valid(conn, uid, jti):
 
 
 def create_session(conn, uid, jti, ip, ua, fingerprint):
-    db.execute(conn, '''
-        INSERT INTO user_sessions (user_id, jti, ip, user_agent, fingerprint, created_at, last_seen)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (uid, jti, ip, ua, fingerprint, _now_iso(), _now_iso()))
-    db.execute(conn,
-        'UPDATE users SET last_login_at = ?, last_login_ip = ?, last_fingerprint = ? WHERE id = ?',
-        (_now_iso(), ip, fingerprint, uid))
+    if db.IS_PG:
+        db.execute(conn, '''
+            INSERT INTO user_sessions (user_id, jti, ip, user_agent, fingerprint)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (uid, jti, ip, ua, fingerprint))
+        db.execute(conn, '''
+            UPDATE users SET last_login_at = NOW(), last_login_ip = ?, last_fingerprint = ?
+            WHERE id = ?
+        ''', (ip, fingerprint, uid))
+    else:
+        db.execute(conn, '''
+            INSERT INTO user_sessions (user_id, jti, ip, user_agent, fingerprint, created_at, last_seen)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (uid, jti, ip, ua, fingerprint, _now_iso(), _now_iso()))
+        db.execute(conn,
+            'UPDATE users SET last_login_at = ?, last_login_ip = ?, last_fingerprint = ? WHERE id = ?',
+            (_now_iso(), ip, fingerprint, uid))
     _enforce_session_limit(conn, uid)
 
 
@@ -396,14 +406,25 @@ def trust_device(conn, uid, fingerprint, ip, label=''):
         'SELECT id FROM trusted_devices WHERE user_id = ? AND fingerprint = ?',
         (uid, fingerprint))
     if existing:
-        db.execute(conn,
-            'UPDATE trusted_devices SET last_used = ?, ip = ? WHERE id = ?',
-            (_now_iso(), ip, existing['id']))
+        if db.IS_PG:
+            db.execute(conn,
+                'UPDATE trusted_devices SET last_used = NOW(), ip = ? WHERE id = ?',
+                (ip, existing['id']))
+        else:
+            db.execute(conn,
+                'UPDATE trusted_devices SET last_used = ?, ip = ? WHERE id = ?',
+                (_now_iso(), ip, existing['id']))
     else:
-        db.execute(conn, '''
-            INSERT INTO trusted_devices (user_id, fingerprint, label, ip, trusted_at, last_used)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (uid, fingerprint, label[:80], ip, _now_iso(), _now_iso()))
+        if db.IS_PG:
+            db.execute(conn, '''
+                INSERT INTO trusted_devices (user_id, fingerprint, label, ip)
+                VALUES (?, ?, ?, ?)
+            ''', (uid, fingerprint, label[:80], ip))
+        else:
+            db.execute(conn, '''
+                INSERT INTO trusted_devices (user_id, fingerprint, label, ip, trusted_at, last_used)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (uid, fingerprint, label[:80], ip, _now_iso(), _now_iso()))
 
 
 def user_is_pro(conn, uid):
@@ -521,9 +542,10 @@ def check_account_transfer_risk(conn, user, fingerprint, ip):
             break
 
     recent_ips = db.fetchall(conn, '''
-        SELECT DISTINCT ip FROM login_attempts
+        SELECT ip FROM login_attempts
         WHERE email = ? AND success = ? AND created_at > ?
-        ORDER BY created_at DESC LIMIT 10
+        GROUP BY ip
+        LIMIT 10
     ''', (account_email, db.bool_val(True), (_now() - timedelta(days=7)).isoformat()))
     ips = {r['ip'] for r in recent_ips if r.get('ip')}
     if len(ips) >= SECURITY['suspicious_ip_count'] and ip not in ips:
