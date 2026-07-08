@@ -642,7 +642,12 @@
         if (drive === 'connected') {
             window.toast?.('Đã kết nối Google Drive thành công!');
         } else if (drive === 'error') {
-            window.toast?.('Không kết nối được Google Drive — thử lại hoặc kiểm tra cấu hình OAuth.', true, 6000);
+            const detail = params.get('drive_msg');
+            window.toast?.(
+                detail || 'Không kết nối được Google Drive — thử lại hoặc kiểm tra cấu hình OAuth.',
+                true,
+                8000
+            );
         }
         const hash = window.location.hash || '';
         history.replaceState(null, '', window.location.pathname + hash);

@@ -2450,20 +2450,27 @@ def social_drive_connect():
         return jsonify({'error': 'Không tạo được liên kết Google — thử lại sau.'}), 500
 
 
+def _drive_error_redirect(message):
+    from urllib.parse import quote
+    msg = quote((message or 'Không kết nối được Google Drive')[:180])
+    return redirect(f'/?drive=error&drive_msg={msg}#social')
+
+
 @app.route('/api/social/drive/callback')
 def social_drive_callback():
     err = request.args.get('error')
     if err:
         print(f'[Drive] OAuth denied: {err}')
-        return redirect('/?drive=error#social')
+        return _drive_error_redirect('Google từ chối quyền — thêm email vào Test users')
     code = request.args.get('code', '').strip()
     state = request.args.get('state', '').strip()
     try:
-        drive.handle_oauth_callback(code, state)
+        drive.normalize_stored_oauth_credentials()
+        drive.handle_oauth_callback(code, state, authorization_response=request.url)
         return redirect('/?drive=connected#social')
     except Exception as e:
         print(f'[Drive] callback error: {e}')
-        return redirect('/?drive=error#social')
+        return _drive_error_redirect(str(e))
 
 
 @app.route('/api/social/drive/disconnect', methods=['POST'])

@@ -238,20 +238,35 @@ def _fetch_google_email(creds):
         return ''
 
 
-def handle_oauth_callback(code, state):
+def _email_from_id_token(id_token):
+    if not id_token:
+        return ''
+    try:
+        payload = id_token.split('.')[1]
+        payload += '=' * (-len(payload) % 4)
+        data = json.loads(base64.urlsafe_b64decode(payload.encode()))
+        return (data.get('email') or '').strip().lower()
+    except Exception:
+        return ''
+
+
+def handle_oauth_callback(code, state, authorization_response=None):
     if not code or not state:
         raise ValueError('Thiếu mã xác thực Google')
+
+    # Google thường trả thêm scope openid/profile — tránh lỗi fetch_token
+    os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
     from google_auth_oauthlib.flow import Flow
     from database import get_conn, fetchone, execute, commit, close, sql_now
 
     user_id = verify_oauth_state(state)
-    creds = get_oauth_credentials()
+    oauth = get_oauth_credentials()
     flow = Flow.from_client_config(
         {
             'web': {
-                'client_id': creds['client_id'],
-                'client_secret': creds['client_secret'],
+                'client_id': oauth['client_id'],
+                'client_secret': oauth['client_secret'],
                 'auth_uri': 'https://accounts.google.com/o/oauth2/auth',
                 'token_uri': 'https://oauth2.googleapis.com/token',
             }
@@ -259,14 +274,27 @@ def handle_oauth_callback(code, state):
         scopes=DRIVE_SCOPES,
         state=state,
     )
-    flow.redirect_uri = creds['redirect_uri']
-    flow.fetch_token(code=code)
+    flow.redirect_uri = oauth['redirect_uri']
+    try:
+        if authorization_response:
+            flow.fetch_token(authorization_response=authorization_response)
+        else:
+            flow.fetch_token(code=code)
+    except Exception as e:
+        msg = str(e).lower()
+        if 'invalid_client' in msg:
+            raise ValueError('Client Secret sai — copy lại secret đang Bật trên Google Console')
+        if 'invalid_grant' in msg:
+            raise ValueError('Mã Google hết hạn — bấm Kết nối lại')
+        if 'scope' in msg:
+            raise ValueError('Lỗi scope OAuth — thử kết nối lại')
+        raise
     creds = flow.credentials
     refresh = creds.refresh_token
     if not refresh:
         raise ValueError('Google không trả refresh token — thử ngắt kết nối và bấm lại')
 
-    google_email = _fetch_google_email(creds)
+    google_email = _fetch_google_email(creds) or _email_from_id_token(getattr(creds, 'id_token', None))
     conn = get_conn()
     admin = fetchone(conn, 'SELECT id, role FROM users WHERE id = ?', (user_id,))
     if not admin or admin.get('role') != 'admin':
