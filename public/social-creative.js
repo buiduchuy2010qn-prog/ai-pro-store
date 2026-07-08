@@ -112,6 +112,8 @@
         studioPills: new Set(),
         studioOpen: false,
         locationLabel: null,
+        captionDisplayMode: 'input',
+        studioCaptionPill: null,
     };
 
     let studioTickInterval = null;
@@ -489,6 +491,54 @@
             drawer.dispatchEvent(new Event('input', { bubbles: true }));
         }
         updateCaptionOverlay();
+        renderCaptionDisplay();
+    }
+
+    function renderCaptionDisplay() {
+        const pillEl = document.getElementById('social-caption-pill-overlay');
+        const barEl = document.getElementById('social-frame-caption-bar');
+        const isPreview = document.querySelector('.social-locket-frame.has-preview');
+        if (!pillEl || !isPreview) {
+            pillEl?.classList.add('hidden');
+            return;
+        }
+
+        const showStudioPill = state.captionDisplayMode === 'pill'
+            && state.studioCaptionPill?.text;
+
+        if (showStudioPill) {
+            pillEl.textContent = state.studioCaptionPill.text;
+            pillEl.className = 'social-caption-pill-overlay ' + (state.studioCaptionPill.cls || 'pill-purple');
+            pillEl.classList.remove('hidden');
+            pillEl.setAttribute('aria-hidden', 'false');
+            barEl?.classList.add('hidden');
+            return;
+        }
+
+        pillEl.classList.add('hidden');
+        pillEl.setAttribute('aria-hidden', 'true');
+        barEl?.classList.remove('hidden');
+    }
+
+    function useInputCaptionMode() {
+        state.captionDisplayMode = 'input';
+        state.studioCaptionPill = null;
+        document.querySelectorAll('[data-social-studio-pill].is-selected').forEach(el => {
+            const p = findStudioPill(el.dataset.socialStudioPill);
+            if (p && getPillMode(p) === 'caption') el.classList.remove('is-selected');
+        });
+        renderCaptionDisplay();
+    }
+
+    function useStudioCaptionPill(id, text, cls) {
+        state.captionDisplayMode = 'pill';
+        state.studioCaptionPill = { id, text, cls: cls || 'pill-purple' };
+        document.querySelectorAll('[data-social-studio-pill]').forEach(el => {
+            el.classList.toggle('is-selected', el.dataset.socialStudioPill === id);
+        });
+        setCaptionInputs(text);
+        closeStudio();
+        renderCaptionDisplay();
     }
 
     async function onStudioPillClick(pill) {
@@ -499,8 +549,12 @@
 
         if (mode === 'caption') {
             const caption = pill.dataset.caption || '';
-            if (caption) setCaptionInputs(caption);
-            focusCaptionInput(!!caption);
+            if (caption) {
+                useStudioCaptionPill(id, caption, p.cls);
+                return;
+            }
+            useInputCaptionMode();
+            focusCaptionInput(false);
             return;
         }
 
@@ -508,6 +562,7 @@
             if (state.locationLabel) {
                 state.locationLabel = null;
                 pill.classList.remove('is-selected');
+                useInputCaptionMode();
                 setCaptionInputs('');
                 updateLocationPillUi('Vị trí', false);
                 return;
@@ -516,6 +571,7 @@
             try {
                 const addr = await fetchRealLocation();
                 state.locationLabel = addr;
+                useInputCaptionMode();
                 setCaptionInputs(addr);
                 pill.classList.add('is-selected');
                 updateLocationPillUi(addr, false);
@@ -631,9 +687,12 @@
     function clearStudioDecorations() {
         state.studioPills.clear();
         state.locationLabel = null;
+        state.captionDisplayMode = 'input';
+        state.studioCaptionPill = null;
         document.querySelectorAll('[data-social-studio-pill].is-selected').forEach(p => p.classList.remove('is-selected'));
         updateLocationPillUi('Vị trí', false);
         renderDecoOverlay();
+        renderCaptionDisplay();
         stopStudioTicker();
     }
 
@@ -733,6 +792,8 @@
             bgId: state.bgId,
             decorations: [...state.studioPills],
             locationLabel: state.locationLabel || null,
+            studioCaption: state.studioCaptionPill ? { ...state.studioCaptionPill } : null,
+            captionDisplayMode: state.captionDisplayMode,
         };
     }
 
@@ -780,6 +841,7 @@
             document.querySelector('.social-locket-studio')?.classList.add('is-editing');
             applyFrameClass();
             updateCaptionOverlay();
+            renderCaptionDisplay();
             syncStudioTicker();
         },
 
@@ -799,7 +861,26 @@
         closeStudio,
         isStudioOpen() { return state.studioOpen; },
         syncCaptionOverlay: updateCaptionOverlay,
+        renderCaptionDisplay,
+        useInputCaptionMode,
         focusCaptionInput,
+
+        applyFeedCaptionPill(el, post) {
+            if (!el) return;
+            const studioCap = post?.postMeta?.studioCaption;
+            if (!post?.caption) {
+                el.textContent = '';
+                el.classList.add('hidden');
+                return;
+            }
+            el.textContent = post.caption;
+            el.classList.remove('hidden');
+            if (studioCap?.cls) {
+                el.className = 'locket-feed-caption-pill is-studio-colored ' + studioCap.cls;
+            } else {
+                el.className = 'locket-feed-caption-pill is-typed-caption';
+            }
+        },
 
         onCameraStart() {
             applyCameraBackground();

@@ -2239,10 +2239,6 @@ body.app-light .app-main {
     align-items: center;
 }
 
-.social-locket-frame.has-preview .social-frame-caption-bar {
-    display: block !important;
-}
-
 .social-locket-frame.has-preview .social-caption-overlay.pos-bottom {
     bottom: 3.2rem;
 }

@@ -2046,13 +2046,7 @@
         mediaWrap.innerHTML = wrappedMedia;
         if (badgesEl) badgesEl.innerHTML = buildLocketBadges(post);
         if (captionEl) {
-            if (post.caption) {
-                captionEl.textContent = post.caption;
-                captionEl.classList.remove('hidden');
-            } else {
-                captionEl.textContent = '';
-                captionEl.classList.add('hidden');
-            }
+            window.SocialCreative?.applyFeedCaptionPill?.(captionEl, post);
         }
         if (metaRow) {
             metaRow.innerHTML = `
@@ -2691,15 +2685,20 @@
         const syncToDrawer = () => {
             drawer.value = inline.value;
             drawer.dispatchEvent(new Event('input', { bubbles: true }));
+            window.SocialCreative?.useInputCaptionMode?.();
             window.SocialCreative?.syncCaptionOverlay?.();
         };
         const syncToInline = () => {
             inline.value = drawer.value;
+            window.SocialCreative?.useInputCaptionMode?.();
             window.SocialCreative?.syncCaptionOverlay?.();
         };
         inline.addEventListener('input', syncToDrawer);
         drawer.addEventListener('input', syncToInline);
-        inline.addEventListener('focus', () => window.SocialCreative?.closeStudio?.());
+        inline.addEventListener('focus', () => {
+            window.SocialCreative?.closeStudio?.();
+            window.SocialCreative?.useInputCaptionMode?.();
+        });
     }
 
     function initDrawerTabs() {
