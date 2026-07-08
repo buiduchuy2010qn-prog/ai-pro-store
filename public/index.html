@@ -433,7 +433,10 @@
                             </div>
                             <div id="social-post-row" class="social-locket-post-row hidden">
                                 <input id="social-caption" type="text" maxlength="500" class="social-locket-caption" placeholder="Thêm chú thích (tuỳ chọn)...">
-                                <button type="button" id="social-post-btn" class="social-locket-send-btn"><i class="fas fa-paper-plane mr-1"></i>Đăng ảnh</button>
+                                <div class="social-post-primary-actions">
+                                    <button type="button" id="social-post-btn" class="social-locket-send-btn"><i class="fas fa-paper-plane mr-1"></i>Đăng ảnh</button>
+                                    <button type="button" id="social-save-btn" class="social-locket-save-btn"><i class="fas fa-download mr-1"></i>Lưu ảnh</button>
+                                </div>
                                 <div class="social-preview-actions">
                                     <button type="button" id="social-cancel-preview" class="social-cancel-btn"><i class="fas fa-times mr-1"></i>Hủy ảnh</button>
                                     <button type="button" id="social-retake-inline" class="social-retake-link"><i class="fas fa-redo mr-1"></i>Chụp lại</button>
@@ -788,7 +791,7 @@
 </a>
 
 <script src="/security-client.js"></script>
-<script src="/social-feed.js?v=locket5"></script>
+<script src="/social-feed.js?v=locket6"></script>
 <script src="/shop-features.js?v=mxh1"></script>
 <script>
 const API = '/api';

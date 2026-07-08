@@ -160,7 +160,7 @@
         updateShutterState();
         updateCameraUi();
         updateComposerMode();
-        setComposerStatus('Bấm Đăng ảnh hoặc Hủy nếu không muốn đăng', 'ok');
+        setComposerStatus('Đăng ảnh, Lưu ảnh vào máy, hoặc Hủy', 'ok');
         if (shouldSaveWhen('capture')) {
             saveImageToDevice(src, 'chup');
         }
@@ -594,6 +594,14 @@
         await startCamera();
     }
 
+    function onSavePreviewClick() {
+        if (!pendingImage) {
+            window.toast?.('Chụp hoặc chọn ảnh trước', true);
+            return;
+        }
+        saveImageToDevice(pendingImage, 'luu');
+    }
+
     async function cancelPreview() {
         if (!pendingImage) return;
         if (!confirm('Hủy ảnh này?\nSẽ không đăng lên bảng tin.')) return;
@@ -657,6 +665,7 @@
         document.getElementById('social-cancel-preview')?.addEventListener('click', cancelPreview);
         document.getElementById('social-flip-camera')?.addEventListener('click', flipCamera);
         document.getElementById('social-post-btn')?.addEventListener('click', publishPost);
+        document.getElementById('social-save-btn')?.addEventListener('click', onSavePreviewClick);
         document.getElementById('social-history-toggle')?.addEventListener('click', toggleHistoryPanel);
 
         const searchInput = document.getElementById('social-search');
