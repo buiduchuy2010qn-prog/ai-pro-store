@@ -88,7 +88,18 @@
         const shutter = document.getElementById('social-shutter-btn');
         if (!shutter) return;
         shutter.classList.toggle('is-live', !!cameraStream && !pendingImage);
-        shutter.classList.toggle('is-captured', !!pendingImage);
+        shutter.classList.toggle('is-captured', false);
+        shutter.disabled = !!pendingImage;
+    }
+
+    function updateComposerMode() {
+        const studio = document.querySelector('.social-locket-studio');
+        const frame = document.querySelector('.social-locket-frame');
+        const controls = document.querySelector('.social-locket-controls');
+        const hasPreview = !!pendingImage;
+        studio?.classList.toggle('has-preview', hasPreview);
+        frame?.classList.toggle('has-preview', hasPreview);
+        if (controls) controls.classList.toggle('hidden', hasPreview);
     }
 
     function showPreview(src) {
@@ -103,7 +114,8 @@
         document.getElementById('social-post-row')?.classList.remove('hidden');
         updateShutterState();
         updateCameraUi();
-        setComposerStatus('Ảnh đã chụp — bấm Gửi ảnh hoặc nút ↻ để chụp lại', 'ok');
+        updateComposerMode();
+        setComposerStatus('Sẵn sàng đăng — thêm chú thích rồi bấm Gửi ảnh', 'ok');
     }
 
     function clearPreview() {
@@ -118,7 +130,8 @@
         document.getElementById('social-post-row')?.classList.add('hidden');
         updateShutterState();
         updateCameraUi();
-        setComposerStatus(cameraStream ? 'Căn khung hình rồi bấm nút tròn' : 'Chụp ảnh gửi cho bạn bè');
+        updateComposerMode();
+        setComposerStatus(cameraStream ? 'Căn khung hình rồi bấm nút tròn tím' : 'Chụp ảnh gửi cho bạn bè');
     }
 
     async function stopCamera() {
@@ -546,6 +559,7 @@
         });
         document.getElementById('social-shutter-btn')?.addEventListener('click', onShutterClick);
         document.getElementById('social-retake-btn')?.addEventListener('click', onRetakeClick);
+        document.getElementById('social-retake-inline')?.addEventListener('click', onRetakeClick);
         document.getElementById('social-flip-camera')?.addEventListener('click', flipCamera);
         document.getElementById('social-post-btn')?.addEventListener('click', publishPost);
         document.getElementById('social-history-toggle')?.addEventListener('click', toggleHistoryPanel);
