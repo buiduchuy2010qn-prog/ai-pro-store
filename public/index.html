@@ -53,7 +53,8 @@
                 </div>
                 <div class="auth-field">
                     <i class="fas fa-lock auth-field-icon"></i>
-                    <input id="login-password" type="password" required autocomplete="current-password" placeholder="Mật khẩu" class="auth-input">
+                    <input id="login-password" type="password" required autocomplete="current-password" placeholder="Mật khẩu" class="auth-input auth-input-password">
+                    <button type="button" class="auth-toggle-password" data-toggle-password="login-password" aria-label="Hiện mật khẩu"><i class="fas fa-eye"></i></button>
                 </div>
                 <div class="text-right">
                     <button type="button" id="forgot-link" class="auth-link">Quên mật khẩu</button>
@@ -74,11 +75,13 @@
                 </div>
                 <div class="auth-field">
                     <i class="fas fa-lock auth-field-icon"></i>
-                    <input id="register-password" type="password" required minlength="8" autocomplete="new-password" placeholder="Mật khẩu" class="auth-input">
+                    <input id="register-password" type="password" required minlength="8" autocomplete="new-password" placeholder="Mật khẩu" class="auth-input auth-input-password">
+                    <button type="button" class="auth-toggle-password" data-toggle-password="register-password" aria-label="Hiện mật khẩu"><i class="fas fa-eye"></i></button>
                 </div>
                 <div class="auth-field">
                     <i class="fas fa-lock auth-field-icon"></i>
-                    <input id="register-confirmPassword" type="password" required minlength="8" autocomplete="new-password" placeholder="Nhập lại mật khẩu" class="auth-input">
+                    <input id="register-confirmPassword" type="password" required minlength="8" autocomplete="new-password" placeholder="Nhập lại mật khẩu" class="auth-input auth-input-password">
+                    <button type="button" class="auth-toggle-password" data-toggle-password="register-confirmPassword" aria-label="Hiện mật khẩu"><i class="fas fa-eye"></i></button>
                 </div>
                 <div id="turnstile-register" class="flex justify-center my-1"></div>
                 <p id="register-error" class="auth-error hidden"></p>
@@ -118,7 +121,8 @@
                     </div>
                     <div class="auth-field">
                         <i class="fas fa-lock auth-field-icon"></i>
-                        <input id="forgot-newPassword" type="password" required minlength="8" placeholder="Mật khẩu mới" class="auth-input">
+                        <input id="forgot-newPassword" type="password" required minlength="8" placeholder="Mật khẩu mới" class="auth-input auth-input-password">
+                        <button type="button" class="auth-toggle-password" data-toggle-password="forgot-newPassword" aria-label="Hiện mật khẩu"><i class="fas fa-eye"></i></button>
                     </div>
                     <p id="forgot-step3-error" class="auth-error hidden"></p>
                     <button type="submit" class="auth-submit">Đổi mật khẩu</button>
@@ -149,6 +153,9 @@
                     <div id="user-name" class="text-sm font-semibold text-slate-800"></div>
                     <div id="header-balance" class="user-balance-pill"></div>
                 </div>
+                <button id="profile-btn" type="button" class="btn-profile" title="Hồ sơ người dùng">
+                    <i class="fas fa-user-circle"></i><span class="hidden sm:inline">Hồ sơ</span>
+                </button>
                 <button id="logout-btn" class="btn-ghost p-2.5 text-slate-500 hover:text-red-500" title="Đăng xuất">
                     <i class="fas fa-sign-out-alt"></i>
                 </button>
@@ -164,6 +171,7 @@
             <button data-view="transactions" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-clock-rotate-left mr-2 w-4"></i>Lịch sử</button>
             <button data-view="dressroom" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-shirt mr-2 w-4"></i>Phòng Thay Đồ</button>
             <button data-view="admin" id="admin-mobile-nav-btn" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium hidden"><i class="fas fa-shield-alt mr-2 w-4"></i>Quản trị</button>
+            <button type="button" id="profile-mobile-btn" class="mobile-nav-btn w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium"><i class="fas fa-user-circle mr-2 w-4"></i>Hồ sơ</button>
         </div>
     </header>
 
@@ -268,15 +276,34 @@
                     <p id="purchase-product-name" class="text-sm text-slate-500 mt-1"></p>
                 </div>
                 <div class="p-5 space-y-4">
-                    <div class="flex items-center justify-between gap-3 bg-slate-50 rounded-xl p-3 border border-sky-100">
-                        <div>
-                            <p class="text-xs text-slate-500">Đơn giá</p>
-                            <p id="purchase-unit-price" class="font-semibold text-brand-600"></p>
+                    <div class="bg-slate-50 rounded-xl p-3 border border-sky-100 space-y-1">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-xs text-slate-500">Đơn giá</p>
+                                <p id="purchase-unit-price" class="font-semibold text-brand-600"></p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-slate-500">Tạm tính</p>
+                                <p id="purchase-subtotal" class="font-semibold text-slate-700"></p>
+                            </div>
                         </div>
-                        <div class="text-right">
+                        <div id="purchase-discount-wrap" class="purchase-price-line discount hidden">
+                            <span>Giảm giá</span>
+                            <span id="purchase-discount-amount"></span>
+                        </div>
+                        <div class="flex items-center justify-between gap-3 pt-1 border-t border-sky-100">
                             <p class="text-xs text-slate-500">Tổng thanh toán</p>
                             <p id="purchase-total-price" class="text-xl font-bold gradient-text"></p>
                         </div>
+                    </div>
+                    <!-- Mã giảm giá -->
+                    <div>
+                        <label class="text-sm font-medium text-slate-600 block mb-2"><i class="fas fa-ticket-alt mr-1 text-violet-500"></i>Mã giảm giá</label>
+                        <div class="purchase-coupon-row">
+                            <input id="purchase-coupon-code" type="text" placeholder="Nhập mã (VD: WELCOME10)" class="purchase-coupon-input" maxlength="32">
+                            <button type="button" id="purchase-apply-coupon" class="purchase-coupon-apply">Áp dụng</button>
+                        </div>
+                        <p id="purchase-coupon-msg" class="purchase-coupon-msg hidden"></p>
                     </div>
                     <div>
                         <label class="text-sm font-medium text-slate-600 block mb-2">Số lượng</label>
@@ -394,6 +421,7 @@
                         <button data-admin-tab="bank-transactions" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Bank TX</button>
                         <button data-admin-tab="dressroom" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Phòng Thay Đồ</button>
                         <button data-admin-tab="ai" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Cài đặt AI</button>
+                        <button data-admin-tab="coupons" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Mã giảm giá</button>
                     </div>
                 </div>
                 <div id="admin-dashboard" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"></div>
@@ -506,6 +534,24 @@
                 <div id="admin-ai" class="hidden">
                     <div id="admin-ai-panel"></div>
                 </div>
+                <div id="admin-coupons" class="hidden space-y-4">
+                    <div>
+                        <h2 class="text-lg font-bold gradient-text"><i class="fas fa-ticket-alt mr-1"></i>Quản lý mã giảm giá</h2>
+                        <p class="text-sm text-slate-500">Tạo mã giảm giá cho khách hàng. Dữ liệu lưu trên trình duyệt (localStorage).</p>
+                    </div>
+                    <div class="glass-card p-5">
+                        <h3 class="font-semibold mb-3">Tạo mã mới</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <input id="new-coupon-code" type="text" placeholder="Mã (VD: SUMMER25)" class="border rounded-xl px-3 py-2 text-sm font-mono uppercase">
+                            <input id="new-coupon-percent" type="number" min="1" max="100" placeholder="% giảm (1–100)" class="border rounded-xl px-3 py-2 text-sm">
+                            <input id="new-coupon-expires" type="date" class="border rounded-xl px-3 py-2 text-sm">
+                        </div>
+                        <button type="button" id="admin-coupon-create-btn" class="btn-primary px-4 py-2.5 text-sm mt-3">
+                            <i class="fas fa-plus mr-1"></i>Tạo mã giảm giá
+                        </button>
+                    </div>
+                    <div id="admin-coupons-list" class="space-y-3"></div>
+                </div>
                 <div id="admin-mock-panel" class="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-5">
                     <h3 class="font-semibold text-amber-800 mb-2"><i class="fas fa-flask mr-1"></i>Mock Bank (dev/test)</h3>
                     <p class="text-sm text-amber-700 mb-3">Mô phỏng giao dịch ngân hàng để test tự động cộng tiền.</p>
@@ -518,6 +564,69 @@
             </div>
         </section>
     </main>
+</div>
+
+<!-- Modal Hồ sơ người dùng -->
+<div id="profile-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 modal-overlay">
+    <div class="profile-modal-panel">
+        <div class="profile-modal-header flex items-center justify-between">
+            <div>
+                <h3 class="font-bold text-lg"><i class="fas fa-user-circle text-brand-500 mr-1"></i>Hồ sơ người dùng</h3>
+                <p class="text-sm text-slate-500 mt-0.5">Thông tin tài khoản & lịch sử đăng nhập</p>
+            </div>
+            <button type="button" id="profile-modal-close" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+        </div>
+        <div class="profile-modal-tabs">
+            <button type="button" id="profile-tab-info" class="profile-tab profile-tab-active">Thông tin</button>
+            <button type="button" id="profile-tab-history" class="profile-tab">Lịch sử đăng nhập</button>
+        </div>
+        <div class="profile-modal-body pretty-scrollbar">
+            <div id="profile-panel-info">
+                <div id="profile-view-mode" class="profile-info-grid">
+                    <div class="profile-info-item full">
+                        <div class="profile-info-label">Họ và tên</div>
+                        <div id="profile-display-name" class="profile-info-value">—</div>
+                    </div>
+                    <div class="profile-info-item">
+                        <div class="profile-info-label">Email</div>
+                        <div id="profile-display-email" class="profile-info-value">—</div>
+                    </div>
+                    <div class="profile-info-item">
+                        <div class="profile-info-label">Số điện thoại</div>
+                        <div id="profile-display-phone" class="profile-info-value">—</div>
+                    </div>
+                    <div class="profile-info-item">
+                        <div class="profile-info-label">Số dư ví</div>
+                        <div id="profile-display-balance" class="profile-info-value text-emerald-600">—</div>
+                    </div>
+                    <div class="profile-info-item full">
+                        <div class="profile-info-label">Ngày tham gia</div>
+                        <div id="profile-display-joined" class="profile-info-value">—</div>
+                    </div>
+                </div>
+                <div id="profile-edit-mode" class="hidden space-y-3">
+                    <div>
+                        <label class="profile-info-label block mb-1">Họ và tên</label>
+                        <input id="profile-edit-name" type="text" class="profile-edit-input" placeholder="Họ và tên">
+                    </div>
+                    <div>
+                        <label class="profile-info-label block mb-1">Số điện thoại</label>
+                        <input id="profile-edit-phone" type="tel" class="profile-edit-input" placeholder="09xxxxxxxx">
+                    </div>
+                    <p class="text-xs text-slate-400">Email và số dư được quản lý bởi hệ thống.</p>
+                </div>
+                <div class="profile-actions">
+                    <button type="button" id="profile-edit-btn" class="btn-primary px-4 py-2 text-sm"><i class="fas fa-edit mr-1"></i>Chỉnh sửa hồ sơ</button>
+                    <button type="button" id="profile-save-btn" class="btn-primary px-4 py-2 text-sm hidden"><i class="fas fa-save mr-1"></i>Lưu thay đổi</button>
+                    <button type="button" id="profile-cancel-edit-btn" class="btn-ghost px-4 py-2 text-sm hidden">Hủy</button>
+                    <button type="button" id="profile-logout-btn" class="btn-ghost px-4 py-2 text-sm text-red-500 hover:bg-red-50"><i class="fas fa-sign-out-alt mr-1"></i>Đăng xuất</button>
+                </div>
+            </div>
+            <div id="profile-panel-history" class="hidden">
+                <div id="profile-login-history-list"></div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Toast -->
@@ -927,8 +1036,13 @@ function updatePurchaseTotal() {
     const p = productsCache[pendingPurchaseId];
     if (!p) return;
     const qty = getPurchaseQty();
-    document.getElementById('purchase-unit-price').textContent = formatMoney(p.price);
-    document.getElementById('purchase-total-price').textContent = formatMoney(p.price * qty);
+    if (window.ShopFeatures?.renderPurchaseTotals) {
+        ShopFeatures.renderPurchaseTotals(p, qty);
+    } else {
+        document.getElementById('purchase-unit-price').textContent = formatMoney(p.price);
+        document.getElementById('purchase-subtotal').textContent = formatMoney(p.price * qty);
+        document.getElementById('purchase-total-price').textContent = formatMoney(p.price * qty);
+    }
 }
 
 function openPurchaseModal(id, contactMode) {
@@ -963,11 +1077,13 @@ function openPurchaseModal(id, contactMode) {
     phoneWrap.classList.toggle('hidden', !needPhone);
     document.getElementById('purchase-contact-email').value = needEmail && currentUser?.email ? currentUser.email : '';
     document.getElementById('purchase-contact-phone').value = '';
+    ShopFeatures?.clearPurchaseCoupon?.();
     document.getElementById('purchase-modal').classList.remove('hidden');
 }
 
 function closePurchaseModal() {
     pendingPurchaseId = null;
+    ShopFeatures?.clearPurchaseCoupon?.();
     document.getElementById('purchase-modal').classList.add('hidden');
 }
 
@@ -980,6 +1096,13 @@ async function submitPurchase(id, contact = {}) {
     const body = { productId: id, quantity: qty };
     if (contact.email) body.contactEmail = contact.email;
     if (contact.phone) body.contactPhone = contact.phone;
+    if (ShopFeatures?.getPurchaseDiscountInfo) {
+        const info = ShopFeatures.getPurchaseDiscountInfo();
+        if (info.code && info.percent > 0) {
+            body.couponCode = info.code;
+            body.discountPercent = info.percent;
+        }
+    }
     const r = await api('/orders/create', { method: 'POST', body: JSON.stringify(body) });
     currentUser.balance = r.balance;
     updateHeader();
@@ -1004,6 +1127,13 @@ function confirmPurchase() {
     const phone = document.getElementById('purchase-contact-phone').value.trim();
     if ((mode === 'email' || mode === 'both') && !email) return toast('Vui lòng nhập email nâng gói', true);
     if ((mode === 'zalo' || mode === 'both') && !phone) return toast('Vui lòng nhập SĐT/Zalo nâng gói', true);
+    const qty = getPurchaseQty();
+    const totals = ShopFeatures?.calcPurchaseTotals
+        ? ShopFeatures.calcPurchaseTotals(p.price, qty)
+        : { total: p.price * qty };
+    if (currentUser && currentUser.balance < totals.total) {
+        return toast(`Số dư không đủ. Cần ${formatMoney(totals.total)}, bạn có ${formatMoney(currentUser.balance)}`, true);
+    }
     submitPurchase(id, { email, phone }).catch(e => toast(e.message, true));
 }
 
@@ -1253,7 +1383,7 @@ async function showAdminTab(tab) {
     document.querySelectorAll('.admin-tab-btn').forEach(btn => {
         btn.className = `admin-tab-btn px-4 py-2 ${btn.dataset.adminTab === tab ? 'active' : 'bg-slate-100 text-slate-600'}`;
     });
-    ['dashboard', 'products', 'users', 'topups', 'orders', 'support', 'transactions', 'bank-transactions', 'dressroom', 'ai'].forEach(t => {
+    ['dashboard', 'products', 'users', 'topups', 'orders', 'support', 'transactions', 'bank-transactions', 'dressroom', 'ai', 'coupons'].forEach(t => {
         const el = document.getElementById('admin-' + t);
         if (el) el.classList.toggle('hidden', t !== tab);
     });
@@ -1286,6 +1416,7 @@ async function showAdminTab(tab) {
         if (tab === 'bank-transactions') loadAdminBankTransactions();
         if (tab === 'dressroom') loadAdminDressRoom();
         if (tab === 'ai') loadAdminAi();
+        if (tab === 'coupons') ShopFeatures?.renderAdminCoupons?.();
     } catch (e) {
         toast(e.message, true);
     }
@@ -1917,6 +2048,7 @@ document.getElementById('login-form').onsubmit = async e => {
         });
         setToken(r.token);
         currentUser = r.user;
+        ShopFeatures?.recordLoginHistory?.(currentUser.id);
         errEl.classList.add('hidden');
         await showApp();
         toast('Đăng nhập thành công!');
@@ -1957,6 +2089,7 @@ document.getElementById('register-form').onsubmit = async e => {
         });
         setToken(r.token);
         currentUser = r.user;
+        ShopFeatures?.recordLoginHistory?.(currentUser.id);
         errEl.classList.add('hidden');
         await showApp();
         toast('Đăng ký thành công!');
@@ -2021,6 +2154,10 @@ document.querySelectorAll('.nav-btn, .mobile-nav-btn, .category-pill[data-view],
     b.onclick = () => navigateTo(b.dataset.view);
 });
 document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('mobile-menu').classList.toggle('hidden');
+document.getElementById('profile-mobile-btn').onclick = () => {
+    document.getElementById('mobile-menu').classList.add('hidden');
+    ShopFeatures?.openProfileModal?.();
+};
 document.getElementById('create-topup-btn').onclick = createTopup;
 document.getElementById('copy-topup-code').onclick = () => {
     navigator.clipboard.writeText(currentUser?.topupCode || '').then(() => toast('Đã sao chép mã CK!'));
@@ -2177,6 +2314,7 @@ document.getElementById('mock-transfer-btn').onclick = async () => {
     }
 })();
 </script>
+<script src="/shop-features.js"></script>
 <script src="/particle-bg.js" defer></script>
 <script src="/ai-assistant.js"></script>
 <script src="/dressroom-render.js"></script>

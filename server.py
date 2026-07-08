@@ -843,7 +843,17 @@ def order_create():
     contact_email, contact_phone = contact
 
     unit_price = int(product['price'])
-    total_price = unit_price * qty
+    subtotal = unit_price * qty
+    coupon_code = str(body.get('couponCode') or '').strip().upper()
+    try:
+        discount_percent = float(body.get('discountPercent') or 0)
+    except (TypeError, ValueError):
+        discount_percent = 0
+    discount_percent = max(0.0, min(100.0, discount_percent))
+    if coupon_code and discount_percent > 0:
+        total_price = int(round(subtotal * (1 - discount_percent / 100)))
+    else:
+        total_price = subtotal
     user = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (request.user['id'],))
     if user['balance'] < total_price:
         db.close(conn)
@@ -859,6 +869,8 @@ def order_create():
     order_code = gen_order_code(oid)
     db.execute(conn, 'UPDATE orders SET order_code = ? WHERE id = ?', (order_code, oid))
     tx_desc = f"Mua {qty}x {product['name']}" if qty > 1 else f"Mua {product['name']}"
+    if coupon_code and discount_percent > 0:
+        tx_desc += f" (mã {coupon_code} -{int(discount_percent)}%)"
     txid = db.insert_returning_id(conn,
         'INSERT INTO transactions (user_id,type,amount,description,status,order_id) VALUES (?,?,?,?,?,?)',
         (user['id'], 'purchase', total_price, tx_desc, 'success', oid))

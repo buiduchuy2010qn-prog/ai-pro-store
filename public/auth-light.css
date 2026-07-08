@@ -292,6 +292,255 @@ body.app-light .app-main {
     padding: 1rem 1rem 3rem;
 }
 
+/* ─── Password eye toggle ─── */
+.auth-input-password {
+    padding-right: 2.75rem !important;
+}
+
+.auth-toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    color: var(--al-muted);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    z-index: 2;
+    transition: color 0.2s, background 0.2s;
+}
+
+.auth-toggle-password:hover {
+    color: var(--al-blue);
+    background: rgba(37, 99, 235, 0.08);
+}
+
+/* ─── Profile button & modal ─── */
+.btn-profile {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--al-blue);
+    background: linear-gradient(135deg, #eff6ff, #f5f3ff);
+    border: 1px solid var(--al-border);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-profile:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+}
+
+.profile-modal-panel {
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid var(--al-border);
+    box-shadow: var(--al-shadow);
+}
+
+.profile-modal-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: linear-gradient(135deg, #eff6ff, #f5f3ff);
+}
+
+.profile-modal-tabs {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0 1.5rem;
+    margin-top: 1rem;
+}
+
+.profile-tab {
+    flex: 1;
+    padding: 0.65rem 1rem;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--al-muted);
+    background: #f1f5f9;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.profile-tab-active {
+    background: var(--al-white) !important;
+    color: var(--al-blue) !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+}
+
+.profile-modal-body {
+    padding: 1.25rem 1.5rem 1.5rem;
+    overflow-y: auto;
+}
+
+.profile-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.profile-info-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
+}
+
+.profile-info-item.full {
+    grid-column: 1 / -1;
+}
+
+.profile-info-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--al-muted);
+    margin-bottom: 0.25rem;
+}
+
+.profile-info-value {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--al-ink);
+    word-break: break-word;
+}
+
+.profile-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.profile-history-row {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.profile-history-time {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--al-ink);
+}
+
+.profile-history-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.8rem;
+    color: var(--al-muted);
+    margin-top: 0.35rem;
+}
+
+.profile-history-status {
+    display: inline-block;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #059669;
+    background: #d1fae5;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+}
+
+.profile-empty {
+    text-align: center;
+    color: var(--al-muted);
+    font-size: 0.875rem;
+    padding: 2rem 1rem;
+}
+
+.profile-edit-input {
+    width: 100%;
+    border: 1.5px solid #dbeafe;
+    border-radius: 12px;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.9rem;
+    background: #fff;
+    outline: none;
+}
+
+.profile-edit-input:focus {
+    border-color: var(--al-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* ─── Coupon trong modal mua hàng ─── */
+.purchase-coupon-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.purchase-coupon-input {
+    flex: 1;
+    border: 1.5px solid #dbeafe;
+    border-radius: 12px;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.9rem;
+    font-family: ui-monospace, monospace;
+    text-transform: uppercase;
+    background: #fff;
+    outline: none;
+}
+
+.purchase-coupon-input:focus {
+    border-color: var(--al-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.purchase-coupon-apply {
+    padding: 0.65rem 1rem;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #fff;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--al-blue), var(--al-purple));
+    white-space: nowrap;
+}
+
+.purchase-coupon-msg {
+    font-size: 0.8rem;
+    margin-top: 0.35rem;
+}
+
+.purchase-coupon-msg.success { color: #059669; }
+.purchase-coupon-msg.error { color: #dc2626; }
+
+.purchase-price-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: var(--al-muted);
+    margin-top: 0.35rem;
+}
+
+.purchase-price-line.discount {
+    color: #059669;
+    font-weight: 600;
+}
+
 @media (max-width: 480px) {
     .login-modal-panel {
         padding: 1.5rem 1.25rem;
@@ -300,5 +549,8 @@ body.app-light .app-main {
     .auth-tab {
         font-size: 0.875rem;
         padding: 0.65rem 0.5rem;
+    }
+    .profile-info-grid {
+        grid-template-columns: 1fr;
     }
 }
