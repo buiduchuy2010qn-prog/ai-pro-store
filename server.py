@@ -27,6 +27,7 @@ from services.bank_service import (
 from services import avatar_service as av
 from services import decoration_service as deco
 from services import drive_service as drive
+from services import preview_cache as preview_cache
 BASE = Path(__file__).parent
 PUBLIC = BASE / 'public'
 VN_TZ = timezone(timedelta(hours=7))
@@ -2731,17 +2732,26 @@ def social_video_preview_upload():
             return jsonify({'error': 'File video rỗng.'}), 400
         if len(raw) > MAX_SOCIAL_VIDEO_BYTES:
             return jsonify({'error': 'Video quá lớn (tối đa ~8MB). Quay ngắn hơn.'}), 400
-        drive_file_id, err, out_mime, out_ext = drive.upload_preview_bytes(
+        drive_file_id, err, out_mime, out_ext, mp4_raw = drive.upload_preview_bytes(
             raw, mime, ext, request.user['email'], conn=conn)
         if err:
             return jsonify({'error': err}), 400
-        token = sec.sign_preview_token(request.user['id'], drive_file_id)
+        preview_key = secrets.token_urlsafe(12)
+        try:
+            preview_cache.save_preview(
+                preview_key, request.user['id'], mp4_raw, drive_file_id=drive_file_id)
+        except Exception as e:
+            if drive_file_id:
+                drive.delete_file(drive_file_id, conn=conn)
+            return jsonify({'error': 'Không lưu được video preview: ' + str(e)}), 500
+        file_token = sec.sign_preview_file_token(request.user['id'], preview_key)
         return jsonify({
             'ok': True,
             'driveFileId': drive_file_id,
-            'previewUrl': f'/api/social/preview/{drive_file_id}?t={token}',
-            'mimeType': out_mime or mime,
-            'ext': out_ext or ext,
+            'previewKey': preview_key,
+            'previewUrl': f'/api/social/preview-file/{preview_key}?t={file_token}',
+            'mimeType': out_mime or 'video/mp4',
+            'ext': out_ext or 'mp4',
         }), 201
     finally:
         db.close(conn)
@@ -2765,6 +2775,44 @@ def social_video_preview_delete(file_id):
         return jsonify({'ok': True})
     finally:
         db.close(conn)
+
+
+@app.route('/api/social/preview-file/<preview_key>')
+def social_serve_preview_file(preview_key):
+    """Phát MP4 preview trực tiếp từ server (nhanh, hỗ trợ Range)."""
+    preview_key = (preview_key or '').strip()
+    token = (request.args.get('t') or '').strip()
+    if not token:
+        return jsonify({'error': 'Thiếu quyền xem video.'}), 401
+    try:
+        payload = sec.verify_preview_file_token(token, preview_key=preview_key)
+        viewer_id = int(payload['userId'])
+    except Exception:
+        return jsonify({'error': 'Link video hết hạn hoặc không hợp lệ.'}), 403
+    if not preview_cache.user_owns_preview(preview_key, viewer_id):
+        return jsonify({'error': 'Bạn không có quyền xem video này.'}), 403
+    path = preview_cache.get_preview_mp4_path(preview_key)
+    if not path:
+        return jsonify({'error': 'Video preview không tồn tại hoặc đã hết hạn.'}), 404
+    from flask import send_file
+    resp = send_file(path, mimetype='video/mp4', conditional=True, max_age=0)
+    resp.headers['Accept-Ranges'] = 'bytes'
+    resp.headers['Cache-Control'] = 'private, no-cache'
+    return resp
+
+
+@app.route('/api/social/preview-file/<preview_key>', methods=['DELETE'])
+@auth_required
+def social_delete_preview_file(preview_key):
+    preview_key = (preview_key or '').strip()
+    if not preview_cache.user_owns_preview(preview_key, request.user['id']):
+        return jsonify({'error': 'Không có quyền xóa video preview.'}), 403
+    meta = preview_cache.get_preview_meta(preview_key) or {}
+    preview_cache.delete_preview(preview_key)
+    drive_id = (meta.get('driveFileId') or '').strip()
+    if drive_id and request.args.get('keepDrive') != '1':
+        drive.delete_file(drive_id)
+    return jsonify({'ok': True})
 
 
 @app.route('/api/social/preview/<file_id>')

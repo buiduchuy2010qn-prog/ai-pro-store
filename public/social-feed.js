@@ -42,6 +42,7 @@
     let pendingDriveFileId = null;
     let pendingDriveStreamUrl = null;
     let pendingPreviewMime = 'video/mp4';
+    let pendingPreviewKey = null;
     let driveUploadPromise = null;
     let searchTimer = null;
     /** 'user' = trước, 'environment' = sau */
@@ -115,7 +116,7 @@
             showPreviewPlayBtn();
             return;
         }
-        if (!String(vid.src || '').includes('/api/social/preview/')) {
+        if (!/\/api\/social\/preview(-file)?\//.test(String(vid.src || ''))) {
             setupPreviewVideoElement(vid, pendingDriveStreamUrl, pendingVideoBlob, previewPosterUrl);
         }
         hidePreviewPlayBtn();
@@ -186,7 +187,7 @@
 
         if (posterUrl) vid.poster = posterUrl;
         else vid.removeAttribute('poster');
-        const isStream = String(playUrl).startsWith('/api/social/');
+        const isStream = String(playUrl).startsWith('/api/social/preview');
         vid.src = isStream ? playUrl + (playUrl.includes('?') ? '&' : '?') + '_=' + Date.now() : playUrl;
         vid.muted = true;
         vid.defaultMuted = true;
@@ -386,18 +387,25 @@
         return data;
     }
 
-    async function deleteDrivePreviewDraft(fileId) {
-        if (!fileId) return;
+    async function deleteDrivePreviewDraft(fileId, previewKey, opts = {}) {
         const secHeaders = window.SecurityClient
             ? await window.SecurityClient.secureHeaders()
             : {};
         const headers = { ...secHeaders };
         const token = localStorage.getItem('auth_token');
         if (token) headers.Authorization = 'Bearer ' + token;
-        await fetch('/api/social/video/preview/' + encodeURIComponent(fileId), {
-            method: 'DELETE',
-            headers,
-        }).catch(() => {});
+        if (previewKey) {
+            const q = opts.keepDrive ? '?keepDrive=1' : '';
+            await fetch('/api/social/preview-file/' + encodeURIComponent(previewKey) + q, {
+                method: 'DELETE',
+                headers,
+            }).catch(() => {});
+        } else if (fileId) {
+            await fetch('/api/social/video/preview/' + encodeURIComponent(fileId), {
+                method: 'DELETE',
+                headers,
+            }).catch(() => {});
+        }
     }
 
     async function uploadVideoPost(blob, caption, driveFileId) {
@@ -478,10 +486,12 @@
             .then(data => {
                 pendingDriveFileId = data.driveFileId || null;
                 pendingDriveStreamUrl = data.previewUrl || null;
+                pendingPreviewKey = data.previewKey || null;
                 pendingPreviewMime = data.mimeType || 'video/mp4';
                 const vid = document.getElementById('social-preview-video');
                 if (vid && pendingDriveStreamUrl) {
                     setupPreviewVideoElement(vid, pendingDriveStreamUrl, blob, poster);
+                    playPreviewVideo().catch(() => showPreviewPlayBtn());
                 }
                 setComposerStatus('Bấm ▶ để xem lại — Đăng hoặc Hủy', 'ok');
                 window.toast?.('Sẵn sàng — bấm ▶ để xem lại', false, 2500);
@@ -724,7 +734,7 @@
     function showPreview(src, mediaType, videoBlob, posterUrl) {
         const isVid = mediaType === 'video' || !!videoBlob
             || (src && String(src).startsWith('data:video/'))
-            || (src && String(src).startsWith('/api/social/preview/'));
+            || (src && String(src).startsWith('/api/social/preview'));
         pendingMediaType = isVid ? 'video' : 'image';
         pendingImage = isVid ? null : src;
         if (isVid && videoBlob) {
@@ -805,8 +815,12 @@
 
     function clearPreview(opts = {}) {
         const keepDrive = !!opts.keepDrive;
-        if (!keepDrive && pendingDriveFileId) {
-            deleteDrivePreviewDraft(pendingDriveFileId);
+        if (pendingPreviewKey || (!keepDrive && pendingDriveFileId)) {
+            deleteDrivePreviewDraft(
+                keepDrive ? null : pendingDriveFileId,
+                pendingPreviewKey,
+                { keepDrive }
+            );
         }
         pendingImage = null;
         pendingVideoBlob = null;
@@ -815,6 +829,7 @@
         previewPosterUrl = null;
         pendingDriveFileId = null;
         pendingDriveStreamUrl = null;
+        pendingPreviewKey = null;
         pendingPreviewMime = 'video/mp4';
         driveUploadPromise = null;
         revokePreviewObjectUrl();

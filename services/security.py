@@ -560,6 +560,26 @@ def verify_preview_token(token, file_id=None):
     return payload
 
 
+def sign_preview_file_token(user_id, preview_key, hours=2):
+    payload = {
+        'type': 'social_preview_file',
+        'userId': int(user_id),
+        'previewKey': str(preview_key),
+        'iat': int(time.time()),
+        'exp': int(time.time()) + hours * 3600,
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
+
+
+def verify_preview_file_token(token, preview_key=None):
+    payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+    if payload.get('type') != 'social_preview_file':
+        raise ValueError('Token preview file không hợp lệ.')
+    if preview_key is not None and str(payload.get('previewKey', '')) != str(preview_key):
+        raise ValueError('Token preview file không khớp.')
+    return payload
+
+
 def verify_step_up_token(token, uid, fingerprint, ip):
     payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
     if payload.get('type') != 'step_up':

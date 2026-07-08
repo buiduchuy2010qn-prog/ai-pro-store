@@ -987,11 +987,11 @@ def upload_preview_bytes(raw, mime, ext, user_email, conn=None):
     filename = f'shop-video-preview-{slug}-{stamp}.{ext}'
     fid, err = upload_media_bytes(
         raw, mime, ext, user_email, f'preview-{stamp}', caption='', conn=conn, is_video=True,
-        filename_override=filename)
+        filename_override=filename, skip_transcode=True)
     if own_conn:
         from database import close
         close(conn)
-    return fid, err, mime, ext
+    return fid, err, mime, ext, raw
 
 
 def delete_file(file_id, conn=None):
@@ -1020,7 +1020,8 @@ def delete_file(file_id, conn=None):
         return False, 'Không xóa được file trên Drive'
 
 
-def upload_media_bytes(raw, mime, ext, user_email, post_id, caption='', conn=None, is_video=False, filename_override=None):
+def upload_media_bytes(raw, mime, ext, user_email, post_id, caption='', conn=None, is_video=False,
+                       filename_override=None, skip_transcode=False):
     """Upload bytes lên Drive. Trả về (file_id, error_message)."""
     own_conn = conn is None
     if own_conn:
@@ -1049,7 +1050,7 @@ def upload_media_bytes(raw, mime, ext, user_email, post_id, caption='', conn=Non
         return None, 'Thiếu thư viện Google Drive trên server'
 
     safe_email = _user_email_slug(user_email)
-    if is_video:
+    if is_video and not skip_transcode:
         raw, mime, ext = ensure_playable_mp4(raw, mime, ext)
     if filename_override:
         filename = filename_override
