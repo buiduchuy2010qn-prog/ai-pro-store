@@ -3525,7 +3525,13 @@ def index():
 def static_files(path):
     if path.startswith('api'):
         return jsonify({'error': 'Not found'}), 404
-    return send_from_directory(PUBLIC, path)
+    full = PUBLIC / path
+    if full.is_file():
+        return send_from_directory(PUBLIC, path)
+    # SPA: /admin, /wallet, ... → index.html (hash routing phía client)
+    if '.' not in path.rsplit('/', 1)[-1]:
+        return send_from_directory(PUBLIC, 'index.html')
+    return jsonify({'error': 'Not found'}), 404
 
 
 _ensure_ready()

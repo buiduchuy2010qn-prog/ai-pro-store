@@ -1046,6 +1046,14 @@ function setCurrentUser(user) {
     window.currentUser = user;
 }
 setCurrentUser(null);
+(function spaPathRedirect() {
+    const seg = (location.pathname || '/').replace(/^\//, '').split('/')[0];
+    const views = ['admin', 'products', 'wallet', 'orders', 'transactions', 'social', 'dressroom', 'avatar', 'decoration', 'checkin', 'coupons'];
+    if (seg && views.includes(seg) && !location.hash) {
+        location.replace('/#' + seg + location.search);
+    }
+})();
+
 let currentView = 'products';
 let currentAdminTab = 'dashboard';
 let activeTopupId = null;
