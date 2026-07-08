@@ -18,6 +18,9 @@ DRIVE_SCOPES = [
 
 
 DRIVE_OAUTH_KEYS = ('drive_oauth_client_id', 'drive_oauth_client_secret')
+DRIVE_FOLDER_SETTING = 'drive_backup_folder_id'
+DRIVE_FOLDER_NAME_KEY = 'drive_backup_folder_name'
+DEFAULT_FOLDER_NAME = 'Shop Đức Hi - Ảnh MXH'
 
 
 def _cfg():
@@ -354,8 +357,155 @@ def handle_oauth_callback(code, state, authorization_response=None):
         WHERE id = ?
     ''', (refresh, google_email or None, user_id))
     commit(conn)
+    folder_info = setup_backup_folder_for_admin(conn)
     close(conn)
+    if folder_info:
+        import threading
+        threading.Thread(target=sync_posts_without_drive, daemon=True).start()
     return google_email
+
+
+def _settings_get(conn, key):
+    from database import fetchone
+    row = fetchone(conn, 'SELECT value FROM ai_settings WHERE key = ?', (key,))
+    return (row['value'] or '').strip() if row else ''
+
+
+def _settings_set(conn, key, value):
+    from database import fetchone, execute
+    if fetchone(conn, 'SELECT key FROM ai_settings WHERE key = ?', (key,)):
+        execute(conn, 'UPDATE ai_settings SET value = ? WHERE key = ?', (value, key))
+    else:
+        execute(conn, 'INSERT INTO ai_settings (key, value) VALUES (?, ?)', (key, value))
+
+
+def get_backup_folder_info(conn=None):
+    """Thông tin thư mục Drive dùng lưu ảnh MXH."""
+    own = conn is None
+    if own:
+        from database import get_conn
+        conn = get_conn()
+    name = _settings_get(conn, DRIVE_FOLDER_NAME_KEY) or DEFAULT_FOLDER_NAME
+    folder_id = _settings_get(conn, DRIVE_FOLDER_SETTING) or (_cfg().get('folder_id') or '').strip()
+    if own:
+        from database import close
+        close(conn)
+    return {'folderId': folder_id, 'folderName': name}
+
+
+def ensure_backup_folder(service, conn):
+    """
+    Tạo / tìm một thư mục Drive duy nhất để lưu mọi ảnh MXH.
+    Trả về (folder_id, folder_name).
+    """
+    env_folder = (_cfg().get('folder_id') or '').strip()
+    if env_folder:
+        return env_folder, DEFAULT_FOLDER_NAME
+
+    stored = _settings_get(conn, DRIVE_FOLDER_SETTING)
+    if stored:
+        try:
+            meta = service.files().get(fileId=stored, fields='id,name,trashed').execute()
+            if not meta.get('trashed'):
+                return stored, meta.get('name') or DEFAULT_FOLDER_NAME
+        except Exception as e:
+            print(f'[Drive] stored folder invalid: {e}')
+
+    name = DEFAULT_FOLDER_NAME
+    safe_name = name.replace("'", "\\'")
+    found = service.files().list(
+        q=f"mimeType='application/vnd.google-apps.folder' and name='{safe_name}' and trashed=false",
+        spaces='drive',
+        fields='files(id,name)',
+        pageSize=5,
+    ).execute().get('files', [])
+    if found:
+        folder_id = found[0]['id']
+        folder_name = found[0].get('name') or name
+    else:
+        created = service.files().create(
+            body={'name': name, 'mimeType': 'application/vnd.google-apps.folder'},
+            fields='id,name,webViewLink',
+        ).execute()
+        folder_id = created['id']
+        folder_name = created.get('name') or name
+        print(f'[Drive] created backup folder: {folder_name} ({folder_id})')
+
+    _settings_set(conn, DRIVE_FOLDER_SETTING, folder_id)
+    _settings_set(conn, DRIVE_FOLDER_NAME_KEY, folder_name)
+    from database import commit
+    commit(conn)
+    return folder_id, folder_name
+
+
+def _build_drive_service(creds):
+    from googleapiclient.discovery import build
+    return build('drive', 'v3', credentials=creds, cache_discovery=False)
+
+
+def setup_backup_folder_for_admin(conn=None):
+    """Sau khi OAuth — tạo thư mục sao lưu trên Drive admin."""
+    own = conn is None
+    if own:
+        from database import get_conn
+        conn = get_conn()
+    admin = get_oauth_admin(conn)
+    if not admin:
+        if own:
+            from database import close
+            close(conn)
+        return None
+    try:
+        creds = _load_oauth_credentials(admin)
+        service = _build_drive_service(creds)
+        folder_id, folder_name = ensure_backup_folder(service, conn)
+        if own:
+            from database import close
+            close(conn)
+        return {'folderId': folder_id, 'folderName': folder_name}
+    except Exception as e:
+        print(f'[Drive] setup folder failed: {e}')
+        if own:
+            from database import close
+            close(conn)
+        return None
+
+
+def sync_posts_without_drive(conn=None, limit=100):
+    """Đồng bộ ảnh cũ (chưa có drive_file_id) lên thư mục Drive."""
+    from database import get_conn, fetchall, close, commit
+    own = conn is None
+    if own:
+        conn = get_conn()
+    if not is_configured(conn):
+        if own:
+            close(conn)
+        return {'ok': False, 'synced': 0, 'message': 'Drive chưa kết nối'}
+
+    rows = fetchall(conn, '''
+        SELECT p.id, p.image_data, p.caption, u.email
+        FROM social_posts p
+        JOIN users u ON u.id = p.user_id
+        WHERE p.drive_file_id IS NULL OR p.drive_file_id = ''
+        ORDER BY p.id ASC
+        LIMIT ?
+    ''', (limit,))
+    synced = 0
+    errors = 0
+    for r in rows:
+        fid, err = upload_post_image(
+            r['image_data'], r['email'], r['id'], r.get('caption') or '', conn=conn)
+        if fid:
+            from database import execute
+            execute(conn, 'UPDATE social_posts SET drive_file_id = ? WHERE id = ?', (fid, r['id']))
+            synced += 1
+        else:
+            errors += 1
+            print(f'[Drive] sync post {r["id"]} failed: {err}')
+    commit(conn)
+    if own:
+        close(conn)
+    return {'ok': True, 'synced': synced, 'errors': errors, 'total': len(rows)}
 
 
 def disconnect_oauth(user_id):
@@ -454,39 +604,45 @@ def upload_post_image(image_data_url, user_email, post_id, caption='', conn=None
     raw, mime, ext = parsed
 
     creds, method = _resolve_upload_credentials(conn)
-    if own_conn:
-        from database import close
-        close(conn)
-
     if not creds:
+        if own_conn:
+            from database import close
+            close(conn)
         return None, 'Không lấy được quyền Google Drive — thử kết nối lại'
 
     try:
-        from googleapiclient.discovery import build
         from googleapiclient.http import MediaIoBaseUpload
     except ImportError:
+        if own_conn:
+            from database import close
+            close(conn)
         return None, 'Thiếu thư viện Google Drive trên server'
 
-    folder_id = (_cfg().get('folder_id') or '').strip()
     safe_email = re.sub(r'[^a-zA-Z0-9@._-]', '_', (user_email or 'user').lower())
     filename = f'shop-anh-{safe_email}-{post_id}.{ext}'
 
     try:
-        service = build('drive', 'v3', credentials=creds, cache_discovery=False)
+        service = _build_drive_service(creds)
+        folder_id, folder_name = ensure_backup_folder(service, conn)
         meta = {
             'name': filename,
+            'parents': [folder_id],
             'description': (caption or '')[:500],
         }
-        if folder_id:
-            meta['parents'] = [folder_id]
         media = MediaIoBaseUpload(BytesIO(raw), mimetype=mime, resumable=False)
         created = service.files().create(
             body=meta,
             media_body=media,
             fields='id,webViewLink',
         ).execute()
-        print(f'[Drive] uploaded post={post_id} via {method} file={created.get("id")}')
+        print(f'[Drive] uploaded post={post_id} via {method} -> {folder_name} file={created.get("id")}')
+        if own_conn:
+            from database import close
+            close(conn)
         return created.get('id'), None
     except Exception as e:
         print(f'[Drive] upload failed post={post_id}: {e}')
+        if own_conn:
+            from database import close
+            close(conn)
         return None, 'Không upload được lên Drive — kiểm tra quyền thư mục hoặc kết nối lại Google'

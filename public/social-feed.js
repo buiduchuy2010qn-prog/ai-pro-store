@@ -692,6 +692,7 @@
         const disconnectedBox = document.getElementById('social-drive-disconnected');
         const emailEl = document.getElementById('social-drive-email');
         const atEl = document.getElementById('social-drive-connected-at');
+        const folderEl = document.getElementById('social-drive-folder-name');
         const connectBtn = document.getElementById('social-drive-connect-btn');
         const setupBox = document.getElementById('social-drive-oauth-setup');
         const readyHint = document.getElementById('social-drive-ready-hint');
@@ -712,6 +713,13 @@
                 ? 'Kết nối lúc ' + fmtTime(data.connectedAt)
                 : '';
             atEl.classList.toggle('hidden', !data.connectedAt);
+        }
+        if (folderEl) {
+            const fname = data.folderName;
+            folderEl.textContent = fname
+                ? '📁 Mọi ảnh lưu trong thư mục: ' + fname
+                : '';
+            folderEl.classList.toggle('hidden', !connected || !fname);
         }
         if (setupBox) setupBox.classList.toggle('hidden', oauthReady);
         if (readyHint) readyHint.classList.toggle('hidden', !oauthReady);
@@ -800,10 +808,11 @@
             driveAdminBackup = !!data.configured;
             renderDriveConnectCard(data, setup);
             const driveEmail = data.googleEmail || data.backupGoogleEmail;
+            const folderLabel = data.folderName ? esc(data.folderName) : 'Drive admin';
             if (info && data.method === 'oauth' && driveEmail) {
-                info.innerHTML = '<i class="fab fa-google-drive mr-1"></i>Ảnh đăng được sao lưu tự động lên <strong>Drive ' + esc(driveEmail) + '</strong>.';
+                info.innerHTML = '<i class="fab fa-google-drive mr-1"></i>Ảnh đăng tự động vào thư mục <strong>' + folderLabel + '</strong> trên Drive.';
             } else if (info) {
-                info.innerHTML = '<i class="fab fa-google-drive mr-1"></i>Ảnh đăng được sao lưu tự động lên <strong>Drive admin</strong> để quản lý.';
+                info.innerHTML = '<i class="fab fa-google-drive mr-1"></i>Ảnh đăng tự động vào thư mục <strong>' + folderLabel + '</strong>.';
             }
         } catch (_) {
             driveAdminBackup = false;
@@ -884,9 +893,24 @@
 
     window.SocialFeed = { loadView, leaveView };
 
+    async function syncOldPhotosToDrive() {
+        const btn = document.getElementById('social-drive-sync-old');
+        if (btn) btn.disabled = true;
+        try {
+            const res = await socialApi('/social/drive/sync', { method: 'POST', body: '{}' });
+            window.toast?.('Đã đồng bộ ' + (res.synced || 0) + ' ảnh vào thư mục Drive!');
+            await loadDriveStatus();
+        } catch (err) {
+            window.toast?.(err.message || 'Không đồng bộ được ảnh cũ', true);
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
     function initDriveConnect() {
         document.getElementById('social-drive-connect-btn')?.addEventListener('click', connectGoogleDrive);
         document.getElementById('social-drive-disconnect')?.addEventListener('click', disconnectGoogleDrive);
+        document.getElementById('social-drive-sync-old')?.addEventListener('click', syncOldPhotosToDrive);
         document.getElementById('social-drive-save-oauth')?.addEventListener('click', saveOAuthConfig);
         document.getElementById('social-drive-copy-redirect')?.addEventListener('click', copyRedirectUri);
     }

@@ -2414,7 +2414,7 @@ def social_drive_status():
     configured = drive.is_configured(conn)
     method = drive.get_active_method(conn)
     oauth_admin = drive.get_oauth_admin(conn)
-    db.close(conn)
+    folder = drive.get_backup_folder_info(conn)
     resp = {
         'configured': configured,
         'adminBackup': True,
@@ -2427,6 +2427,13 @@ def social_drive_status():
         resp['connected'] = bool(row and row.get('google_drive_refresh_token'))
         resp['googleEmail'] = row.get('google_drive_email') if row else None
         resp['connectedAt'] = format_dt_vn(row.get('google_drive_connected_at')) if row else None
+        if resp['connected'] and not folder.get('folderId'):
+            setup = drive.setup_backup_folder_for_admin(conn)
+            if setup:
+                folder = setup
+        resp['folderName'] = folder.get('folderName') or drive.DEFAULT_FOLDER_NAME
+        resp['folderId'] = folder.get('folderId') or ''
+    db.close(conn)
     return jsonify(resp)
 
 
@@ -2487,6 +2494,17 @@ def social_drive_callback():
     except Exception as e:
         print(f'[Drive] callback error: {e}')
         return _drive_error_redirect(str(e))
+
+
+@app.route('/api/social/drive/sync', methods=['POST'])
+@admin_required
+def social_drive_sync():
+    """Đồng bộ ảnh cũ vào thư mục Drive duy nhất."""
+    conn = db.get_conn()
+    drive.setup_backup_folder_for_admin(conn)
+    result = drive.sync_posts_without_drive(conn)
+    db.close(conn)
+    return jsonify(result)
 
 
 @app.route('/api/social/drive/disconnect', methods=['POST'])

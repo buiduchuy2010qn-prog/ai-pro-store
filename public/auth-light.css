@@ -1116,6 +1116,26 @@ body.app-light .app-main {
     box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
 }
 
+.social-drive-folder-name {
+    font-size: 0.78rem;
+    color: #1d4ed8;
+    margin: 0 0 0.55rem;
+    line-height: 1.4;
+}
+
+.social-drive-sync-btn {
+    width: 100%;
+    margin-bottom: 0.45rem;
+    padding: 0.55rem 0.9rem;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
 .social-drive-card .social-drive-disconnect-btn {
     width: 100%;
     margin-top: 0.5rem;
