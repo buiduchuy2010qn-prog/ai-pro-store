@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/theme.css">
-    <link rel="stylesheet" href="/auth-light.css?v=locket-slot1">
+    <link rel="stylesheet" href="/auth-light.css?v=locket-unified1">
     <link rel="stylesheet" href="/sidebar-menu.css?v=1">
     <link rel="stylesheet" href="/post-composer.css?v=locket2">
     <script>
@@ -424,184 +424,204 @@
 
         <!-- MXH mini — đăng ảnh, kết bạn -->
         <section id="view-social" class="hidden app-section social-page">
-            <div class="social-page-main space-y-5">
-                    <div class="glass-card padded social-composer-card social-locket-card">
-                        <div class="social-locket-studio">
-                            <div class="social-friends-count">
-                                <i class="fas fa-user-friends"></i>
-                                <span id="social-friend-count-num">0</span> người bạn
-                            </div>
-                            <div class="social-locket-frame">
-                                <div id="social-camera-bg-layer" class="social-camera-bg-layer" data-bg="none" aria-hidden="true"></div>
-                                <div id="social-camera-wrap" class="social-camera-wrap hidden" aria-hidden="true">
-                                    <video id="social-camera-video" autoplay playsinline webkit-playsinline muted></video>
-                                </div>
-                                <img id="social-preview" class="social-locket-media hidden" alt="Ảnh chụp">
-                                <video id="social-preview-video" class="social-locket-media hidden" playsinline controls preload="auto"></video>
-                                <iframe id="social-preview-drive" class="social-locket-media social-preview-drive hidden" title="Xem video trên Google Drive" allow="autoplay; fullscreen" allowfullscreen></iframe>
-                                <button type="button" id="social-preview-play" class="social-preview-play-btn hidden" aria-label="Phát video">
-                                    <i class="fas fa-play"></i>
-                                </button>
-                                <div id="social-preview-placeholder" class="social-locket-placeholder">
-                                    <i id="social-placeholder-icon" class="fas fa-camera"></i>
-                                    <span id="social-placeholder-text">Chọn Ảnh hoặc Video bên dưới khung</span>
-                                </div>
-                                <div id="social-frame-mode-picker" class="social-frame-mode-picker">
-                                    <button type="button" id="social-mode-photo" class="social-frame-mode-btn is-active" data-mode="photo">
-                                        <i class="fas fa-camera"></i><span>Ảnh</span>
-                                    </button>
-                                    <button type="button" id="social-mode-video" class="social-frame-mode-btn" data-mode="video">
-                                        <i class="fas fa-video"></i><span>Video</span>
-                                    </button>
-                                </div>
-                                <div id="social-rec-badge" class="social-rec-badge hidden"><span class="social-rec-dot"></span> REC</div>
-                                <div id="social-media-info" class="social-media-info hidden" aria-live="polite"></div>
-                                <button type="button" id="social-flip-camera" class="social-flip-camera-btn hidden" title="Đổi camera trước / sau" aria-label="Đổi camera">
-                                    <i class="fas fa-arrows-rotate"></i>
-                                </button>
-                                <div id="social-caption-overlay" class="social-caption-overlay pos-bottom style-classic hidden" aria-hidden="true"></div>
-                            </div>
-                            <div id="social-creative-camera-tools" class="social-creative-toolbar social-creative-camera-only">
-                                <p class="social-creative-section-title"><i class="fas fa-palette"></i> Trang trí nền khi chụp</p>
-                                <div class="social-bg-picker">
-                                    <button type="button" class="social-bg-option" data-bg="none" title="Không nền">Tắt</button>
-                                    <button type="button" class="social-bg-option" data-bg="vintage">Vintage</button>
-                                    <button type="button" class="social-bg-option" data-bg="polaroid">Polaroid</button>
-                                    <button type="button" class="social-bg-option" data-bg="neon">Neon</button>
-                                    <button type="button" class="social-bg-option" data-bg="aesthetic">Aesthetic</button>
-                                    <button type="button" class="social-bg-option" data-bg="bokeh">Bokeh</button>
-                                    <button type="button" class="social-bg-option" data-bg="warm">Ấm</button>
-                                    <button type="button" class="social-bg-option" data-bg="cool">Lạnh</button>
-                                </div>
-                                <div class="social-bg-opacity-row">
-                                    <button type="button" id="social-bg-toggle" class="social-bg-toggle">Bật nền</button>
-                                    <label>Độ mờ</label>
-                                    <input type="range" id="social-bg-opacity" min="10" max="80" value="40">
-                                    <span id="social-bg-opacity-val">40%</span>
-                                </div>
-                            </div>
-                            <p id="social-composer-status" class="social-composer-status">Chọn Ảnh/Video trên khung rồi bấm nút tròn</p>
-                            <div class="social-locket-controls">
-                                <button type="button" id="social-file-btn" class="social-locket-side-btn" title="Chọn ảnh/video từ máy">
-                                    <i class="fas fa-image"></i>
-                                </button>
-                                <button type="button" id="social-shutter-btn" class="social-locket-shutter" aria-label="Chụp ảnh">
-                                    <span class="social-locket-shutter-ring"></span>
-                                </button>
-                                <button type="button" id="social-retake-btn" class="social-locket-side-btn" title="Chụp lại">
-                                    <i class="fas fa-sync-alt"></i>
-                                </button>
-                            </div>
-                            <div id="social-post-row" class="social-locket-post-row hidden">
-                                <div class="social-creative-toolbar" id="social-creative-edit-tools">
-                                    <p class="social-creative-section-title"><i class="fas fa-border-style"></i> Khung viền</p>
-                                    <div class="social-frame-picker">
-                                        <button type="button" class="social-frame-option is-active" data-frame="none" title="Không khung"><span class="social-frame-option-inner"></span></button>
-                                        <button type="button" class="social-frame-option" data-frame="polaroid" title="Polaroid"><span class="social-frame-option-inner"></span></button>
-                                        <button type="button" class="social-frame-option" data-frame="neon" title="Neon"><span class="social-frame-option-inner"></span></button>
-                                        <button type="button" class="social-frame-option" data-frame="vintage" title="Vintage"><span class="social-frame-option-inner"></span></button>
-                                        <button type="button" class="social-frame-option" data-frame="gold" title="Vàng"><span class="social-frame-option-inner"></span></button>
-                                        <button type="button" class="social-frame-option" data-frame="aesthetic" title="Aesthetic"><span class="social-frame-option-inner"></span></button>
-                                        <button type="button" class="social-frame-option" data-frame="film" title="Phim"><span class="social-frame-option-inner"></span></button>
-                                        <button type="button" class="social-frame-option" data-frame="minimal" title="Tối giản"><span class="social-frame-option-inner"></span></button>
-                                        <button type="button" class="social-frame-option" data-frame="rainbow" title="Cầu vồng"><span class="social-frame-option-inner"></span></button>
-                                        <button type="button" class="social-frame-option" data-frame="heart" title="Tim"><span class="social-frame-option-inner"></span></button>
-                                        <button type="button" class="social-frame-option" data-frame="custom" title="Tuỳ chỉnh"><span class="social-frame-option-inner"><i class="fas fa-plus"></i></span></button>
-                                    </div>
-                                    <button type="button" id="social-frame-upload" class="social-frame-upload-btn"><i class="fas fa-upload mr-1"></i>Tải ảnh làm khung viền (PNG trong suốt giữa)</button>
-                                    <input type="file" id="social-frame-file" accept="image/png,image/webp" class="hidden">
-                                    <p class="social-creative-section-title mt-2"><i class="fas fa-font"></i> Caption đẹp</p>
-                                    <div class="social-caption-editor">
-                                        <div class="social-caption-presets">
-                                            <button type="button" class="social-caption-preset-btn" data-caption-preset="classic">Cổ điển</button>
-                                            <button type="button" class="social-caption-preset-btn" data-caption-preset="neon">Neon</button>
-                                            <button type="button" class="social-caption-preset-btn" data-caption-preset="outline">Viền chữ</button>
-                                            <button type="button" class="social-caption-preset-btn" data-caption-preset="gradient">Gradient</button>
-                                            <button type="button" class="social-caption-preset-btn" data-caption-preset="bubble">Bong bóng</button>
-                                            <button type="button" class="social-caption-preset-btn" data-caption-preset="minimal">Tối giản</button>
-                                        </div>
-                                        <div class="social-caption-controls">
-                                            <input type="color" id="social-caption-color" value="#ffffff" title="Màu chữ">
-                                            <select id="social-caption-position" title="Vị trí">
-                                                <option value="top">Trên</option>
-                                                <option value="center">Giữa</option>
-                                                <option value="bottom" selected>Dưới</option>
-                                            </select>
-                                            <input type="range" id="social-caption-size" min="12" max="28" value="16" title="Cỡ chữ">
-                                        </div>
-                                    </div>
-                                    <p class="social-creative-section-title mt-2"><i class="fas fa-user-lock"></i> Ai được xem?</p>
-                                    <div class="social-audience-panel">
-                                        <div class="social-audience-options">
-                                            <label class="social-audience-option">
-                                                <input type="radio" name="social-visibility" value="all_friends" checked>
-                                                <span><i class="fas fa-globe-asia mr-1"></i>Tất cả bạn bè (mặc định)</span>
-                                            </label>
-                                            <label class="social-audience-option">
-                                                <input type="radio" name="social-visibility" value="selected">
-                                                <span><i class="fas fa-user-check mr-1"></i>Chọn bạn bè cụ thể</span>
-                                            </label>
-                                        </div>
-                                        <input type="search" id="social-audience-search" class="social-audience-search hidden" placeholder="Tìm bạn bè...">
-                                        <div id="social-audience-friends" class="social-audience-friends"></div>
-                                    </div>
-                                </div>
-                                <input id="social-caption" type="text" maxlength="500" class="social-locket-caption" placeholder="Thêm chú thích (tuỳ chọn)...">
-                                <div class="social-post-primary-actions">
-                                    <button type="button" id="social-post-btn" class="social-locket-send-btn"><i class="fas fa-paper-plane mr-1"></i>Đăng</button>
-                                    <button type="button" id="social-save-btn" class="social-locket-save-btn"><i class="fas fa-download mr-1"></i>Lưu</button>
-                                </div>
-                                <div class="social-preview-actions">
-                                    <button type="button" id="social-cancel-preview" class="social-cancel-btn"><i class="fas fa-times mr-1"></i>Hủy ảnh</button>
-                                    <button type="button" id="social-retake-inline" class="social-retake-link"><i class="fas fa-redo mr-1"></i>Chụp lại</button>
-                                </div>
-                            </div>
-                            <div class="social-save-settings">
-                                <label class="social-save-label" for="social-save-mode"><i class="fas fa-download mr-1"></i>Chế độ lưu ảnh (máy bạn)</label>
-                                <select id="social-save-mode" class="social-save-select">
-                                    <option value="off">Không lưu vào máy</option>
-                                    <option value="capture">Lưu khi chụp / chọn ảnh</option>
-                                    <option value="post">Lưu khi đăng thành công</option>
-                                    <option value="both">Lưu cả khi chụp và đăng</option>
-                                </select>
-                                <p id="social-drive-info" class="social-drive-info hidden">
-                                    <i class="fab fa-google-drive mr-1"></i>Ảnh/video tự động lên <strong>Drive admin</strong> (thư mục Ảnh &amp; Video riêng).
-                                </p>
-                                <p id="social-drive-hint" class="social-drive-hint hidden">Drive admin chưa cấu hình — video cần Drive để đăng.</p>
-                            </div>
-                            <input type="file" id="social-file-input" accept="image/*,video/webm,video/mp4" class="hidden">
+            <div class="social-page-main">
+                <div class="glass-card padded social-locket-unified">
+                    <div class="social-feed-toolbar social-unified-toolbar">
+                        <div class="social-feed-toolbar-left">
+                            <button type="button" id="social-feed-folder" class="social-feed-folder-btn" title="Tất cả bài đăng">
+                                <i class="far fa-folder"></i>
+                            </button>
+                            <span class="social-feed-toolbar-title">Tất cả dấu trang</span>
+                            <span class="social-feed-toolbar-divider" aria-hidden="true"></span>
+                        </div>
+                        <div class="social-feed-toolbar-right">
+                            <button type="button" id="social-toolbar-chat" class="social-feed-icon-btn" title="Lời mời &amp; tin nhắn">
+                                <i class="far fa-comment"></i>
+                            </button>
+                            <button type="button" id="social-toolbar-menu" class="social-feed-icon-btn" title="Chi tiết chụp ảnh &amp; bài đăng">
+                                <i class="fas fa-bars"></i>
+                            </button>
                         </div>
                     </div>
-                    <div class="social-feed-section">
-                        <div class="social-feed-toolbar">
-                            <div class="social-feed-toolbar-left">
-                                <button type="button" id="social-feed-folder" class="social-feed-folder-btn" title="Tất cả bài đăng">
-                                    <i class="far fa-folder"></i>
-                                </button>
-                                <span class="social-feed-toolbar-title">Tất cả dấu trang</span>
-                                <span class="social-feed-toolbar-divider" aria-hidden="true"></span>
-                            </div>
-                            <div class="social-feed-toolbar-right">
-                                <button type="button" id="social-toolbar-chat" class="social-feed-icon-btn" title="Lời mời &amp; tin nhắn">
-                                    <i class="far fa-comment"></i>
-                                </button>
-                                <button type="button" id="social-toolbar-menu" class="social-feed-icon-btn" title="Kết bạn &amp; cài đặt">
-                                    <i class="fas fa-bars"></i>
-                                </button>
-                            </div>
+                    <div class="social-locket-studio">
+                        <div class="social-friends-count">
+                            <i class="fas fa-user-friends"></i>
+                            <span id="social-friend-count-num">0</span> người bạn
                         </div>
-                        <div id="social-feed-panel" class="social-feed-panel social-locket-feed-panel">
-                            <div id="social-feed-list" class="social-locket-viewer"></div>
+                        <div class="social-locket-frame" id="social-unified-frame">
+                            <div id="social-feed-layer" class="social-feed-layer hidden" data-feed-slot-id="">
+                                <div id="social-feed-media-wrap" class="locket-feed-media-wrap"></div>
+                                <div id="social-feed-badges" class="locket-feed-badges"></div>
+                                <div id="social-feed-caption-pill" class="locket-feed-caption-pill hidden"></div>
+                            </div>
+                            <div id="social-camera-bg-layer" class="social-camera-bg-layer" data-bg="none" aria-hidden="true"></div>
+                            <div id="social-camera-wrap" class="social-camera-wrap hidden" aria-hidden="true">
+                                <video id="social-camera-video" autoplay playsinline webkit-playsinline muted></video>
+                            </div>
+                            <img id="social-preview" class="social-locket-media hidden" alt="Ảnh chụp">
+                            <video id="social-preview-video" class="social-locket-media hidden" playsinline controls preload="auto"></video>
+                            <iframe id="social-preview-drive" class="social-locket-media social-preview-drive hidden" title="Xem video trên Google Drive" allow="autoplay; fullscreen" allowfullscreen></iframe>
+                            <button type="button" id="social-preview-play" class="social-preview-play-btn hidden" aria-label="Phát video">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <div id="social-preview-placeholder" class="social-locket-placeholder">
+                                <i id="social-placeholder-icon" class="fas fa-camera"></i>
+                                <span id="social-placeholder-text">Bấm nút tròn để chụp hoặc xem bài đăng</span>
+                            </div>
+                            <div id="social-frame-mode-picker" class="social-frame-mode-picker">
+                                <button type="button" id="social-mode-photo" class="social-frame-mode-btn is-active" data-mode="photo">
+                                    <i class="fas fa-camera"></i><span>Ảnh</span>
+                                </button>
+                                <button type="button" id="social-mode-video" class="social-frame-mode-btn" data-mode="video">
+                                    <i class="fas fa-video"></i><span>Video</span>
+                                </button>
+                            </div>
+                            <div id="social-rec-badge" class="social-rec-badge hidden"><span class="social-rec-dot"></span> REC</div>
+                            <div id="social-media-info" class="social-media-info hidden" aria-live="polite"></div>
+                            <button type="button" id="social-flip-camera" class="social-flip-camera-btn hidden" title="Đổi camera trước / sau" aria-label="Đổi camera">
+                                <i class="fas fa-arrows-rotate"></i>
+                            </button>
+                            <div id="social-caption-overlay" class="social-caption-overlay pos-bottom style-classic hidden" aria-hidden="true"></div>
                         </div>
+                        <p id="social-composer-status" class="social-composer-status">Bấm nút tròn để chụp ảnh hoặc xem bài đăng</p>
+                        <div class="social-locket-controls social-unified-actions">
+                            <button type="button" id="social-unified-left" class="social-locket-side-btn" title="Chọn ảnh/video từ máy">
+                                <i class="fas fa-image"></i>
+                            </button>
+                            <button type="button" id="social-shutter-btn" class="social-locket-shutter" aria-label="Chụp ảnh">
+                                <span class="social-locket-shutter-ring"></span>
+                            </button>
+                            <button type="button" id="social-unified-studio" class="social-locket-side-btn" title="Tuỳ chỉnh &amp; chi tiết">
+                                <i class="fas fa-wand-magic-sparkles"></i>
+                            </button>
+                        </div>
+                        <div id="social-feed-meta-row" class="locket-feed-meta hidden"></div>
+                        <div id="social-feed-dots-row" class="locket-feed-dots hidden"></div>
+                        <input type="file" id="social-file-input" accept="image/*,video/webm,video/mp4" class="hidden">
+                        <button type="button" id="social-file-btn" class="hidden" aria-hidden="true" tabindex="-1"></button>
+                        <button type="button" id="social-retake-btn" class="hidden" aria-hidden="true" tabindex="-1"></button>
                     </div>
+                </div>
             </div>
             <div id="social-drawer-overlay" class="social-drawer-overlay hidden" aria-hidden="true"></div>
-            <aside id="social-side-drawer" class="social-side-drawer" aria-hidden="true" aria-label="Kết bạn và cài đặt">
+            <aside id="social-side-drawer" class="social-side-drawer" aria-hidden="true" aria-label="Chi tiết chụp ảnh và bài đăng">
                 <div class="social-side-drawer-head">
-                    <h2><i class="fas fa-user-friends mr-1"></i> MXH</h2>
+                    <h2><i class="fas fa-bars mr-1"></i> Chi tiết</h2>
                     <button type="button" id="social-drawer-close" class="social-drawer-close" aria-label="Đóng">&times;</button>
                 </div>
-                <div class="social-side-drawer-body pretty-scrollbar space-y-4">
+                <nav class="social-drawer-tabs" aria-label="Phần chi tiết">
+                    <button type="button" class="social-drawer-tab is-active" data-drawer-tab="detail">Bài đăng</button>
+                    <button type="button" class="social-drawer-tab" data-drawer-tab="capture">Chụp &amp; đăng</button>
+                    <button type="button" class="social-drawer-tab" data-drawer-tab="social">Bạn bè</button>
+                </nav>
+                <div class="social-side-drawer-body pretty-scrollbar">
+                    <div id="social-drawer-panel-detail" class="social-drawer-panel is-active">
+                        <div id="social-feed-engage" class="social-drawer-engage">
+                            <div class="locket-feed-empty social-drawer-empty">
+                                <i class="fas fa-images"></i>
+                                <p>Chưa có bài đăng — bấm nút tròn để chụp ảnh đầu tiên!</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="social-drawer-panel-capture" class="social-drawer-panel">
+                        <div id="social-creative-camera-tools" class="social-creative-toolbar social-creative-camera-only">
+                            <p class="social-creative-section-title"><i class="fas fa-palette"></i> Trang trí nền khi chụp</p>
+                            <div class="social-bg-picker">
+                                <button type="button" class="social-bg-option" data-bg="none" title="Không nền">Tắt</button>
+                                <button type="button" class="social-bg-option" data-bg="vintage">Vintage</button>
+                                <button type="button" class="social-bg-option" data-bg="polaroid">Polaroid</button>
+                                <button type="button" class="social-bg-option" data-bg="neon">Neon</button>
+                                <button type="button" class="social-bg-option" data-bg="aesthetic">Aesthetic</button>
+                                <button type="button" class="social-bg-option" data-bg="bokeh">Bokeh</button>
+                                <button type="button" class="social-bg-option" data-bg="warm">Ấm</button>
+                                <button type="button" class="social-bg-option" data-bg="cool">Lạnh</button>
+                            </div>
+                            <div class="social-bg-opacity-row">
+                                <button type="button" id="social-bg-toggle" class="social-bg-toggle">Bật nền</button>
+                                <label>Độ mờ</label>
+                                <input type="range" id="social-bg-opacity" min="10" max="80" value="40">
+                                <span id="social-bg-opacity-val">40%</span>
+                            </div>
+                        </div>
+                        <div id="social-post-row" class="social-locket-post-row">
+                            <div class="social-creative-toolbar" id="social-creative-edit-tools">
+                                <p class="social-creative-section-title"><i class="fas fa-border-style"></i> Khung viền</p>
+                                <div class="social-frame-picker">
+                                    <button type="button" class="social-frame-option is-active" data-frame="none" title="Không khung"><span class="social-frame-option-inner"></span></button>
+                                    <button type="button" class="social-frame-option" data-frame="polaroid" title="Polaroid"><span class="social-frame-option-inner"></span></button>
+                                    <button type="button" class="social-frame-option" data-frame="neon" title="Neon"><span class="social-frame-option-inner"></span></button>
+                                    <button type="button" class="social-frame-option" data-frame="vintage" title="Vintage"><span class="social-frame-option-inner"></span></button>
+                                    <button type="button" class="social-frame-option" data-frame="gold" title="Vàng"><span class="social-frame-option-inner"></span></button>
+                                    <button type="button" class="social-frame-option" data-frame="aesthetic" title="Aesthetic"><span class="social-frame-option-inner"></span></button>
+                                    <button type="button" class="social-frame-option" data-frame="film" title="Phim"><span class="social-frame-option-inner"></span></button>
+                                    <button type="button" class="social-frame-option" data-frame="minimal" title="Tối giản"><span class="social-frame-option-inner"></span></button>
+                                    <button type="button" class="social-frame-option" data-frame="rainbow" title="Cầu vồng"><span class="social-frame-option-inner"></span></button>
+                                    <button type="button" class="social-frame-option" data-frame="heart" title="Tim"><span class="social-frame-option-inner"></span></button>
+                                    <button type="button" class="social-frame-option" data-frame="custom" title="Tuỳ chỉnh"><span class="social-frame-option-inner"><i class="fas fa-plus"></i></span></button>
+                                </div>
+                                <button type="button" id="social-frame-upload" class="social-frame-upload-btn"><i class="fas fa-upload mr-1"></i>Tải ảnh làm khung viền (PNG trong suốt giữa)</button>
+                                <input type="file" id="social-frame-file" accept="image/png,image/webp" class="hidden">
+                                <p class="social-creative-section-title mt-2"><i class="fas fa-font"></i> Caption đẹp</p>
+                                <div class="social-caption-editor">
+                                    <div class="social-caption-presets">
+                                        <button type="button" class="social-caption-preset-btn" data-caption-preset="classic">Cổ điển</button>
+                                        <button type="button" class="social-caption-preset-btn" data-caption-preset="neon">Neon</button>
+                                        <button type="button" class="social-caption-preset-btn" data-caption-preset="outline">Viền chữ</button>
+                                        <button type="button" class="social-caption-preset-btn" data-caption-preset="gradient">Gradient</button>
+                                        <button type="button" class="social-caption-preset-btn" data-caption-preset="bubble">Bong bóng</button>
+                                        <button type="button" class="social-caption-preset-btn" data-caption-preset="minimal">Tối giản</button>
+                                    </div>
+                                    <div class="social-caption-controls">
+                                        <input type="color" id="social-caption-color" value="#ffffff" title="Màu chữ">
+                                        <select id="social-caption-position" title="Vị trí">
+                                            <option value="top">Trên</option>
+                                            <option value="center">Giữa</option>
+                                            <option value="bottom" selected>Dưới</option>
+                                        </select>
+                                        <input type="range" id="social-caption-size" min="12" max="28" value="16" title="Cỡ chữ">
+                                    </div>
+                                </div>
+                                <p class="social-creative-section-title mt-2"><i class="fas fa-user-lock"></i> Ai được xem?</p>
+                                <div class="social-audience-panel">
+                                    <div class="social-audience-options">
+                                        <label class="social-audience-option">
+                                            <input type="radio" name="social-visibility" value="all_friends" checked>
+                                            <span><i class="fas fa-globe-asia mr-1"></i>Tất cả bạn bè (mặc định)</span>
+                                        </label>
+                                        <label class="social-audience-option">
+                                            <input type="radio" name="social-visibility" value="selected">
+                                            <span><i class="fas fa-user-check mr-1"></i>Chọn bạn bè cụ thể</span>
+                                        </label>
+                                    </div>
+                                    <input type="search" id="social-audience-search" class="social-audience-search hidden" placeholder="Tìm bạn bè...">
+                                    <div id="social-audience-friends" class="social-audience-friends"></div>
+                                </div>
+                            </div>
+                            <input id="social-caption" type="text" maxlength="500" class="social-locket-caption" placeholder="Thêm chú thích (tuỳ chọn)...">
+                            <div class="social-post-primary-actions">
+                                <button type="button" id="social-post-btn" class="social-locket-send-btn"><i class="fas fa-paper-plane mr-1"></i>Đăng</button>
+                                <button type="button" id="social-save-btn" class="social-locket-save-btn"><i class="fas fa-download mr-1"></i>Lưu</button>
+                            </div>
+                            <div class="social-preview-actions">
+                                <button type="button" id="social-cancel-preview" class="social-cancel-btn"><i class="fas fa-times mr-1"></i>Hủy ảnh</button>
+                                <button type="button" id="social-retake-inline" class="social-retake-link"><i class="fas fa-redo mr-1"></i>Chụp lại</button>
+                            </div>
+                        </div>
+                        <div class="social-save-settings">
+                            <label class="social-save-label" for="social-save-mode"><i class="fas fa-download mr-1"></i>Chế độ lưu ảnh (máy bạn)</label>
+                            <select id="social-save-mode" class="social-save-select">
+                                <option value="off">Không lưu vào máy</option>
+                                <option value="capture">Lưu khi chụp / chọn ảnh</option>
+                                <option value="post">Lưu khi đăng thành công</option>
+                                <option value="both">Lưu cả khi chụp và đăng</option>
+                            </select>
+                            <p id="social-drive-info" class="social-drive-info hidden">
+                                <i class="fab fa-google-drive mr-1"></i>Ảnh/video tự động lên <strong>Drive admin</strong> (thư mục Ảnh &amp; Video riêng).
+                            </p>
+                            <p id="social-drive-hint" class="social-drive-hint hidden">Drive admin chưa cấu hình — video cần Drive để đăng.</p>
+                        </div>
+                    </div>
+                    <div id="social-drawer-panel-social" class="social-drawer-panel space-y-4">
                     <div class="glass-card padded social-friends-card">
                         <h2 class="social-side-title"><i class="fas fa-user-plus text-violet-500 mr-1"></i>Kết bạn</h2>
                         <p class="text-sm text-slate-500 mb-3">Tìm theo email hoặc tên để gửi lời mời</p>
@@ -668,6 +688,7 @@
                                 <i class="fab fa-google mr-1"></i>Kết nối Google Drive
                             </button>
                         </div>
+                    </div>
                     </div>
                 </div>
             </aside>
@@ -982,7 +1003,7 @@
 <script src="/security-client.js"></script>
 <link rel="stylesheet" href="/social-creative.css?v=1">
 <script src="/social-creative.js?v=1"></script>
-<script src="/social-feed.js?v=locket-slot1"></script>
+<script src="/social-feed.js?v=locket-unified1"></script>
 <script src="/shop-features.js?v=mxh1"></script>
 <script src="/sidebar-menu.js?v=1"></script>
 <script src="/post-composer.js?v=locket2"></script>

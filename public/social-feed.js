@@ -57,6 +57,7 @@
     let feedSlotIndex = 0;
     let feedRotateTimer = null;
     const FEED_ROTATE_MS = 5500;
+    let activeDrawerTab = 'detail';
 
     function isVideoMedia() {
         return pendingMediaType === 'video' || !!pendingVideoBlob
@@ -483,7 +484,6 @@
         pendingImage = null;
 
         setupPreviewWaiting(poster, blob);
-        document.getElementById('social-post-row')?.classList.remove('hidden');
         const postBtn = document.getElementById('social-post-btn');
         const cancelBtn = document.getElementById('social-cancel-preview');
         if (postBtn) postBtn.innerHTML = '<i class="fas fa-paper-plane mr-1"></i>Đăng video';
@@ -709,9 +709,78 @@
         setCameraVisible(false);
     }
 
+    function getUnifiedSlotMode() {
+        if (pendingImage || pendingVideoBlob) return 'preview';
+        if (cameraStream) return 'capture';
+        if (feedPostsCache.length) return 'feed';
+        return 'idle';
+    }
+
+    function updateUnifiedActionButtons() {
+        const leftBtn = document.getElementById('social-unified-left');
+        if (!leftBtn) return;
+        const hasPreview = !!pendingImage || !!pendingVideoBlob;
+        if (hasPreview) {
+            leftBtn.innerHTML = '<i class="fas fa-times"></i>';
+            leftBtn.title = 'Hủy ảnh/video';
+        } else if (cameraStream) {
+            leftBtn.innerHTML = '<i class="fas fa-times"></i>';
+            leftBtn.title = 'Đóng camera';
+        } else {
+            leftBtn.innerHTML = '<i class="fas fa-image"></i>';
+            leftBtn.title = 'Chọn ảnh/video từ máy';
+        }
+    }
+
+    function updateUnifiedSlotVisibility() {
+        const mode = getUnifiedSlotMode();
+        const frame = document.querySelector('.social-locket-frame');
+        const feedLayer = document.getElementById('social-feed-layer');
+        const placeholder = document.getElementById('social-preview-placeholder');
+        const metaRow = document.getElementById('social-feed-meta-row');
+        const dotsRow = document.getElementById('social-feed-dots-row');
+        const modePicker = document.getElementById('social-frame-mode-picker');
+
+        const isPreview = mode === 'preview';
+        const isCapture = mode === 'capture';
+        const isFeed = mode === 'feed';
+
+        frame?.classList.toggle('is-feed-mode', isFeed);
+        frame?.classList.toggle('has-preview', isPreview);
+        feedLayer?.classList.toggle('hidden', !isFeed);
+        placeholder?.classList.toggle('hidden', isPreview || isCapture || isFeed);
+        modePicker?.classList.toggle('hidden', isPreview || isFeed);
+        metaRow?.classList.toggle('hidden', !isFeed);
+        dotsRow?.classList.toggle('hidden', !isFeed || feedPostsCache.length <= 1);
+
+        document.getElementById('social-post-row')?.classList.toggle('is-preview-active', isPreview);
+
+        updateUnifiedActionButtons();
+
+        if (isFeed) startFeedRotation();
+        else stopFeedRotation();
+    }
+
+    async function exitCameraToFeed() {
+        await stopCamera();
+        updateUnifiedSlotVisibility();
+        if (feedPostsCache.length) {
+            setComposerStatus('Vuốt chấm hoặc đợi — bài đăng tự đổi');
+        } else {
+            updateComposerStatusText();
+        }
+    }
+
     function scheduleAutoCameraStart(delayMs = 500) {
+        if (pendingImage || pendingVideoBlob) return;
+        if (feedPostsCache.length > 0) {
+            updateUnifiedSlotVisibility();
+            setComposerStatus('Bấm nút tròn để chụp ảnh mới');
+            return;
+        }
         if (isPhoneDevice()) {
             setComposerStatus('Bấm nút tròn tím để mở camera');
+            updateUnifiedSlotVisibility();
             return;
         }
         setTimeout(() => startCamera().catch(() => {}), delayMs);
@@ -815,12 +884,9 @@
 
     function updateComposerMode() {
         const studio = document.querySelector('.social-locket-studio');
-        const frame = document.querySelector('.social-locket-frame');
-        const controls = document.querySelector('.social-locket-controls');
         const hasPreview = !!pendingImage || !!pendingVideoBlob;
         studio?.classList.toggle('has-preview', hasPreview);
-        frame?.classList.toggle('has-preview', hasPreview);
-        if (controls) controls.classList.toggle('hidden', hasPreview);
+        updateUnifiedSlotVisibility();
     }
 
     function getSaveMode() {
@@ -909,7 +975,6 @@
             }
         }
         placeholder?.classList.add('hidden');
-        document.getElementById('social-post-row')?.classList.remove('hidden');
         const postBtn = document.getElementById('social-post-btn');
         const cancelBtn = document.getElementById('social-cancel-preview');
         if (postBtn) postBtn.innerHTML = isVid
@@ -987,7 +1052,6 @@
             previewVid.classList.add('hidden');
         }
         placeholder?.classList.remove('hidden');
-        document.getElementById('social-post-row')?.classList.add('hidden');
         const postBtn = document.getElementById('social-post-btn');
         if (postBtn) postBtn.innerHTML = '<i class="fas fa-paper-plane mr-1"></i>Đăng';
         updateShutterState();
@@ -1269,6 +1333,7 @@
                 document.getElementById('social-preview')?.classList.add('hidden');
                 updateShutterState();
                 updateCameraUi();
+                updateUnifiedSlotVisibility();
                 updateComposerStatusText();
                 window.SocialCreative?.onCameraStart();
                 return;
@@ -1413,10 +1478,7 @@
             } else {
                 window.toast?.('Đã đăng ' + posted + ' lên bảng tin!');
             }
-            const panel = document.getElementById('social-feed-panel');
-            if (panel && !panel.dataset.loaded) panel.dataset.loaded = '1';
             await loadFeed();
-            document.querySelector('.social-feed-section')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
             scheduleAutoCameraStart(400);
         } catch (err) {
             window.toast?.(err.message, true);
@@ -1490,13 +1552,18 @@
         </div>`;
     }
 
+    function getPostEngageRoot(postId) {
+        return document.querySelector('#social-feed-engage .social-post-engage[data-post-id="' + postId + '"]')
+            || document.querySelector('.social-post-engage[data-post-id="' + postId + '"]');
+    }
+
     async function toggleReaction(postId, reaction) {
         try {
             const res = await socialApi('/social/posts/' + postId + '/reactions', {
                 method: 'POST',
                 body: JSON.stringify({ reaction }),
             });
-            const card = document.querySelector('[data-post-id="' + postId + '"]');
+            const card = getPostEngageRoot(postId);
             if (!card) return;
             const bar = card.querySelector('.social-reaction-bar');
             const summary = card.querySelector('.social-reaction-summary');
@@ -1527,7 +1594,7 @@
     }
 
     async function loadComments(postId, forceOpen) {
-        const card = document.querySelector('[data-post-id="' + postId + '"]');
+        const card = getPostEngageRoot(postId);
         if (!card) return;
         const body = card.querySelector('[data-comments-body="' + postId + '"]');
         const list = card.querySelector('[data-comments-list="' + postId + '"]');
@@ -1554,7 +1621,7 @@
             method: 'POST',
             body: JSON.stringify({ content }),
         });
-        const card = document.querySelector('[data-post-id="' + postId + '"]');
+        const card = getPostEngageRoot(postId);
         if (!card) return res;
         const toggle = card.querySelector('[data-toggle-comments="' + postId + '"]');
         if (toggle) {
@@ -1580,7 +1647,7 @@
             });
             const item = document.querySelector('[data-comment-id="' + commentId + '"]');
             item?.remove();
-            const card = document.querySelector('[data-post-id="' + postId + '"]');
+            const card = getPostEngageRoot(postId);
             const toggle = card?.querySelector('[data-toggle-comments="' + postId + '"]');
             if (toggle) {
                 const n = res.commentCount || 0;
@@ -1680,9 +1747,35 @@
         return badges.join('');
     }
 
+    function bindUnifiedFeedEvents(root) {
+        if (!root) return;
+        root.querySelectorAll('[data-delete-post]').forEach(btn => {
+            btn.addEventListener('click', () => deletePost(Number(btn.dataset.deletePost)));
+        });
+        root.querySelectorAll('[data-feed-dot]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                showFeedSlot(Number(btn.dataset.feedDot), true);
+                startFeedRotation();
+            });
+        });
+        root.querySelectorAll('.social-post-img[data-lightbox]').forEach(img => {
+            img.addEventListener('click', () => window.ShopFeatures?.openPhotoLightbox?.(img.src));
+        });
+        bindFeedMediaMeta(root);
+        bindEngagement(root);
+    }
+
     function renderLocketSlot(post, animate) {
-        const el = document.getElementById('social-feed-list');
-        if (!el || !post) return;
+        if (!post) return;
+
+        const feedLayer = document.getElementById('social-feed-layer');
+        const mediaWrap = document.getElementById('social-feed-media-wrap');
+        const badgesEl = document.getElementById('social-feed-badges');
+        const captionEl = document.getElementById('social-feed-caption-pill');
+        const metaRow = document.getElementById('social-feed-meta-row');
+        const dotsRow = document.getElementById('social-feed-dots-row');
+        const engageEl = document.getElementById('social-feed-engage');
+        if (!feedLayer || !mediaWrap) return;
 
         const name = post.author?.fullName || post.author?.email || 'Người dùng';
         const isVid = post.mediaType === 'video' || String(post.imageData).startsWith('data:video/') || !!post.mediaUrl;
@@ -1691,62 +1784,50 @@
             ? `<video src="${esc(mediaSrc)}" class="social-post-video locket-feed-media" playsinline muted loop autoplay preload="metadata"></video>`
             : `<img src="${esc(mediaSrc)}" class="social-post-img locket-feed-media" data-lightbox="1" alt="Ảnh bài đăng">`;
         const wrappedMedia = window.SocialCreative?.renderFeedMediaWrap(post, mediaHtml) || mediaHtml;
-        const captionPill = post.caption
-            ? `<div class="locket-feed-caption-pill">${esc(post.caption)}</div>`
-            : '';
-        const dots = feedPostsCache.map((_, i) =>
-            `<button type="button" class="locket-feed-dot${i === feedSlotIndex ? ' is-active' : ''}" data-feed-dot="${i}" aria-label="Bài ${i + 1}"></button>`
-        ).join('');
 
-        const html = `
-        <article class="locket-feed-slot${animate ? ' is-swapping' : ''}" data-post-id="${post.id}">
-            <div class="locket-feed-frame">
-                <div class="locket-feed-media-wrap">${wrappedMedia}</div>
-                <div class="locket-feed-badges">${buildLocketBadges(post)}</div>
-                ${captionPill}
-            </div>
-            <div class="locket-feed-actions-row" aria-hidden="true">
-                <span class="locket-feed-action-icon"><i class="fas fa-times"></i></span>
-                <span class="locket-feed-action-send"><i class="fas fa-paper-plane"></i></span>
-                <span class="locket-feed-action-icon"><i class="fas fa-wand-magic-sparkles"></i></span>
-            </div>
-            <div class="locket-feed-meta">
+        feedLayer.dataset.feedSlotId = String(post.id);
+        feedLayer.classList.toggle('is-swapping', !!animate);
+        if (animate) {
+            feedLayer.addEventListener('animationend', () => feedLayer.classList.remove('is-swapping'), { once: true });
+        }
+
+        mediaWrap.innerHTML = wrappedMedia;
+        if (badgesEl) badgesEl.innerHTML = buildLocketBadges(post);
+        if (captionEl) {
+            if (post.caption) {
+                captionEl.textContent = post.caption;
+                captionEl.classList.remove('hidden');
+            } else {
+                captionEl.textContent = '';
+                captionEl.classList.add('hidden');
+            }
+        }
+        if (metaRow) {
+            metaRow.innerHTML = `
                 <span><span class="locket-feed-author">${esc(name)}</span> · ${esc(fmtTime(post.createdAt))}</span>
-                ${post.isMine ? `<button type="button" class="social-delete-btn text-xs" data-delete-post="${post.id}"><i class="fas fa-trash-alt"></i></button>` : ''}
-            </div>
-            <div class="locket-feed-dots">${dots}</div>
-            <div class="locket-feed-engage">
-                <div class="social-post-engage">
+                ${post.isMine ? `<button type="button" class="social-delete-btn text-xs" data-delete-post="${post.id}"><i class="fas fa-trash-alt"></i></button>` : ''}`;
+        }
+        if (dotsRow) {
+            dotsRow.innerHTML = feedPostsCache.map((_, i) =>
+                `<button type="button" class="locket-feed-dot${i === feedSlotIndex ? ' is-active' : ''}" data-feed-dot="${i}" aria-label="Bài ${i + 1}"></button>`
+            ).join('');
+        }
+        if (engageEl) {
+            engageEl.innerHTML = `
+                <div class="social-post-engage" data-post-id="${post.id}">
                     ${renderReactionSummary(post)}
                     ${renderReactionBar(post)}
                     ${renderCommentSection(post)}
-                </div>
-            </div>
-        </article>`;
-
-        el.innerHTML = html;
-
-        if (animate) {
-            const slot = el.querySelector('.locket-feed-slot');
-            slot?.addEventListener('animationend', () => slot.classList.remove('is-swapping'), { once: true });
+                </div>`;
         }
 
-        el.querySelectorAll('[data-delete-post]').forEach(btn => {
-            btn.addEventListener('click', () => deletePost(Number(btn.dataset.deletePost)));
-        });
-        el.querySelectorAll('[data-feed-dot]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                showFeedSlot(Number(btn.dataset.feedDot), true);
-                startFeedRotation();
-            });
-        });
-        el.querySelectorAll('.social-post-img[data-lightbox]').forEach(img => {
-            img.addEventListener('click', () => window.ShopFeatures?.openPhotoLightbox?.(img.src));
-        });
-        bindFeedMediaMeta(el);
-        bindEngagement(el);
+        updateUnifiedSlotVisibility();
+        bindUnifiedFeedEvents(feedLayer);
+        bindUnifiedFeedEvents(metaRow);
+        bindUnifiedFeedEvents(dotsRow);
+        bindUnifiedFeedEvents(engageEl);
 
-        const vid = el.querySelector('.locket-feed-media-wrap video');
+        const vid = mediaWrap.querySelector('video');
         if (vid) vid.play().catch(() => {});
     }
 
@@ -1756,30 +1837,56 @@
         renderLocketSlot(feedPostsCache[feedSlotIndex], animate);
     }
 
+    function clearUnifiedFeedDisplay() {
+        const feedLayer = document.getElementById('social-feed-layer');
+        const mediaWrap = document.getElementById('social-feed-media-wrap');
+        const badgesEl = document.getElementById('social-feed-badges');
+        const captionEl = document.getElementById('social-feed-caption-pill');
+        const metaRow = document.getElementById('social-feed-meta-row');
+        const dotsRow = document.getElementById('social-feed-dots-row');
+        const engageEl = document.getElementById('social-feed-engage');
+        if (mediaWrap) mediaWrap.innerHTML = '';
+        if (badgesEl) badgesEl.innerHTML = '';
+        if (captionEl) {
+            captionEl.textContent = '';
+            captionEl.classList.add('hidden');
+        }
+        if (metaRow) metaRow.innerHTML = '';
+        if (dotsRow) dotsRow.innerHTML = '';
+        if (feedLayer) {
+            feedLayer.dataset.feedSlotId = '';
+            feedLayer.classList.add('hidden');
+        }
+        if (engageEl) {
+            engageEl.innerHTML = '<div class="locket-feed-empty social-drawer-empty"><i class="fas fa-images"></i><p>Chưa có bài đăng — bấm nút tròn để chụp ảnh đầu tiên!</p></div>';
+        }
+        updateUnifiedSlotVisibility();
+    }
+
     function renderFeed(posts) {
-        const el = document.getElementById('social-feed-list');
-        if (!el) return;
         stopFeedRotation();
         feedPostsCache = posts || [];
         feedSlotIndex = 0;
 
         if (!feedPostsCache.length) {
-            el.innerHTML = '<div class="locket-feed-empty"><i class="fas fa-images"></i><p>Chưa có bài đăng — chụp ảnh phía trên để đăng lên đây!</p></div>';
+            clearUnifiedFeedDisplay();
             return;
         }
 
         renderLocketSlot(feedPostsCache[0], false);
-        startFeedRotation();
     }
 
     async function loadFeed() {
-        const el = document.getElementById('social-feed-list');
-        if (el) el.innerHTML = '<div class="social-loading"><i class="fas fa-spinner fa-spin"></i> Đang tải bảng tin...</div>';
+        setComposerStatus('Đang tải bảng tin...');
         try {
             const { posts } = await socialApi('/social/feed');
             renderFeed(posts || []);
+            if (feedPostsCache.length && !pendingImage && !pendingVideoBlob && !cameraStream) {
+                setComposerStatus('Vuốt chấm hoặc đợi — bài đăng tự đổi');
+            }
         } catch (err) {
-            if (el) el.innerHTML = '<div class="social-empty"><p>' + esc(err.message) + '</p></div>';
+            clearUnifiedFeedDisplay();
+            setComposerStatus(err.message, 'err');
         }
     }
 
@@ -2005,7 +2112,11 @@
     async function onRetakeClick() {
         clearPreview();
         await stopCamera();
-        await startCamera();
+        if (feedPostsCache.length) {
+            scheduleAutoCameraStart(0);
+        } else {
+            await startCamera();
+        }
     }
 
     function onSavePreviewClick() {
@@ -2022,7 +2133,7 @@
         if (!confirm(isVid ? 'Hủy video này?\nSẽ không đăng lên bảng tin.' : 'Hủy ảnh này?\nSẽ không đăng lên bảng tin.')) return;
         clearPreview();
         await stopCamera();
-        await startCamera();
+        scheduleAutoCameraStart(0);
         window.toast?.(isVid ? 'Đã hủy video' : 'Đã hủy ảnh');
     }
 
@@ -2266,7 +2377,26 @@
         chatBtn.classList.toggle('has-badge', n > 0 && !badge?.classList.contains('hidden'));
     }
 
-    function openSocialDrawer(scrollTo) {
+    function setDrawerTab(tab) {
+        activeDrawerTab = tab || 'detail';
+        document.querySelectorAll('.social-drawer-tab').forEach(btn => {
+            btn.classList.toggle('is-active', btn.dataset.drawerTab === activeDrawerTab);
+        });
+        document.querySelectorAll('.social-drawer-panel').forEach(panel => {
+            const id = panel.id || '';
+            const panelTab = id.replace('social-drawer-panel-', '');
+            panel.classList.toggle('is-active', panelTab === activeDrawerTab);
+        });
+    }
+
+    function getDefaultDrawerTab() {
+        if (pendingImage || pendingVideoBlob) return 'capture';
+        if (feedPostsCache.length) return 'detail';
+        return 'capture';
+    }
+
+    function openSocialDrawer(scrollTo, tab) {
+        setDrawerTab(tab || getDefaultDrawerTab());
         document.getElementById('social-drawer-overlay')?.classList.remove('hidden');
         document.getElementById('social-drawer-overlay')?.classList.add('is-open');
         document.getElementById('social-side-drawer')?.classList.add('is-open');
@@ -2288,17 +2418,24 @@
         }, 300);
     }
 
+    function initDrawerTabs() {
+        document.querySelectorAll('.social-drawer-tab').forEach(btn => {
+            btn.addEventListener('click', () => setDrawerTab(btn.dataset.drawerTab));
+        });
+    }
+
     function initFeedToolbar() {
         document.getElementById('social-feed-folder')?.addEventListener('click', () => {
-            document.querySelector('.social-feed-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            const panel = document.getElementById('social-feed-panel');
-            if (panel && !panel.dataset.loaded) {
-                panel.dataset.loaded = '1';
-                loadFeed();
-            }
+            if (!feedPostsCache.length) loadFeed();
+            else showFeedSlot(0, true);
         });
         document.getElementById('social-toolbar-menu')?.addEventListener('click', () => openSocialDrawer());
-        document.getElementById('social-toolbar-chat')?.addEventListener('click', () => openSocialDrawer('social-pending-in'));
+        document.getElementById('social-toolbar-chat')?.addEventListener('click', () => {
+            openSocialDrawer('social-pending-in', 'social');
+        });
+        document.getElementById('social-unified-studio')?.addEventListener('click', () => {
+            openSocialDrawer(null, pendingImage || pendingVideoBlob ? 'capture' : 'detail');
+        });
         document.getElementById('social-drawer-close')?.addEventListener('click', closeSocialDrawer);
         document.getElementById('social-drawer-overlay')?.addEventListener('click', closeSocialDrawer);
         document.addEventListener('keydown', e => {
@@ -2320,6 +2457,17 @@
     }
 
     function initComposerEvents() {
+        document.getElementById('social-unified-left')?.addEventListener('click', async () => {
+            if (pendingImage || pendingVideoBlob) {
+                await cancelPreview();
+                return;
+            }
+            if (cameraStream) {
+                await exitCameraToFeed();
+                return;
+            }
+            document.getElementById('social-file-input')?.click();
+        });
         document.getElementById('social-file-btn')?.addEventListener('click', () => {
             document.getElementById('social-file-input')?.click();
         });
@@ -2355,11 +2503,7 @@
         clearPreview();
         await stopCamera();
         await Promise.all([loadFriendsPanel(), loadDriveStatus()]);
-        const panel = document.getElementById('social-feed-panel');
-        if (panel) {
-            panel.dataset.loaded = '1';
-            await loadFeed();
-        }
+        await loadFeed();
         scheduleAutoCameraStart(500);
     }
 
@@ -2410,6 +2554,7 @@
 
     function init() {
         initFabButton();
+        initDrawerTabs();
         initFeedToolbar();
         initSaveMode();
         initModeToggle();
