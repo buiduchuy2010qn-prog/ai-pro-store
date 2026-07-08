@@ -40,7 +40,7 @@
     /** Video đã tải lên Drive để xem trước — đăng bài dùng lại file này */
     let pendingDriveFileId = null;
     let pendingDriveStreamUrl = null;
-    let pendingDriveEmbedUrl = null;
+    let pendingPreviewMime = 'video/mp4';
     let searchTimer = null;
     /** 'user' = trước, 'environment' = sau */
     let cameraFacing = 'user';
@@ -73,7 +73,7 @@
         setPreviewPlayOverlay(true);
     }
 
-    function waitVideoCanPlay(vid, timeoutMs = 4000) {
+    function waitVideoCanPlay(vid, timeoutMs = 10000) {
         return new Promise((resolve, reject) => {
             if (!vid) return reject(new Error('no video'));
             if (vid.readyState >= 3) return resolve();
@@ -116,7 +116,7 @@
             } catch (err) {
                 console.warn('[SocialFeed] preview play:', err);
                 showPreviewPlayBtn();
-                window.toast?.('Không phát được — đợi vài giây rồi bấm ▶ lại (video đang tải từ Drive)', true, 4500);
+                window.toast?.('Chưa phát được — đợi vài giây (đang tải MP4 từ Drive) rồi bấm ▶ lại', true, 4500);
             }
         }
     }
@@ -149,37 +149,9 @@
         document.querySelector('.social-locket-frame')?.classList.remove('is-drive-embed');
     }
 
-    function setupDriveEmbedPreview(embedUrl, blob) {
-        if (!embedUrl) return;
-        const frame = document.querySelector('.social-locket-frame');
-        const iframe = document.getElementById('social-preview-drive');
-        const previewVid = document.getElementById('social-preview-video');
-        frame?.classList.add('is-video-preview', 'is-drive-embed');
-        hidePreviewPlayBtn();
-        if (previewVid) {
-            previewVid.pause?.();
-            previewVid.removeAttribute('src');
-            previewVid.load();
-            previewVid.classList.add('hidden');
-        }
-        if (iframe) {
-            iframe.src = embedUrl;
-            iframe.classList.remove('hidden');
-        }
-        if (blob) {
-            const durPart = lastRecordDurationSec > 0
-                ? '<span><i class="fas fa-clock"></i> ' + formatDurationLabel(lastRecordDurationSec) + '</span>'
-                : '';
-            setMediaInfo([
-                durPart,
-                '<span><i class="fas fa-database"></i> ' + formatFileSize(blob.size) + '</span>',
-                '<span><i class="fab fa-google-drive"></i> Drive</span>',
-            ].filter(Boolean), true);
-        }
-    }
-
     function setupPreviewVideoElement(vid, playUrl, blob, posterUrl) {
         if (!vid || !playUrl) return;
+        hideDriveEmbedPreview();
         const frame = document.querySelector('.social-locket-frame');
         frame?.classList.add('is-video-preview');
         bindPreviewPlayButton();
@@ -187,6 +159,7 @@
         vid.pause();
         vid.onloadedmetadata = null;
         vid.onloadeddata = null;
+        vid.oncanplay = null;
         vid.onplaying = null;
         vid.onpause = null;
         vid.onended = null;
@@ -194,9 +167,10 @@
 
         if (posterUrl) vid.poster = posterUrl;
         else vid.removeAttribute('poster');
-        vid.src = playUrl;
+        const isStream = String(playUrl).startsWith('/api/social/');
+        vid.src = isStream ? playUrl + (playUrl.includes('?') ? '&' : '?') + '_=' + Date.now() : playUrl;
         vid.muted = true;
-        vid.defaultMuted = false;
+        vid.defaultMuted = true;
         vid.controls = true;
         vid.setAttribute('playsinline', '');
         vid.setAttribute('webkit-playsinline', '');
@@ -211,9 +185,11 @@
                 const durPart = dur > 0
                     ? '<span><i class="fas fa-clock"></i> ' + formatDurationLabel(dur) + '</span>'
                     : '';
+                const drivePart = isStream ? '<span><i class="fab fa-google-drive"></i> Drive</span>' : '';
                 setMediaInfo([
                     durPart,
                     '<span><i class="fas fa-database"></i> ' + formatFileSize(blob.size) + '</span>',
+                    drivePart,
                 ].filter(Boolean), true);
             }
         };
@@ -226,8 +202,14 @@
         vid.onended = showPreviewPlayBtn;
         vid.onerror = () => {
             showPreviewPlayBtn();
-            setComposerStatus('Bấm nút ▶ giữa khung hoặc thanh điều khiển dưới video', 'err');
+            setComposerStatus('Không phát được — bấm ▶ hoặc thử Chụp lại', 'err');
         };
+        if (isStream) {
+            vid.oncanplay = () => {
+                refreshMeta();
+                playPreviewVideo().catch(() => showPreviewPlayBtn());
+            };
+        }
         refreshMeta();
         vid.load();
     }
@@ -434,9 +416,9 @@
             const data = await uploadVideoPreviewToDrive(blob);
             pendingDriveFileId = data.driveFileId || null;
             pendingDriveStreamUrl = data.previewUrl || null;
-            pendingDriveEmbedUrl = data.embedUrl || null;
+            pendingPreviewMime = data.mimeType || 'video/mp4';
             showPreview(pendingDriveStreamUrl, 'video', blob, poster);
-            window.toast?.('Video trên Google Drive — bấm ▶ trong khung để xem', false, 3200);
+            window.toast?.('Video đã lên Drive — đang tải để xem lại...', false, 2800);
         } finally {
             if (postBtn) postBtn.disabled = false;
         }
@@ -690,7 +672,6 @@
             pendingVideoBlob = null;
             pendingDriveFileId = null;
             pendingDriveStreamUrl = null;
-            pendingDriveEmbedUrl = null;
             revokePreviewObjectUrl();
         }
 
@@ -702,20 +683,16 @@
             if (!isVid) preview.src = src;
             else preview.src = '';
         }
-        if (isVid && pendingDriveEmbedUrl) {
-            setupDriveEmbedPreview(pendingDriveEmbedUrl, pendingVideoBlob);
-        } else {
-            hideDriveEmbedPreview();
-            if (previewVid) {
-                if (isVid) {
-                    const playUrl = pendingDriveStreamUrl || previewObjectUrl || src;
-                    setupPreviewVideoElement(previewVid, playUrl, pendingVideoBlob, previewPosterUrl);
-                } else {
-                    hidePreviewPlayBtn();
-                    previewVid.pause?.();
-                    previewVid.src = '';
-                    previewVid.classList.add('hidden');
-                }
+        hideDriveEmbedPreview();
+        if (previewVid) {
+            if (isVid) {
+                const playUrl = pendingDriveStreamUrl || previewObjectUrl || src;
+                setupPreviewVideoElement(previewVid, playUrl, pendingVideoBlob, previewPosterUrl);
+            } else {
+                hidePreviewPlayBtn();
+                previewVid.pause?.();
+                previewVid.src = '';
+                previewVid.classList.add('hidden');
             }
         }
         placeholder?.classList.add('hidden');
@@ -733,11 +710,9 @@
         updateComposerMode();
         setComposerStatus(
             isVid
-                ? (pendingDriveEmbedUrl
-                    ? 'Video trên Google Drive — bấm ▶ trong khung để xem, rồi Đăng hoặc Hủy'
-                    : pendingDriveStreamUrl
-                        ? 'Video trên Drive — bấm ▶ để xem lại, rồi Đăng hoặc Hủy'
-                        : 'Bấm ▶ trên video để xem lại — Đăng, Lưu hoặc Hủy')
+                ? (pendingDriveStreamUrl
+                    ? 'Video trên Drive — bấm ▶ để xem lại, rồi Đăng hoặc Hủy'
+                    : 'Bấm ▶ trên video để xem lại — Đăng, Lưu hoặc Hủy')
                 : 'Đăng ảnh, Lưu vào máy, hoặc Hủy',
             'ok'
         );
@@ -769,7 +744,7 @@
         previewPosterUrl = null;
         pendingDriveFileId = null;
         pendingDriveStreamUrl = null;
-        pendingDriveEmbedUrl = null;
+        pendingPreviewMime = 'video/mp4';
         revokePreviewObjectUrl();
         releaseSilentAudio();
         hidePreviewPlayBtn();
