@@ -28,6 +28,12 @@ def sql_now():
     return 'NOW()' if IS_PG else "datetime('now')"
 
 
+def bool_val(v):
+    if IS_PG:
+        return bool(v)
+    return 1 if v else 0
+
+
 def adapt(sql):
     return sql.replace('?', '%s') if IS_PG else sql
 
@@ -101,6 +107,14 @@ def migrate(conn):
         _safe_alter(conn, 'ALTER TABLE decoration_drafts ADD COLUMN IF NOT EXISTS custom_overlay TEXT')
         _safe_alter(conn, 'ALTER TABLE decoration_saved_outfits ADD COLUMN IF NOT EXISTS custom_bg TEXT')
         _safe_alter(conn, 'ALTER TABLE decoration_saved_outfits ADD COLUMN IF NOT EXISTS custom_overlay TEXT')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret TEXT')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN DEFAULT FALSE')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_count INTEGER DEFAULT 0')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_ip TEXT')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN IF NOT EXISTS last_fingerprint TEXT')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN IF NOT EXISTS trust_score INTEGER DEFAULT 100')
     else:
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN is_blocked INTEGER DEFAULT 0')
         _safe_alter(conn, 'ALTER TABLE processed_bank_transactions ADD COLUMN bank_account TEXT')
@@ -113,6 +127,14 @@ def migrate(conn):
         _safe_alter(conn, 'ALTER TABLE decoration_drafts ADD COLUMN custom_overlay TEXT')
         _safe_alter(conn, 'ALTER TABLE decoration_saved_outfits ADD COLUMN custom_bg TEXT')
         _safe_alter(conn, 'ALTER TABLE decoration_saved_outfits ADD COLUMN custom_overlay TEXT')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN totp_secret TEXT')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN totp_enabled INTEGER DEFAULT 0')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN failed_login_count INTEGER DEFAULT 0')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN locked_until TEXT')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN last_login_at TEXT')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN last_login_ip TEXT')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN last_fingerprint TEXT')
+        _safe_alter(conn, 'ALTER TABLE users ADD COLUMN trust_score INTEGER DEFAULT 100')
     for row in fetchall(conn, "SELECT id FROM orders WHERE order_code IS NULL OR order_code = ''"):
         execute(conn, 'UPDATE orders SET order_code = ? WHERE id = ?', (f"DH{row['id']:06d}", row['id']))
     commit(conn)
@@ -226,6 +248,24 @@ def init_schema():
                 id SERIAL PRIMARY KEY, notification_id INTEGER NOT NULL REFERENCES support_notifications(id),
                 admin_id INTEGER NOT NULL REFERENCES users(id),
                 action TEXT NOT NULL, note TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS login_attempts (
+                id SERIAL PRIMARY KEY, email TEXT NOT NULL, ip TEXT, user_agent TEXT,
+                fingerprint TEXT, success BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS user_sessions (
+                id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
+                jti TEXT NOT NULL UNIQUE, ip TEXT, user_agent TEXT, fingerprint TEXT,
+                revoked BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(), last_seen TIMESTAMP NOT NULL DEFAULT NOW())''',
+            '''CREATE TABLE IF NOT EXISTS trusted_devices (
+                id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
+                fingerprint TEXT NOT NULL, label TEXT, ip TEXT,
+                trusted_at TIMESTAMP NOT NULL DEFAULT NOW(), last_used TIMESTAMP NOT NULL DEFAULT NOW(),
+                UNIQUE(user_id, fingerprint))''',
+            '''CREATE TABLE IF NOT EXISTS security_events (
+                id SERIAL PRIMARY KEY, event_type TEXT NOT NULL, severity TEXT NOT NULL,
+                user_id INTEGER, ip TEXT, details TEXT,
                 created_at TIMESTAMP NOT NULL DEFAULT NOW())''',
         ):
             execute(conn, stmt)
@@ -367,6 +407,30 @@ def init_schema():
                 created_at TEXT DEFAULT ({n}),
                 FOREIGN KEY (notification_id) REFERENCES support_notifications(id),
                 FOREIGN KEY (admin_id) REFERENCES users(id)
+            );
+            CREATE TABLE IF NOT EXISTS login_attempts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL, ip TEXT,
+                user_agent TEXT, fingerprint TEXT, success INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT ({n})
+            );
+            CREATE TABLE IF NOT EXISTS user_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+                jti TEXT NOT NULL UNIQUE, ip TEXT, user_agent TEXT, fingerprint TEXT,
+                revoked INTEGER DEFAULT 0, created_at TEXT DEFAULT ({n}),
+                last_seen TEXT DEFAULT ({n}),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+            CREATE TABLE IF NOT EXISTS trusted_devices (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+                fingerprint TEXT NOT NULL, label TEXT, ip TEXT,
+                trusted_at TEXT DEFAULT ({n}), last_used TEXT DEFAULT ({n}),
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                UNIQUE(user_id, fingerprint)
+            );
+            CREATE TABLE IF NOT EXISTS security_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, event_type TEXT NOT NULL,
+                severity TEXT NOT NULL, user_id INTEGER, ip TEXT, details TEXT,
+                created_at TEXT DEFAULT ({n})
             );
         ''')
 

@@ -57,3 +57,17 @@ services:
         fromDatabase:
           name: aiprostore-db
           property: connectionString
+      - key: FORCE_HSTS
+        value: "true"
+      - key: TURNSTILE_SITE_KEY
+        sync: false
+      - key: TURNSTILE_SECRET_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://ai-pro-store.onrender.com
+      - key: JWT_EXPIRE_HOURS
+        value: "24"
+      - key: LOCKOUT_ATTEMPTS
+        value: "5"
+      - key: PASSWORD_MIN_LENGTH
+        value: "8"

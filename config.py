@@ -53,3 +53,35 @@ AI = {
     'model': os.getenv('AI_MODEL', 'grok-3-mini' if os.getenv('XAI_API_KEY') else 'gpt-4o-mini'),
     'rate_limit': int(os.getenv('AI_RATE_LIMIT_PER_HOUR', '30')),
 }
+
+_cors_raw = os.getenv('CORS_ORIGINS', '')
+_cors_list = [o.strip() for o in _cors_raw.split(',') if o.strip()]
+
+SECURITY = {
+    'force_hsts': os.getenv('FORCE_HSTS', 'false').lower() == 'true',
+    'hsts_max_age': int(os.getenv('HSTS_MAX_AGE', '31536000')),
+    'csp_enabled': os.getenv('CSP_ENABLED', 'true').lower() != 'false',
+    'cors_origins': _cors_list,
+    'cors_allow_same_host': os.getenv('CORS_ALLOW_SAME_HOST', 'true').lower() != 'false',
+    'rate_global_per_min': int(os.getenv('RATE_GLOBAL_PER_MIN', '120')),
+    'rate_auth_per_min': int(os.getenv('RATE_AUTH_PER_MIN', '10')),
+    'rate_write_per_min': int(os.getenv('RATE_WRITE_PER_MIN', '60')),
+    'rate_ai_per_min': int(os.getenv('RATE_AI_PER_MIN', '20')),
+    'max_body_bytes': int(os.getenv('MAX_BODY_BYTES', '1048576')),
+    'password_min_length': int(os.getenv('PASSWORD_MIN_LENGTH', '8')),
+    'lockout_attempts': int(os.getenv('LOCKOUT_ATTEMPTS', '5')),
+    'lockout_minutes': int(os.getenv('LOCKOUT_MINUTES', '15')),
+    'jwt_expire_hours': int(os.getenv('JWT_EXPIRE_HOURS', '24')),
+    'max_sessions_per_user': int(os.getenv('MAX_SESSIONS_PER_USER', '3')),
+    'legacy_jwt_allowed': os.getenv('LEGACY_JWT_ALLOWED', 'true').lower() != 'false',
+    'csrf_ttl_sec': int(os.getenv('CSRF_TTL_SEC', '7200')),
+    'csrf_relaxed': os.getenv('CSRF_RELAXED', 'true').lower() != 'false',
+    'turnstile_site_key': os.getenv('TURNSTILE_SITE_KEY', ''),
+    'turnstile_secret_key': os.getenv('TURNSTILE_SECRET_KEY', ''),
+    'step_up_all_pro': os.getenv('STEP_UP_ALL_PRO', 'true').lower() != 'false',
+    'step_up_ttl_sec': int(os.getenv('STEP_UP_TTL_SEC', '600')),
+    'suspicious_ip_count': int(os.getenv('SUSPICIOUS_IP_COUNT', '4')),
+    'trust_block_threshold': int(os.getenv('TRUST_BLOCK_THRESHOLD', '30')),
+    'alert_webhook_url': os.getenv('SECURITY_ALERT_WEBHOOK', ''),
+    'alert_cooldown_sec': int(os.getenv('ALERT_COOLDOWN_SEC', '300')),
+}

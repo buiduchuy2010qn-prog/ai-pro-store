@@ -33,6 +33,7 @@
             <h1>Shop<span style="color:#0ea5e9">.</span> Đức Hi</h1>
             <p class="text-sm mt-2" style="color:#64748b">Chào mừng đến Web Shop của Đức Hi</p>
             <p class="text-xs mt-1" style="color:#94a3b8">Nạp tiền tự động qua QR VietQR</p>
+            <p id="security-notice" class="text-xs mt-3 px-3 py-2 rounded-lg hidden" style="background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd"></p>
         </div>
 
         <div id="auth-tabs" class="auth-tabs">
@@ -59,6 +60,12 @@
                 <div class="text-right">
                     <button type="button" id="forgot-link" class="text-sm text-brand-600 hover:text-brand-700 hover:underline font-medium">Quên mật khẩu</button>
                 </div>
+                <div id="login-2fa-wrap" class="hidden">
+                    <label class="text-sm font-medium text-slate-600 block mb-1">Mã 2FA (Authenticator)</label>
+                    <input id="login-totp" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code"
+                           class="input-modern text-center tracking-widest font-mono" placeholder="000000">
+                </div>
+                <div id="turnstile-login" class="flex justify-center my-2"></div>
                 <p id="login-error" class="text-red-500 text-sm hidden"></p>
                 <button type="submit" class="w-full btn-primary py-3">
                     <i class="fas fa-sign-in-alt mr-1"></i> Đăng nhập
@@ -84,21 +91,41 @@
                     <label class="text-sm font-medium text-slate-600 block mb-1">Mật khẩu</label>
                     <div class="input-wrap">
                         <i class="fas fa-lock input-icon"></i>
-                        <input id="register-password" type="password" required minlength="6" autocomplete="new-password" class="input-modern">
+                        <input id="register-password" type="password" required minlength="8" autocomplete="new-password" class="input-modern">
                     </div>
                 </div>
                 <div>
                     <label class="text-sm font-medium text-slate-600 block mb-1">Nhập lại mật khẩu</label>
                     <div class="input-wrap">
                         <i class="fas fa-lock input-icon"></i>
-                        <input id="register-confirmPassword" type="password" required minlength="6" autocomplete="new-password" class="input-modern">
+                        <input id="register-confirmPassword" type="password" required minlength="8" autocomplete="new-password" class="input-modern">
                     </div>
                 </div>
+                <div id="turnstile-register" class="flex justify-center my-2"></div>
                 <p id="register-error" class="text-red-500 text-sm hidden"></p>
                 <button type="submit" class="w-full btn-primary py-3">
                     <i class="fas fa-user-plus mr-1"></i> Tạo tài khoản
                 </button>
             </form>
+
+            <!-- Step-up verification (thiết bị mới / tài khoản Pro) -->
+            <div id="stepup-panel" class="hidden space-y-4">
+                <button type="button" id="stepup-back" class="text-sm text-slate-500 hover:text-brand-600">
+                    <i class="fas fa-arrow-left mr-1"></i> Quay lại đăng nhập
+                </button>
+                <div class="text-center mb-2">
+                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-100 text-amber-600 mb-2">
+                        <i class="fas fa-shield-alt text-xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-lg">Xác minh bảo mật</h3>
+                    <p id="stepup-message" class="text-sm text-slate-500">Nhập mã OTP đã gửi đến email đăng ký</p>
+                </div>
+                <input id="stepup-otp" type="text" maxlength="6" inputmode="numeric"
+                       class="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-center text-2xl tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-brand-500">
+                <p id="stepup-error" class="text-red-500 text-sm hidden"></p>
+                <button type="button" id="stepup-resend" class="text-sm text-brand-600 hover:underline">Gửi lại OTP</button>
+                <button type="button" id="stepup-submit" class="w-full btn-primary py-3">Xác minh &amp; đăng nhập</button>
+            </div>
 
             <!-- Forgot password flow -->
             <div id="forgot-panel" class="hidden">
@@ -153,7 +180,7 @@
                     </div>
                     <div>
                         <label class="text-sm font-medium text-slate-600 block mb-1">Mật khẩu mới</label>
-                        <input id="forgot-newPassword" type="password" required minlength="6"
+                        <input id="forgot-newPassword" type="password" required minlength="8"
                                class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500">
                     </div>
                     <p id="forgot-step3-error" class="text-red-500 text-sm hidden"></p>
@@ -585,8 +612,10 @@
     <span class="sm:hidden">Zalo: 0944255413</span>
 </a>
 
+<script src="/security-client.js"></script>
 <script>
 const API = '/api';
+let stepUpToken = '';
 let currentUser = null;
 let currentView = 'products';
 let currentAdminTab = 'dashboard';
@@ -623,13 +652,22 @@ function setToken(t) { localStorage.setItem('auth_token', t); }
 function clearToken() { localStorage.removeItem('auth_token'); }
 
 async function api(path, opts = {}) {
-    const headers = { 'Content-Type': 'application/json', ...opts.headers };
+    const secHeaders = window.SecurityClient ? await SecurityClient.secureHeaders() : {};
+    const headers = { 'Content-Type': 'application/json', ...secHeaders, ...opts.headers };
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
     const res = await fetch(API + path, { ...opts, headers });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || data.message || 'Lỗi hệ thống');
     return data;
+}
+
+async function apiRaw(path, opts = {}) {
+    const secHeaders = window.SecurityClient ? await SecurityClient.secureHeaders() : {};
+    const headers = { 'Content-Type': 'application/json', ...secHeaders, ...opts.headers };
+    const token = getToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return fetch(API + path, { ...opts, headers });
 }
 
 function escapeHtml(s) {
@@ -761,12 +799,31 @@ function orderContactBlock(o) {
 /* ─── Auth UI ─── */
 function showAuthTab(tab) {
     const isLogin = tab === 'login';
+    stepUpToken = '';
     document.getElementById('tab-login').className = `auth-tab ${isLogin ? 'active' : ''}`;
     document.getElementById('tab-register').className = `auth-tab ${!isLogin ? 'active' : ''}`;
     document.getElementById('login-form').classList.toggle('hidden', !isLogin);
     document.getElementById('register-form').classList.toggle('hidden', isLogin);
     document.getElementById('forgot-panel').classList.add('hidden');
+    document.getElementById('stepup-panel').classList.add('hidden');
+    document.getElementById('login-2fa-wrap').classList.add('hidden');
     document.getElementById('auth-tabs').classList.remove('hidden');
+    if (window.SecurityClient) {
+        if (isLogin) SecurityClient.renderTurnstile('turnstile-login');
+        else SecurityClient.renderTurnstile('turnstile-register');
+    }
+}
+
+function showStepUpPanel(message, token) {
+    stepUpToken = token;
+    document.getElementById('auth-tabs').classList.add('hidden');
+    document.getElementById('login-form').classList.add('hidden');
+    document.getElementById('register-form').classList.add('hidden');
+    document.getElementById('forgot-panel').classList.add('hidden');
+    document.getElementById('stepup-panel').classList.remove('hidden');
+    document.getElementById('stepup-message').textContent = message || 'Nhập mã OTP đã gửi đến email đăng ký';
+    document.getElementById('stepup-error').classList.add('hidden');
+    document.getElementById('stepup-otp').value = '';
 }
 
 function showForgotPanel(step = 1) {
@@ -789,6 +846,7 @@ function showAuth() {
     currentUser = null;
     forgotEmail = '';
     forgotOtp = '';
+    stepUpToken = '';
     document.getElementById('auth-screen').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
     showAuthTab('login');
@@ -1874,19 +1932,37 @@ document.getElementById('login-form').onsubmit = async e => {
     e.preventDefault();
     const errEl = document.getElementById('login-error');
     try {
-        const r = await api('/auth/login', {
+        const turnstileToken = SecurityClient ? SecurityClient.getTurnstileResponse('turnstile-login') : '';
+        const res = await apiRaw('/auth/login', {
             method: 'POST',
             body: JSON.stringify({
                 email: document.getElementById('login-email').value,
                 password: document.getElementById('login-password').value,
+                turnstileToken,
+                totpCode: document.getElementById('login-totp').value.trim(),
             }),
         });
+        const r = await res.json().catch(() => ({}));
+        if (r.requires2FA) {
+            document.getElementById('login-2fa-wrap').classList.remove('hidden');
+            errEl.textContent = r.message || 'Nhập mã 2FA.';
+            errEl.classList.remove('hidden');
+            return;
+        }
+        if (r.requiresStepUp) {
+            errEl.classList.add('hidden');
+            showStepUpPanel(r.message, r.stepUpToken);
+            if (r.otpSent) toast('Mã OTP đã gửi đến email của bạn.');
+            return;
+        }
+        if (!res.ok) throw new Error(r.error || 'Đăng nhập thất bại');
         setToken(r.token);
         currentUser = r.user;
         errEl.classList.add('hidden');
         await showApp();
         toast('Đăng nhập thành công!');
     } catch (err) {
+        if (SecurityClient) SecurityClient.resetTurnstile('turnstile-login');
         errEl.textContent = err.message;
         errEl.classList.remove('hidden');
     }
@@ -1902,7 +1978,14 @@ document.getElementById('register-form').onsubmit = async e => {
         errEl.classList.remove('hidden');
         return;
     }
+    const minLen = SecurityClient ? SecurityClient.getPasswordMinLength() : 8;
+    if (pw.length < minLen) {
+        errEl.textContent = `Mật khẩu tối thiểu ${minLen} ký tự.`;
+        errEl.classList.remove('hidden');
+        return;
+    }
     try {
+        const turnstileToken = SecurityClient ? SecurityClient.getTurnstileResponse('turnstile-register') : '';
         const r = await api('/auth/register', {
             method: 'POST',
             body: JSON.stringify({
@@ -1910,6 +1993,7 @@ document.getElementById('register-form').onsubmit = async e => {
                 email: document.getElementById('register-email').value,
                 password: pw,
                 confirmPassword: pw2,
+                turnstileToken,
             }),
         });
         setToken(r.token);
@@ -1918,8 +2002,41 @@ document.getElementById('register-form').onsubmit = async e => {
         await showApp();
         toast('Đăng ký thành công!');
     } catch (err) {
+        if (SecurityClient) SecurityClient.resetTurnstile('turnstile-register');
         errEl.textContent = err.message;
         errEl.classList.remove('hidden');
+    }
+};
+
+document.getElementById('stepup-back').onclick = () => showAuthTab('login');
+document.getElementById('stepup-submit').onclick = async () => {
+    const errEl = document.getElementById('stepup-error');
+    try {
+        const r = await api('/auth/step-up', {
+            method: 'POST',
+            body: JSON.stringify({
+                stepUpToken,
+                otp: document.getElementById('stepup-otp').value.trim(),
+            }),
+        });
+        setToken(r.token);
+        currentUser = r.user;
+        await showApp();
+        toast('Xác minh thành công!');
+    } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+    }
+};
+document.getElementById('stepup-resend').onclick = async () => {
+    try {
+        const r = await api('/auth/step-up/send-otp', {
+            method: 'POST',
+            body: JSON.stringify({ stepUpToken }),
+        });
+        toast(r.message || 'Đã gửi lại OTP.');
+    } catch (err) {
+        toast(err.message, true);
     }
 };
 
@@ -2096,6 +2213,19 @@ document.getElementById('mock-transfer-btn').onclick = async () => {
 
 /* ─── Init ─── */
 (async () => {
+    if (window.SecurityClient) {
+        const boot = await SecurityClient.bootstrap();
+        if (boot.securityNotice) {
+            const n = document.getElementById('security-notice');
+            n.textContent = boot.securityNotice;
+            n.classList.remove('hidden');
+        }
+        const minLen = SecurityClient.getPasswordMinLength();
+        ['register-password', 'register-confirmPassword', 'forgot-newPassword'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.minLength = minLen;
+        });
+    }
     if (getToken()) {
         try {
             await refreshUser();
