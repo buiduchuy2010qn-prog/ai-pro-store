@@ -498,11 +498,30 @@
                             </button>
                         </div>
                         <div id="social-drive-disconnected">
-                            <p class="social-drive-setup-hint">Bấm bên dưới để đăng nhập Google và cấp quyền lưu ảnh.</p>
-                            <button type="button" id="social-drive-connect-btn" class="social-drive-connect-btn">
+                            <div id="social-drive-oauth-setup" class="social-drive-oauth-setup hidden">
+                                <p class="social-drive-setup-title"><i class="fas fa-cog mr-1"></i>Bước 1 — Tạo OAuth trên Google</p>
+                                <ol class="social-drive-setup-steps">
+                                    <li><a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener">Bật Google Drive API</a></li>
+                                    <li><a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Tạo OAuth Client ID</a> (loại Web)</li>
+                                    <li>Thêm Redirect URI bên dưới vào Google Console</li>
+                                </ol>
+                                <div class="social-drive-redirect-row">
+                                    <input id="social-drive-redirect-uri" type="text" readonly class="social-drive-redirect-input">
+                                    <button type="button" id="social-drive-copy-redirect" class="social-drive-copy-btn" title="Sao chép">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                                <p class="social-drive-setup-title mt-3"><i class="fas fa-key mr-1"></i>Bước 2 — Dán Client ID &amp; Secret</p>
+                                <input id="social-drive-client-id" type="text" class="social-drive-config-input" placeholder="Client ID (*.apps.googleusercontent.com)" autocomplete="off">
+                                <input id="social-drive-client-secret" type="password" class="social-drive-config-input" placeholder="Client Secret" autocomplete="off">
+                                <button type="button" id="social-drive-save-oauth" class="social-drive-save-oauth-btn">
+                                    <i class="fas fa-save mr-1"></i>Lưu cấu hình OAuth
+                                </button>
+                            </div>
+                            <p id="social-drive-ready-hint" class="social-drive-setup-hint hidden">Bấm bên dưới để đăng nhập Google và cấp quyền lưu ảnh.</p>
+                            <button type="button" id="social-drive-connect-btn" class="social-drive-connect-btn hidden">
                                 <i class="fab fa-google mr-1"></i>Kết nối Google Drive
                             </button>
-                            <p id="social-drive-oauth-missing" class="social-drive-oauth-missing hidden">Server chưa cấu hình OAuth — thêm GOOGLE_OAUTH_CLIENT_ID trên Render.</p>
                         </div>
                     </div>
                 </div>
@@ -816,7 +835,7 @@
 </a>
 
 <script src="/security-client.js"></script>
-<script src="/social-feed.js?v=drive3"></script>
+<script src="/social-feed.js?v=drive4"></script>
 <script src="/shop-features.js?v=mxh1"></script>
 <script>
 const API = '/api';

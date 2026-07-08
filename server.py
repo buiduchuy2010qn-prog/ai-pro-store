@@ -2414,6 +2414,28 @@ def social_drive_status():
     return jsonify(resp)
 
 
+@app.route('/api/social/drive/oauth-setup')
+@admin_required
+def social_drive_oauth_setup_get():
+    return jsonify(drive.get_oauth_setup_info())
+
+
+@app.route('/api/social/drive/oauth-setup', methods=['POST'])
+@admin_required
+def social_drive_oauth_setup_post():
+    d = request.get_json(silent=True) or {}
+    client_id = sec.sanitize_string(d.get('clientId', ''), max_len=200)
+    client_secret = sec.sanitize_string(d.get('clientSecret', ''), max_len=200)
+    try:
+        drive.save_oauth_credentials(client_id, client_secret)
+        return jsonify({'ok': True, 'setup': drive.get_oauth_setup_info()})
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        print(f'[Drive] save oauth config error: {e}')
+        return jsonify({'error': 'Không lưu được cấu hình OAuth'}), 500
+
+
 @app.route('/api/social/drive/connect')
 @admin_required
 def social_drive_connect():

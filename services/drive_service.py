@@ -17,14 +17,82 @@ DRIVE_SCOPES = [
 ]
 
 
+DRIVE_OAUTH_KEYS = ('drive_oauth_client_id', 'drive_oauth_client_secret')
+
+
 def _cfg():
     from config import GOOGLE_DRIVE
     return GOOGLE_DRIVE
 
 
-def oauth_available():
+def _oauth_from_db():
+    try:
+        from database import get_conn, fetchall, close
+        conn = get_conn()
+        rows = {
+            r['key']: (r['value'] or '').strip()
+            for r in fetchall(conn, f'''
+                SELECT key, value FROM ai_settings
+                WHERE key IN ({",".join("?" * len(DRIVE_OAUTH_KEYS))})
+            ''', DRIVE_OAUTH_KEYS)
+        }
+        close(conn)
+        return rows.get('drive_oauth_client_id', ''), rows.get('drive_oauth_client_secret', '')
+    except Exception as e:
+        print(f'[Drive] read oauth settings failed: {e}')
+        return '', ''
+
+
+def get_oauth_credentials():
+    """Ưu tiên biến môi trường, fallback cấu hình admin lưu trên web."""
     c = _cfg()
-    return bool(c.get('oauth_client_id') and c.get('oauth_client_secret') and c.get('oauth_redirect_uri'))
+    db_id, db_secret = _oauth_from_db()
+    return {
+        'client_id': (c.get('oauth_client_id') or db_id or '').strip(),
+        'client_secret': (c.get('oauth_client_secret') or db_secret or '').strip(),
+        'redirect_uri': (c.get('oauth_redirect_uri') or '').strip(),
+    }
+
+
+def oauth_available():
+    creds = get_oauth_credentials()
+    return bool(creds['client_id'] and creds['client_secret'] and creds['redirect_uri'])
+
+
+def get_oauth_setup_info():
+    creds = get_oauth_credentials()
+    has_secret = bool(creds['client_secret'])
+    return {
+        'redirectUri': creds['redirect_uri'],
+        'clientId': creds['client_id'],
+        'hasClientSecret': has_secret,
+        'configured': oauth_available(),
+        'cloudConsoleUrl': 'https://console.cloud.google.com/apis/credentials',
+        'driveApiUrl': 'https://console.cloud.google.com/apis/library/drive.googleapis.com',
+    }
+
+
+def save_oauth_credentials(client_id, client_secret):
+    from database import get_conn, fetchone, execute, commit, close
+    client_id = (client_id or '').strip()
+    client_secret = (client_secret or '').strip()
+    if not client_id:
+        raise ValueError('Client ID không được để trống')
+    if not client_secret:
+        raise ValueError('Client Secret không được để trống')
+    conn = get_conn()
+    for key, val in (
+        ('drive_oauth_client_id', client_id),
+        ('drive_oauth_client_secret', client_secret),
+    ):
+        if fetchone(conn, 'SELECT key FROM ai_settings WHERE key = ?', (key,)):
+            execute(conn, 'UPDATE ai_settings SET value = ? WHERE key = ?', (val, key))
+        else:
+            execute(conn, 'INSERT INTO ai_settings (key, value) VALUES (?, ?)', (key, val))
+    commit(conn)
+    close(conn)
+    if not oauth_available():
+        raise ValueError('OAuth chưa đủ thông tin — kiểm tra lại Client ID và Secret')
 
 
 def _service_account_configured():
@@ -90,13 +158,13 @@ def get_oauth_connect_url(user_id):
 
     from google_auth_oauthlib.flow import Flow
 
-    c = _cfg()
+    creds = get_oauth_credentials()
     state = make_oauth_state(user_id)
     flow = Flow.from_client_config(
         {
             'web': {
-                'client_id': c['oauth_client_id'],
-                'client_secret': c['oauth_client_secret'],
+                'client_id': creds['client_id'],
+                'client_secret': creds['client_secret'],
                 'auth_uri': 'https://accounts.google.com/o/oauth2/auth',
                 'token_uri': 'https://oauth2.googleapis.com/token',
             }
@@ -104,7 +172,7 @@ def get_oauth_connect_url(user_id):
         scopes=DRIVE_SCOPES,
         state=state,
     )
-    flow.redirect_uri = c['oauth_redirect_uri']
+    flow.redirect_uri = creds['redirect_uri']
     auth_url, _ = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true',
@@ -132,12 +200,12 @@ def handle_oauth_callback(code, state):
     from database import get_conn, fetchone, execute, commit, close, sql_now
 
     user_id = verify_oauth_state(state)
-    c = _cfg()
+    creds = get_oauth_credentials()
     flow = Flow.from_client_config(
         {
             'web': {
-                'client_id': c['oauth_client_id'],
-                'client_secret': c['oauth_client_secret'],
+                'client_id': creds['client_id'],
+                'client_secret': creds['client_secret'],
                 'auth_uri': 'https://accounts.google.com/o/oauth2/auth',
                 'token_uri': 'https://oauth2.googleapis.com/token',
             }
@@ -145,7 +213,7 @@ def handle_oauth_callback(code, state):
         scopes=DRIVE_SCOPES,
         state=state,
     )
-    flow.redirect_uri = c['oauth_redirect_uri']
+    flow.redirect_uri = creds['redirect_uri']
     flow.fetch_token(code=code)
     creds = flow.credentials
     refresh = creds.refresh_token
@@ -200,13 +268,13 @@ def _load_oauth_credentials(admin_row):
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
 
-    c = _cfg()
+    oauth = get_oauth_credentials()
     creds = Credentials(
         token=None,
         refresh_token=admin_row['google_drive_refresh_token'],
         token_uri='https://oauth2.googleapis.com/token',
-        client_id=c['oauth_client_id'],
-        client_secret=c['oauth_client_secret'],
+        client_id=oauth['client_id'],
+        client_secret=oauth['client_secret'],
         scopes=DRIVE_SCOPES,
     )
     creds.refresh(Request())

@@ -65,6 +65,12 @@ services:
         sync: false
       - key: CORS_ORIGINS
         value: https://ai-pro-store.onrender.com
+      - key: GOOGLE_OAUTH_REDIRECT_URI
+        value: https://ai-pro-store.onrender.com/api/social/drive/callback
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_SECRET
+        sync: false
       - key: JWT_EXPIRE_HOURS
         value: "24"
       - key: LOCKOUT_ATTEMPTS

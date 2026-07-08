@@ -1147,11 +1147,73 @@ body.app-light .app-main {
     line-height: 1.4;
 }
 
-.social-drive-oauth-missing {
-    font-size: 0.72rem;
-    color: #b45309;
-    margin: 0.5rem 0 0;
-    line-height: 1.35;
+.social-drive-oauth-setup {
+    margin-bottom: 0.85rem;
+}
+
+.social-drive-setup-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--al-ink);
+    margin: 0 0 0.45rem;
+}
+
+.social-drive-setup-steps {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin: 0 0 0.65rem 1.1rem;
+    padding: 0;
+    line-height: 1.5;
+}
+
+.social-drive-setup-steps a {
+    color: #2563eb;
+    text-decoration: underline;
+}
+
+.social-drive-redirect-row {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.social-drive-redirect-input,
+.social-drive-config-input {
+    width: 100%;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.78rem;
+    background: #f8fafc;
+    color: #334155;
+    margin-bottom: 0.45rem;
+}
+
+.social-drive-redirect-input {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.social-drive-copy-btn {
+    flex-shrink: 0;
+    width: 2.4rem;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    background: #fff;
+    color: #2563eb;
+    cursor: pointer;
+}
+
+.social-drive-save-oauth-btn {
+    width: 100%;
+    margin-top: 0.25rem;
+    padding: 0.55rem 0.9rem;
+    border: none;
+    border-radius: 10px;
+    background: #0f766e;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
 }
 
 .social-post-actions {

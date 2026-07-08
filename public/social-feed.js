@@ -676,7 +676,7 @@
         }
     }
 
-    function renderDriveConnectCard(data) {
+    function renderDriveConnectCard(data, setup) {
         const card = document.getElementById('social-drive-connect-card');
         const isAdmin = window.currentUser?.role === 'admin';
         if (card) card.classList.toggle('hidden', !isAdmin);
@@ -685,12 +685,16 @@
         const disconnectedBox = document.getElementById('social-drive-disconnected');
         const emailEl = document.getElementById('social-drive-email');
         const atEl = document.getElementById('social-drive-connected-at');
-        const oauthMissing = document.getElementById('social-drive-oauth-missing');
         const connectBtn = document.getElementById('social-drive-connect-btn');
+        const setupBox = document.getElementById('social-drive-oauth-setup');
+        const readyHint = document.getElementById('social-drive-ready-hint');
+        const redirectInput = document.getElementById('social-drive-redirect-uri');
+        const clientIdInput = document.getElementById('social-drive-client-id');
 
         if (!isAdmin) return;
 
         const connected = !!data.connected;
+        const oauthReady = !!data.oauthAvailable;
         if (connectedBox) connectedBox.classList.toggle('hidden', !connected);
         if (disconnectedBox) disconnectedBox.classList.toggle('hidden', connected);
         if (emailEl) emailEl.textContent = data.googleEmail || 'Tài khoản Google';
@@ -700,17 +704,75 @@
                 : '';
             atEl.classList.toggle('hidden', !data.connectedAt);
         }
-        if (oauthMissing) oauthMissing.classList.toggle('hidden', data.oauthAvailable !== false);
-        if (connectBtn) connectBtn.disabled = data.oauthAvailable === false;
+        if (setupBox) setupBox.classList.toggle('hidden', oauthReady);
+        if (readyHint) readyHint.classList.toggle('hidden', !oauthReady);
+        if (connectBtn) {
+            connectBtn.classList.toggle('hidden', !oauthReady);
+            connectBtn.disabled = !oauthReady;
+        }
+        if (setup && redirectInput) redirectInput.value = setup.redirectUri || '';
+        if (setup && clientIdInput && setup.clientId) clientIdInput.value = setup.clientId;
+    }
+
+    async function loadOAuthSetup() {
+        try {
+            return await socialApi('/social/drive/oauth-setup');
+        } catch (_) {
+            return {
+                redirectUri: 'https://ai-pro-store.onrender.com/api/social/drive/callback',
+                clientId: '',
+                hasClientSecret: false,
+                configured: false,
+            };
+        }
+    }
+
+    async function saveOAuthConfig() {
+        const clientId = document.getElementById('social-drive-client-id')?.value.trim() || '';
+        const clientSecret = document.getElementById('social-drive-client-secret')?.value.trim() || '';
+        const btn = document.getElementById('social-drive-save-oauth');
+        if (!clientId || !clientSecret) {
+            window.toast?.('Nhập đủ Client ID và Client Secret từ Google Cloud', true);
+            return;
+        }
+        if (btn) btn.disabled = true;
+        try {
+            const res = await socialApi('/social/drive/oauth-setup', {
+                method: 'POST',
+                body: JSON.stringify({ clientId, clientSecret }),
+            });
+            document.getElementById('social-drive-client-secret').value = '';
+            window.toast?.('Đã lưu OAuth — bấm Kết nối Google Drive!');
+            await loadDriveStatus();
+            if (res.setup) renderDriveConnectCard({ oauthAvailable: true, connected: false, isAdmin: true }, res.setup);
+        } catch (err) {
+            window.toast?.(err.message || 'Không lưu được OAuth', true);
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    function copyRedirectUri() {
+        const input = document.getElementById('social-drive-redirect-uri');
+        const text = input?.value || '';
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => {
+            window.toast?.('Đã sao chép Redirect URI!');
+        }).catch(() => {
+            window.toast?.('Không sao chép được — chọn và copy thủ công', true);
+        });
     }
 
     async function loadDriveStatus() {
         const hint = document.getElementById('social-drive-hint');
         const info = document.getElementById('social-drive-info');
         try {
-            const data = await socialApi('/social/drive/status');
+            const [data, setup] = await Promise.all([
+                socialApi('/social/drive/status'),
+                window.currentUser?.role === 'admin' ? loadOAuthSetup() : Promise.resolve(null),
+            ]);
             driveAdminBackup = !!data.configured;
-            renderDriveConnectCard(data);
+            renderDriveConnectCard(data, setup);
             const driveEmail = data.googleEmail || data.backupGoogleEmail;
             if (info && data.method === 'oauth' && driveEmail) {
                 info.innerHTML = '<i class="fab fa-google-drive mr-1"></i>Ảnh đăng được sao lưu tự động lên <strong>Drive ' + esc(driveEmail) + '</strong>.';
@@ -719,7 +781,8 @@
             }
         } catch (_) {
             driveAdminBackup = false;
-            renderDriveConnectCard({ oauthAvailable: false });
+            const setup = window.currentUser?.role === 'admin' ? await loadOAuthSetup() : null;
+            renderDriveConnectCard({ oauthAvailable: false }, setup);
         }
         if (hint) hint.classList.toggle('hidden', driveAdminBackup);
         if (info) info.classList.toggle('hidden', !driveAdminBackup);
@@ -797,6 +860,8 @@
     function initDriveConnect() {
         document.getElementById('social-drive-connect-btn')?.addEventListener('click', connectGoogleDrive);
         document.getElementById('social-drive-disconnect')?.addEventListener('click', disconnectGoogleDrive);
+        document.getElementById('social-drive-save-oauth')?.addEventListener('click', saveOAuthConfig);
+        document.getElementById('social-drive-copy-redirect')?.addEventListener('click', copyRedirectUri);
     }
 
     function init() {
