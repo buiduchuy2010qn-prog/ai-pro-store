@@ -2393,7 +2393,7 @@ def social_feed():
 def social_drive_status():
     return jsonify({
         'configured': drive.is_configured(),
-        'folderId': GOOGLE_DRIVE.get('folder_id') or None,
+        'adminBackup': True,
     })
 
 
@@ -2403,7 +2403,6 @@ def social_create_post():
     d = request.get_json(silent=True) or {}
     caption = sec.sanitize_string(d.get('caption', ''), max_len=500)
     image = d.get('imageData') or d.get('image_data') or ''
-    sync_drive = bool(d.get('syncDrive') or d.get('sync_drive'))
     if not _valid_social_image(image):
         return jsonify({'error': 'Ảnh không hợp lệ hoặc quá lớn (tối đa ~500KB).'}), 400
     conn = db.get_conn()
@@ -2412,21 +2411,19 @@ def social_create_post():
         (request.user['id'], caption, image))
     drive_file_id = None
     drive_error = None
-    if sync_drive:
-        if drive.is_configured():
-            drive_file_id, drive_error = drive.upload_post_image(
-                image, request.user['email'], pid, caption)
-            if drive_file_id:
-                db.execute(conn, 'UPDATE social_posts SET drive_file_id = ? WHERE id = ?',
-                           (drive_file_id, pid))
-        else:
-            drive_error = 'Google Drive chưa cấu hình trên server'
+    # Tự động sao lưu lên Drive admin (quản lý ảnh mọi người)
+    if drive.is_configured():
+        drive_file_id, drive_error = drive.upload_post_image(
+            image, request.user['email'], pid, caption)
+        if drive_file_id:
+            db.execute(conn, 'UPDATE social_posts SET drive_file_id = ? WHERE id = ?',
+                       (drive_file_id, pid))
     db.commit(conn)
     db.close(conn)
     resp = {'ok': True, 'postId': pid, 'driveSynced': bool(drive_file_id)}
     if drive_file_id:
         resp['driveFileId'] = drive_file_id
-    if drive_error and sync_drive:
+    if drive_error:
         resp['driveWarning'] = drive_error
     return jsonify(resp), 201
 

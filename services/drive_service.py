@@ -1,4 +1,4 @@
-"""Đồng bộ ảnh MXH lên Google Drive (Service Account)."""
+"""Sao lưu ảnh MXH lên Google Drive admin (Service Account — quản lý ảnh mọi user)."""
 import base64
 import json
 import os

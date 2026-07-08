@@ -8,8 +8,7 @@
     const PHOTO_QUALITY = 0.55;
     const MAX_IMAGE_CHARS = 520000;
     const LS_SAVE_MODE = 'social_save_mode';
-    const LS_SYNC_DRIVE = 'social_sync_drive';
-    let driveAvailable = false;
+    let driveAdminBackup = false;
 
     let cameraStream = null;
     let pendingImage = null;
@@ -346,11 +345,10 @@
         const imageToPost = pendingImage;
         const btn = document.getElementById('social-post-btn');
         if (btn) btn.disabled = true;
-        const syncDrive = document.getElementById('social-sync-drive')?.checked && driveAvailable;
         try {
             const res = await socialApi('/social/posts', {
                 method: 'POST',
-                body: JSON.stringify({ caption, imageData: imageToPost, syncDrive }),
+                body: JSON.stringify({ caption, imageData: imageToPost }),
             });
             if (shouldSaveWhen('post')) {
                 saveImageToDevice(imageToPost, 'dang');
@@ -358,9 +356,9 @@
             document.getElementById('social-caption').value = '';
             clearPreview();
             if (res.driveSynced) {
-                window.toast?.('Đã đăng ảnh và đồng bộ lên Google Drive!');
-            } else if (res.driveWarning && syncDrive) {
-                window.toast?.('Đã đăng ảnh nhưng Drive: ' + res.driveWarning, true, 5000);
+                window.toast?.('Đã đăng ảnh — admin đã sao lưu lên Drive!');
+            } else if (res.driveWarning && driveAdminBackup) {
+                window.toast?.('Đã đăng ảnh nhưng Drive admin: ' + res.driveWarning, true, 5000);
             } else {
                 window.toast?.('Đã đăng ảnh lên bảng tin!');
             }
@@ -635,35 +633,19 @@
             window.toast?.(labels[sel.value] || 'Đã đổi chế độ lưu ảnh', false, 2800);
         });
 
-        const driveCb = document.getElementById('social-sync-drive');
-        if (driveCb) {
-            driveCb.checked = localStorage.getItem(LS_SYNC_DRIVE) === '1';
-            driveCb.addEventListener('change', () => {
-                localStorage.setItem(LS_SYNC_DRIVE, driveCb.checked ? '1' : '0');
-                window.toast?.(driveCb.checked
-                    ? 'Sẽ đồng bộ ảnh lên Google Drive khi đăng'
-                    : 'Tắt đồng bộ Google Drive', false, 2500);
-            });
-        }
     }
 
     async function loadDriveStatus() {
         const hint = document.getElementById('social-drive-hint');
-        const wrap = document.getElementById('social-drive-sync-wrap');
-        const cb = document.getElementById('social-sync-drive');
+        const info = document.getElementById('social-drive-info');
         try {
             const data = await socialApi('/social/drive/status');
-            driveAvailable = !!data.configured;
+            driveAdminBackup = !!data.configured;
         } catch (_) {
-            driveAvailable = false;
+            driveAdminBackup = false;
         }
-        if (hint) hint.classList.toggle('hidden', driveAvailable);
-        if (wrap) wrap.classList.toggle('is-disabled', !driveAvailable);
-        if (cb) {
-            cb.disabled = !driveAvailable;
-            if (!driveAvailable) cb.checked = false;
-            else cb.checked = localStorage.getItem(LS_SYNC_DRIVE) === '1';
-        }
+        if (hint) hint.classList.toggle('hidden', driveAdminBackup);
+        if (info) info.classList.toggle('hidden', !driveAdminBackup);
     }
 
     function toggleHistoryPanel() {

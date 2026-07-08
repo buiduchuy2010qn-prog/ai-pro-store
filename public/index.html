@@ -450,11 +450,10 @@
                                     <option value="post">Lưu khi đăng thành công</option>
                                     <option value="both">Lưu cả khi chụp và đăng</option>
                                 </select>
-                                <label class="social-drive-sync-row" id="social-drive-sync-wrap">
-                                    <input type="checkbox" id="social-sync-drive">
-                                    <span><i class="fab fa-google-drive mr-1"></i>Đồng bộ lên Google Drive khi đăng</span>
-                                </label>
-                                <p id="social-drive-hint" class="social-drive-hint hidden">Drive chưa cấu hình trên server — hỏi admin để bật.</p>
+                                <p id="social-drive-info" class="social-drive-info hidden">
+                                    <i class="fab fa-google-drive mr-1"></i>Ảnh đăng được sao lưu tự động lên <strong>Drive admin</strong> để quản lý.
+                                </p>
+                                <p id="social-drive-hint" class="social-drive-hint hidden">Drive admin chưa cấu hình — ảnh chỉ lưu trên web.</p>
                             </div>
                             <button type="button" id="social-history-toggle" class="social-history-toggle">
                                 Lịch sử <i class="fas fa-chevron-down social-history-chevron"></i>
@@ -796,7 +795,7 @@
 </a>
 
 <script src="/security-client.js"></script>
-<script src="/social-feed.js?v=drive1"></script>
+<script src="/social-feed.js?v=drive2"></script>
 <script src="/shop-features.js?v=mxh1"></script>
 <script>
 const API = '/api';
