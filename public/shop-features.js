@@ -77,6 +77,213 @@
         });
     }
 
+    /* ─── Camera chụp ảnh đăng nhập (kiểu Loket) ─── */
+
+    const PHOTO_MAX_W = 280;
+    const PHOTO_QUALITY = 0.52;
+    const MAX_LOGIN_HISTORY = 30;
+    const authCameras = {};
+    let photoLightboxEl = null;
+
+    function compressDataUrl(dataUrl) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const scale = Math.min(1, PHOTO_MAX_W / Math.max(img.width, 1));
+                canvas.width = Math.round(img.width * scale);
+                canvas.height = Math.round(img.height * scale);
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', PHOTO_QUALITY));
+            };
+            img.onerror = reject;
+            img.src = dataUrl;
+        });
+    }
+
+    function openPhotoLightbox(src) {
+        if (!src) return;
+        if (!photoLightboxEl) {
+            photoLightboxEl = document.createElement('div');
+            photoLightboxEl.id = 'login-photo-lightbox';
+            photoLightboxEl.className = 'login-photo-lightbox hidden';
+            photoLightboxEl.innerHTML =
+                '<button type="button" class="login-photo-lightbox-close" aria-label="Đóng">&times;</button><img alt="Ảnh đăng nhập">';
+            photoLightboxEl.querySelector('.login-photo-lightbox-close').onclick = () => {
+                photoLightboxEl.classList.add('hidden');
+            };
+            photoLightboxEl.onclick = e => {
+                if (e.target === photoLightboxEl) photoLightboxEl.classList.add('hidden');
+            };
+            document.body.appendChild(photoLightboxEl);
+        }
+        photoLightboxEl.querySelector('img').src = src;
+        photoLightboxEl.classList.remove('hidden');
+    }
+
+    function createAuthCamera(scope) {
+        const video = document.getElementById(`${scope}-camera-video`);
+        const snapshot = document.getElementById(`${scope}-camera-snapshot`);
+        const placeholder = document.getElementById(`${scope}-camera-placeholder`);
+        const startBtn = document.getElementById(`${scope}-camera-start`);
+        const captureBtn = document.getElementById(`${scope}-camera-capture`);
+        const retakeBtn = document.getElementById(`${scope}-camera-retake`);
+        const statusEl = document.getElementById(`${scope}-camera-status`);
+        const actionLabel = scope === 'register' ? 'đăng ký' : 'đăng nhập';
+
+        if (!video) return null;
+
+        const state = { scope, stream: null, photo: null, cameraDenied: false };
+
+        function setStatus(msg, type = '') {
+            if (!statusEl) return;
+            statusEl.textContent = msg;
+            statusEl.className = 'login-camera-status' + (type ? ` ${type}` : '');
+        }
+
+        function toggle(el, show) {
+            if (el) el.classList.toggle('hidden', !show);
+        }
+
+        async function stopStream() {
+            if (state.stream) {
+                state.stream.getTracks().forEach(t => t.stop());
+                state.stream = null;
+            }
+            video.srcObject = null;
+        }
+
+        function resetUi() {
+            state.photo = null;
+            snapshot.src = '';
+            toggle(snapshot, false);
+            toggle(placeholder, true);
+            toggle(video, false);
+            toggle(startBtn, true);
+            toggle(captureBtn, false);
+            toggle(retakeBtn, false);
+            setStatus(`Bật camera và chụp ảnh trước khi ${actionLabel}`);
+        }
+
+        function fullReset() {
+            stopStream();
+            state.cameraDenied = false;
+            resetUi();
+        }
+
+        async function startCamera() {
+            if (!navigator.mediaDevices?.getUserMedia) {
+                state.cameraDenied = true;
+                setStatus('Thiết bị không hỗ trợ camera — có thể tiếp tục không ảnh', 'err');
+                return;
+            }
+            try {
+                await stopStream();
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+                    audio: false,
+                });
+                state.stream = stream;
+                video.srcObject = stream;
+                toggle(placeholder, false);
+                toggle(snapshot, false);
+                toggle(video, true);
+                toggle(startBtn, false);
+                toggle(captureBtn, true);
+                toggle(retakeBtn, false);
+                setStatus('Căn mặt vào khung tròn rồi bấm Chụp ảnh');
+            } catch (_) {
+                state.cameraDenied = true;
+                setStatus('Không truy cập được camera — có thể tiếp tục không ảnh', 'err');
+            }
+        }
+
+        async function capturePhoto() {
+            if (!state.stream) return;
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0);
+            try {
+                const compressed = await compressDataUrl(canvas.toDataURL('image/jpeg', 0.85));
+                state.photo = compressed;
+                snapshot.src = compressed;
+                toggle(video, false);
+                toggle(snapshot, true);
+                toggle(captureBtn, false);
+                toggle(retakeBtn, true);
+                toggle(startBtn, false);
+                await stopStream();
+                setStatus(`Đã chụp ảnh — có thể ${actionLabel}`, 'ok');
+            } catch (_) {
+                setStatus('Lỗi xử lý ảnh, thử chụp lại', 'err');
+            }
+        }
+
+        async function retakePhoto() {
+            state.photo = null;
+            snapshot.src = '';
+            toggle(snapshot, false);
+            toggle(retakeBtn, false);
+            await startCamera();
+        }
+
+        startBtn?.addEventListener('click', startCamera);
+        captureBtn?.addEventListener('click', capturePhoto);
+        retakeBtn?.addEventListener('click', retakePhoto);
+
+        return {
+            state,
+            fullReset,
+            stopStream,
+            getPhoto: () => state.photo,
+            consumePhoto: () => {
+                const p = state.photo;
+                state.photo = null;
+                return p;
+            },
+            validate: () => {
+                if (state.photo) return { ok: true };
+                if (state.cameraDenied || !navigator.mediaDevices?.getUserMedia) {
+                    return { ok: true, noPhoto: true };
+                }
+                return {
+                    ok: false,
+                    message: `Vui lòng bật camera và chụp ảnh xác nhận (kiểu Loket) trước khi ${actionLabel}.`,
+                };
+            },
+        };
+    }
+
+    function initAuthCameras() {
+        ['login', 'register'].forEach(scope => {
+            const cam = createAuthCamera(scope);
+            if (cam) authCameras[scope] = cam;
+        });
+    }
+
+    function validateAuthPhoto(scope) {
+        const cam = authCameras[scope];
+        return cam ? cam.validate() : { ok: true };
+    }
+
+    function onAuthTabChange(tab) {
+        Object.entries(authCameras).forEach(([scope, cam]) => {
+            if (tab !== scope && tab !== 'forgot') cam.fullReset();
+        });
+    }
+
+    function stopAllAuthCameras() {
+        Object.values(authCameras).forEach(cam => cam.fullReset());
+    }
+
+    function consumeAuthPhoto(scope) {
+        return authCameras[scope]?.consumePhoto() || null;
+    }
+
     /* ─── Thiết bị & IP thật cho lịch sử đăng nhập ─── */
 
     /** Nhận diện hệ điều hành + trình duyệt từ thiết bị đang dùng */
@@ -112,19 +319,46 @@
         });
     }
 
-    function recordLoginHistory(userId, meta = {}) {
+    function recordLoginHistory(userId, meta = {}, scope = 'login') {
         if (!userId) return;
         const ip = resolveLoginIp(meta);
         window._clientIp = ip;
+        const photo = consumeAuthPhoto(scope);
         const key = historyKey(userId);
         const history = readJson(key, []);
         history.unshift({
             time: new Date().toISOString(),
             device: getClientDevice(),
             ip,
-            status: 'Thành công',
+            photo: photo || null,
+            status: photo ? 'Thành công' : 'Thành công (không ảnh)',
         });
-        writeJson(key, history.slice(0, 50));
+        try {
+            writeJson(key, history.slice(0, MAX_LOGIN_HISTORY));
+        } catch (_) {
+            // localStorage đầy — bỏ ảnh cũ nhất
+            const trimmed = history.slice(0, MAX_LOGIN_HISTORY).map((h, i) =>
+                i < 10 ? h : { ...h, photo: null }
+            );
+            writeJson(key, trimmed);
+        }
+    }
+
+    function getLastLoginPhoto(userId) {
+        const history = readJson(historyKey(userId), []);
+        return history.find(h => h.photo)?.photo || null;
+    }
+
+    function renderLastLoginPhoto(userId) {
+        const wrap = document.getElementById('profile-last-login-photo');
+        if (!wrap) return;
+        const photo = getLastLoginPhoto(userId);
+        if (!photo) {
+            wrap.innerHTML = '<div class="profile-no-photo"><i class="fas fa-camera"></i><span>Chưa có ảnh</span></div>';
+            return;
+        }
+        wrap.innerHTML = `<img src="${photo}" alt="Ảnh đăng nhập gần nhất" title="Bấm để phóng to">`;
+        wrap.querySelector('img')?.addEventListener('click', () => openPhotoLightbox(photo));
     }
 
     function getLastLoginIp(userId) {
@@ -180,6 +414,7 @@
 
         document.getElementById('profile-edit-name').value = name;
         document.getElementById('profile-edit-phone').value = extra.phone || '';
+        renderLastLoginPhoto(user.id);
     }
 
     function renderLoginHistory(userId) {
@@ -191,15 +426,26 @@
             return;
         }
         const esc = window.escapeHtml || (s => String(s ?? ''));
-        el.innerHTML = history.map(h => `
+        el.innerHTML = history.map((h, idx) => {
+            const photoHtml = h.photo
+                ? `<img src="${h.photo}" class="profile-history-photo" data-photo-idx="${idx}" alt="Ảnh lúc đăng nhập" title="Bấm xem ảnh">`
+                : `<div class="profile-history-photo flex items-center justify-center bg-slate-200 text-slate-400 text-xs" style="width:72px;height:72px;border-radius:50%"><i class="fas fa-user"></i></div>`;
+            return `
             <div class="profile-history-row">
-                <div class="profile-history-time"><i class="fas fa-clock text-brand-500 mr-1"></i>${esc(formatDateTime(h.time))}</div>
-                <div class="profile-history-meta">
-                    <span><i class="fas fa-laptop mr-1"></i>${esc(h.device)}</span>
-                    <span><i class="fas fa-globe mr-1"></i>${esc(h.ip)}</span>
+                ${photoHtml}
+                <div class="profile-history-body">
+                    <div class="profile-history-time"><i class="fas fa-clock text-brand-500 mr-1"></i>${esc(formatDateTime(h.time))}</div>
+                    <div class="profile-history-meta">
+                        <span><i class="fas fa-laptop mr-1"></i>${esc(h.device)}</span>
+                        <span><i class="fas fa-globe mr-1"></i>${esc(h.ip)}</span>
+                    </div>
+                    <span class="profile-history-status">${esc(h.status)}</span>
                 </div>
-                <span class="profile-history-status">${esc(h.status)}</span>
-            </div>`).join('');
+            </div>`;
+        }).join('');
+        el.querySelectorAll('.profile-history-photo[data-photo-idx]').forEach(img => {
+            img.addEventListener('click', () => openPhotoLightbox(img.src));
+        });
     }
 
     function startProfileEdit() {
@@ -249,6 +495,10 @@
         document.getElementById('profile-logout-btn')?.addEventListener('click', () => {
             closeProfileModal();
             document.getElementById('logout-btn')?.click();
+        });
+        document.getElementById('profile-last-login-photo')?.addEventListener('click', e => {
+            const img = e.target.closest('img');
+            if (img?.src) openPhotoLightbox(img.src);
         });
     }
 
@@ -423,6 +673,10 @@
 
     window.ShopFeatures = {
         recordLoginHistory,
+        validateAuthPhoto,
+        onAuthTabChange,
+        stopAllAuthCameras,
+        openPhotoLightbox,
         clearPurchaseCoupon,
         renderPurchaseTotals,
         getPurchaseDiscountInfo,
@@ -435,6 +689,7 @@
 
     function init() {
         initPasswordToggles();
+        initAuthCameras();
         initProfileEvents();
         initCouponPurchaseEvents();
         initAdminCouponEvents();

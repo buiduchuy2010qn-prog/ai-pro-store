@@ -59,6 +59,24 @@
                 <div class="text-right">
                     <button type="button" id="forgot-link" class="auth-link">Quên mật khẩu</button>
                 </div>
+                <!-- Chụp ảnh xác nhận đăng nhập (kiểu Loket) -->
+                <div id="login-camera-section" class="login-camera-box" data-camera-scope="login">
+                    <div class="login-camera-label"><i class="fas fa-camera mr-1"></i>Chụp ảnh xác nhận đăng nhập</div>
+                    <div class="login-camera-frame">
+                        <video id="login-camera-video" class="login-camera-video hidden" autoplay playsinline muted></video>
+                        <img id="login-camera-snapshot" class="login-camera-snapshot hidden" alt="Ảnh đăng nhập">
+                        <div id="login-camera-placeholder" class="login-camera-placeholder">
+                            <i class="fas fa-user-circle"></i>
+                            <span>Nhìn thẳng vào camera</span>
+                        </div>
+                    </div>
+                    <div class="login-camera-actions">
+                        <button type="button" id="login-camera-start" class="login-camera-btn outline"><i class="fas fa-video mr-1"></i>Bật camera</button>
+                        <button type="button" id="login-camera-capture" class="login-camera-btn primary hidden"><i class="fas fa-camera mr-1"></i>Chụp ảnh</button>
+                        <button type="button" id="login-camera-retake" class="login-camera-btn outline hidden"><i class="fas fa-redo mr-1"></i>Chụp lại</button>
+                    </div>
+                    <p id="login-camera-status" class="login-camera-status">Bật camera và chụp ảnh trước khi đăng nhập</p>
+                </div>
                 <div id="turnstile-login" class="flex justify-center my-1"></div>
                 <p id="login-error" class="auth-error hidden"></p>
                 <button type="submit" class="auth-submit"><i class="fas fa-sign-in-alt mr-2"></i>Đăng nhập</button>
@@ -82,6 +100,23 @@
                     <i class="fas fa-lock auth-field-icon"></i>
                     <input id="register-confirmPassword" type="password" required minlength="8" autocomplete="new-password" placeholder="Nhập lại mật khẩu" class="auth-input auth-input-password">
                     <button type="button" class="auth-toggle-password" data-toggle-password="register-confirmPassword" aria-label="Hiện mật khẩu"><i class="fas fa-eye"></i></button>
+                </div>
+                <div id="register-camera-section" class="login-camera-box" data-camera-scope="register">
+                    <div class="login-camera-label"><i class="fas fa-camera mr-1"></i>Chụp ảnh xác nhận đăng ký</div>
+                    <div class="login-camera-frame">
+                        <video id="register-camera-video" class="login-camera-video hidden" autoplay playsinline muted></video>
+                        <img id="register-camera-snapshot" class="login-camera-snapshot hidden" alt="Ảnh đăng ký">
+                        <div id="register-camera-placeholder" class="login-camera-placeholder">
+                            <i class="fas fa-user-circle"></i>
+                            <span>Nhìn thẳng vào camera</span>
+                        </div>
+                    </div>
+                    <div class="login-camera-actions">
+                        <button type="button" id="register-camera-start" class="login-camera-btn outline"><i class="fas fa-video mr-1"></i>Bật camera</button>
+                        <button type="button" id="register-camera-capture" class="login-camera-btn primary hidden"><i class="fas fa-camera mr-1"></i>Chụp ảnh</button>
+                        <button type="button" id="register-camera-retake" class="login-camera-btn outline hidden"><i class="fas fa-redo mr-1"></i>Chụp lại</button>
+                    </div>
+                    <p id="register-camera-status" class="login-camera-status">Bật camera và chụp ảnh trước khi đăng ký</p>
                 </div>
                 <div id="turnstile-register" class="flex justify-center my-1"></div>
                 <p id="register-error" class="auth-error hidden"></p>
@@ -583,6 +618,12 @@
         <div class="profile-modal-body pretty-scrollbar">
             <div id="profile-panel-info">
                 <div id="profile-view-mode" class="profile-info-grid">
+                    <div class="profile-info-item full profile-login-photo-wrap">
+                        <div class="profile-info-label">Ảnh đăng nhập gần nhất</div>
+                        <div id="profile-last-login-photo" class="profile-last-login-photo">
+                            <div class="profile-no-photo"><i class="fas fa-camera"></i><span>Chưa có ảnh</span></div>
+                        </div>
+                    </div>
                     <div class="profile-info-item full">
                         <div class="profile-info-label">Họ và tên</div>
                         <div id="profile-display-name" class="profile-info-value">—</div>
@@ -889,9 +930,11 @@ function showAuthTab(tab) {
         if (isLogin) SecurityClient.renderTurnstile('turnstile-login');
         else SecurityClient.renderTurnstile('turnstile-register');
     }
+    ShopFeatures?.onAuthTabChange?.(tab);
 }
 
 function showForgotPanel(step = 1) {
+    ShopFeatures?.onAuthTabChange?.('forgot');
     document.getElementById('auth-tabs').classList.add('hidden');
     document.getElementById('login-form').classList.add('hidden');
     document.getElementById('register-form').classList.add('hidden');
@@ -908,6 +951,7 @@ function showAuth() {
     stopPolling();
     stopSupportPolling();
     stopOrderSupportPolling();
+    ShopFeatures?.stopAllAuthCameras?.();
     setCurrentUser(null);
     forgotEmail = '';
     forgotOtp = '';
@@ -2052,6 +2096,12 @@ document.getElementById('forgot-back').onclick = () => showAuthTab('login');
 document.getElementById('login-form').onsubmit = async e => {
     e.preventDefault();
     const errEl = document.getElementById('login-error');
+    const photoCheck = ShopFeatures?.validateAuthPhoto?.('login');
+    if (photoCheck && !photoCheck.ok) {
+        errEl.textContent = photoCheck.message;
+        errEl.classList.remove('hidden');
+        return;
+    }
     try {
         const turnstileToken = SecurityClient ? SecurityClient.getTurnstileResponse('turnstile-login') : '';
         const r = await api('/auth/login', {
@@ -2065,8 +2115,9 @@ document.getElementById('login-form').onsubmit = async e => {
         setToken(r.token);
         setCurrentUser(r.user);
         if (r.loginMeta?.ip) window._clientIp = r.loginMeta.ip;
-        ShopFeatures?.recordLoginHistory?.(currentUser.id, r.loginMeta);
+        ShopFeatures?.recordLoginHistory?.(currentUser.id, r.loginMeta, 'login');
         errEl.classList.add('hidden');
+        ShopFeatures?.stopAllAuthCameras?.();
         await showApp();
         toast('Đăng nhập thành công!');
     } catch (err) {
@@ -2092,6 +2143,12 @@ document.getElementById('register-form').onsubmit = async e => {
         errEl.classList.remove('hidden');
         return;
     }
+    const photoCheck = ShopFeatures?.validateAuthPhoto?.('register');
+    if (photoCheck && !photoCheck.ok) {
+        errEl.textContent = photoCheck.message;
+        errEl.classList.remove('hidden');
+        return;
+    }
     try {
         const turnstileToken = SecurityClient ? SecurityClient.getTurnstileResponse('turnstile-register') : '';
         const r = await api('/auth/register', {
@@ -2107,8 +2164,9 @@ document.getElementById('register-form').onsubmit = async e => {
         setToken(r.token);
         setCurrentUser(r.user);
         if (r.loginMeta?.ip) window._clientIp = r.loginMeta.ip;
-        ShopFeatures?.recordLoginHistory?.(currentUser.id, r.loginMeta);
+        ShopFeatures?.recordLoginHistory?.(currentUser.id, r.loginMeta, 'register');
         errEl.classList.add('hidden');
+        ShopFeatures?.stopAllAuthCameras?.();
         await showApp();
         toast('Đăng ký thành công!');
     } catch (err) {
