@@ -218,22 +218,30 @@ def sanitize_password(pw):
     return pw
 
 
-def scan_payload(obj, depth=0):
+IMAGE_PAYLOAD_KEYS = frozenset({'imageData', 'image_data', 'image', 'photo', 'snapshot'})
+MAX_IMAGE_STRING_LEN = 800_000
+
+
+def scan_payload(obj, depth=0, parent_key=None):
     if depth > 8:
         raise ValueError('Payload quá sâu.')
     if isinstance(obj, dict):
         for k, v in obj.items():
             if isinstance(k, str):
                 sanitize_string(k, max_len=120)
-            scan_payload(v, depth + 1)
+            key = k if isinstance(k, str) else None
+            scan_payload(v, depth + 1, parent_key=key)
     elif isinstance(obj, list):
         if len(obj) > 200:
             raise ValueError('Danh sách quá dài.')
         for item in obj:
-            scan_payload(item, depth + 1)
+            scan_payload(item, depth + 1, parent_key=parent_key)
     elif isinstance(obj, str):
-        if len(obj) > 20000:
+        limit = MAX_IMAGE_STRING_LEN if parent_key in IMAGE_PAYLOAD_KEYS else 20000
+        if len(obj) > limit:
             raise ValueError('Chuỗi quá dài.')
+        if parent_key in IMAGE_PAYLOAD_KEYS and obj.startswith('data:image/'):
+            return
         for pat in DANGEROUS_PATTERNS:
             if pat.search(obj):
                 raise ValueError('Payload chứa nội dung nguy hiểm.')

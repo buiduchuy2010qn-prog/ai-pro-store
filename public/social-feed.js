@@ -4,9 +4,9 @@
 (function () {
     'use strict';
 
-    const PHOTO_MAX_W = 720;
-    const PHOTO_QUALITY = 0.62;
-    const MAX_IMAGE_CHARS = 680000;
+    const PHOTO_MAX_W = 640;
+    const PHOTO_QUALITY = 0.55;
+    const MAX_IMAGE_CHARS = 520000;
 
     let cameraStream = null;
     let pendingImage = null;
@@ -59,16 +59,34 @@
         return new Promise((resolve, reject) => {
             const img = new Image();
             img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const scale = Math.min(1, PHOTO_MAX_W / Math.max(img.width, 1));
-                canvas.width = Math.round(img.width * scale);
-                canvas.height = Math.round(img.height * scale);
-                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                let maxW = PHOTO_MAX_W;
                 let q = PHOTO_QUALITY;
-                let out = canvas.toDataURL('image/jpeg', q);
-                while (out.length > MAX_IMAGE_CHARS && q > 0.35) {
-                    q -= 0.08;
-                    out = canvas.toDataURL('image/jpeg', q);
+                let out = '';
+
+                const render = () => {
+                    const canvas = document.createElement('canvas');
+                    const scale = Math.min(1, maxW / Math.max(img.width, 1));
+                    canvas.width = Math.max(1, Math.round(img.width * scale));
+                    canvas.height = Math.max(1, Math.round(img.height * scale));
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    return canvas.toDataURL('image/jpeg', q);
+                };
+
+                out = render();
+                while (out.length > MAX_IMAGE_CHARS) {
+                    if (q > 0.32) {
+                        q -= 0.07;
+                    } else if (maxW > 360) {
+                        maxW = Math.round(maxW * 0.82);
+                        q = PHOTO_QUALITY;
+                    } else {
+                        break;
+                    }
+                    out = render();
+                }
+                if (out.length > MAX_IMAGE_CHARS) {
+                    reject(new Error('Ảnh vẫn quá lớn sau khi nén — thử chụp lại hoặc chọn ảnh nhỏ hơn'));
+                    return;
                 }
                 resolve(out);
             };
@@ -283,6 +301,10 @@
         if (!user) return;
         if (!pendingImage) {
             window.toast?.('Chọn hoặc chụp ảnh trước', true);
+            return;
+        }
+        if (pendingImage.length > MAX_IMAGE_CHARS) {
+            window.toast?.('Ảnh quá lớn — bấm Chụp lại hoặc chọn ảnh khác', true);
             return;
         }
         const caption = document.getElementById('social-caption')?.value.trim() || '';
