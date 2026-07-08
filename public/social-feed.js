@@ -64,19 +64,25 @@
         el.className = 'social-composer-status' + (type ? ' ' + type : '');
     }
 
+    function updateShutterState() {
+        const shutter = document.getElementById('social-shutter-btn');
+        if (!shutter) return;
+        shutter.classList.toggle('is-live', !!cameraStream && !pendingImage);
+        shutter.classList.toggle('is-captured', !!pendingImage);
+    }
+
     function showPreview(src) {
         pendingImage = src;
         const preview = document.getElementById('social-preview');
         const placeholder = document.getElementById('social-preview-placeholder');
-        const postBtn = document.getElementById('social-post-btn');
         if (preview) {
             preview.src = src;
             preview.classList.remove('hidden');
         }
         placeholder?.classList.add('hidden');
-        postBtn?.classList.remove('hidden');
-        document.getElementById('social-retake-btn')?.classList.remove('hidden');
-        setComposerStatus('Ảnh sẵn sàng — thêm chú thích và bấm Đăng bài', 'ok');
+        document.getElementById('social-post-row')?.classList.remove('hidden');
+        updateShutterState();
+        setComposerStatus('Ảnh đã chụp — bấm Gửi ảnh hoặc nút ↻ để chụp lại', 'ok');
     }
 
     function clearPreview() {
@@ -88,9 +94,9 @@
             preview.classList.add('hidden');
         }
         placeholder?.classList.remove('hidden');
-        document.getElementById('social-post-btn')?.classList.add('hidden');
-        document.getElementById('social-retake-btn')?.classList.add('hidden');
-        setComposerStatus('Bấm Camera bên dưới hoặc Chọn ảnh bên phải');
+        document.getElementById('social-post-row')?.classList.add('hidden');
+        updateShutterState();
+        setComposerStatus(cameraStream ? 'Căn khung hình rồi bấm nút tròn' : 'Chụp ảnh gửi cho bạn bè');
     }
 
     async function stopCamera() {
@@ -103,8 +109,10 @@
             video.srcObject = null;
             video.classList.add('hidden');
         }
-        document.getElementById('social-camera-start')?.classList.remove('hidden');
-        document.getElementById('social-camera-capture')?.classList.add('hidden');
+        if (!pendingImage) {
+            document.getElementById('social-preview-placeholder')?.classList.remove('hidden');
+        }
+        updateShutterState();
     }
 
     function cameraErrorMessage(err) {
@@ -163,9 +171,8 @@
             video.classList.remove('hidden');
             document.getElementById('social-preview-placeholder')?.classList.add('hidden');
             document.getElementById('social-preview')?.classList.add('hidden');
-            document.getElementById('social-camera-start')?.classList.add('hidden');
-            document.getElementById('social-camera-capture')?.classList.remove('hidden');
-            setComposerStatus('Căn khung hình rồi bấm Chụp ảnh', 'ok');
+            updateShutterState();
+            setComposerStatus('Căn khung hình rồi bấm nút tròn tím', 'ok');
         } catch (err) {
             console.warn('[SocialFeed] camera:', err);
             await stopCamera();
@@ -229,8 +236,16 @@
             });
             document.getElementById('social-caption').value = '';
             clearPreview();
-            window.toast?.('Đã đăng bài lên bảng tin!');
+            window.toast?.('Đã gửi ảnh cho bạn bè!');
+            const panel = document.getElementById('social-feed-panel');
+            const histBtn = document.getElementById('social-history-toggle');
+            if (panel?.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+                histBtn?.classList.add('is-open');
+                panel.dataset.loaded = '1';
+            }
             await loadFeed();
+            setTimeout(() => startCamera().catch(() => {}), 400);
         } catch (err) {
             window.toast?.(err.message, true);
         } finally {
@@ -429,8 +444,37 @@
                 badge.textContent = n;
                 badge.classList.toggle('hidden', n === 0);
             }
+            const countEl = document.getElementById('social-friend-count-num');
+            if (countEl) countEl.textContent = String((data.friends || []).length);
         } catch (err) {
             if (friendsEl) friendsEl.innerHTML = '<div class="social-hint">' + esc(err.message) + '</div>';
+        }
+    }
+
+    async function onShutterClick() {
+        if (pendingImage) return;
+        if (cameraStream) {
+            await captureFromCamera();
+            return;
+        }
+        await startCamera();
+    }
+
+    async function onRetakeClick() {
+        clearPreview();
+        await stopCamera();
+        await startCamera();
+    }
+
+    function toggleHistoryPanel() {
+        const panel = document.getElementById('social-feed-panel');
+        const btn = document.getElementById('social-history-toggle');
+        if (!panel || !btn) return;
+        const open = panel.classList.toggle('hidden');
+        btn.classList.toggle('is-open', !open);
+        if (!open && !panel.dataset.loaded) {
+            panel.dataset.loaded = '1';
+            loadFeed();
         }
     }
 
@@ -443,13 +487,10 @@
             if (file) handleFileSelect(file);
             e.target.value = '';
         });
-        document.getElementById('social-camera-start')?.addEventListener('click', startCamera);
-        document.getElementById('social-camera-capture')?.addEventListener('click', captureFromCamera);
-        document.getElementById('social-retake-btn')?.addEventListener('click', () => {
-            clearPreview();
-            stopCamera();
-        });
+        document.getElementById('social-shutter-btn')?.addEventListener('click', onShutterClick);
+        document.getElementById('social-retake-btn')?.addEventListener('click', onRetakeClick);
         document.getElementById('social-post-btn')?.addEventListener('click', publishPost);
+        document.getElementById('social-history-toggle')?.addEventListener('click', toggleHistoryPanel);
 
         const searchInput = document.getElementById('social-search');
         searchInput?.addEventListener('input', () => {
@@ -467,7 +508,8 @@
         }
         clearPreview();
         await stopCamera();
-        await Promise.all([loadFeed(), loadFriendsPanel()]);
+        await loadFriendsPanel();
+        setTimeout(() => startCamera().catch(() => {}), 500);
     }
 
     function leaveView() {
