@@ -3,28 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shop của Đức Hi</title>
+    <title>AI Pro Store — Tài khoản AI Premium</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/theme.css">
     <link rel="stylesheet" href="/auth-light.css?v=locket-send-pill1">
     <link rel="stylesheet" href="/sidebar-menu.css?v=1">
-    <link rel="stylesheet" href="/post-composer.css?v=locket2">
     <link rel="stylesheet" href="/admin-code-editor.css?v=1">
+    <!-- UI Light Blue: không camera/upload; không đụng API/dữ liệu -->
+    <link rel="stylesheet" href="/store-ui.css?v=aipro-light1">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
                         brand: {
-                            50: '#f0f9ff', 100: '#e0f2fe', 200: '#bae6fd',
-                            500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1'
+                            50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe',
+                            500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8'
                         },
-                        accent: { cyan: '#06B6D4', violet: '#8B5CF6', highlight: '#22D3EE' }
+                        accent: { cyan: '#0ea5e9', violet: '#3b82f6', highlight: '#60a5fa' }
                     }
                 }
             }
         };
+        // Force Light Mode (không dark)
+        try { localStorage.setItem('shop_theme_mode', 'light'); } catch (_) {}
     </script>
 </head>
 <body class="app-bg min-h-screen app-light">
@@ -38,9 +41,9 @@
         <div class="login-modal-glow absolute inset-0 pointer-events-none"></div>
 
         <div class="relative z-10 text-center mb-6">
-            <div class="login-modal-brand-icon"><i class="fas fa-store"></i></div>
-            <h1 class="login-modal-title">Shop<span>.</span> Đức Hi</h1>
-            <p class="login-modal-subtitle">Nạp tiền tự động qua QR VietQR</p>
+            <div class="login-modal-brand-icon"><i class="fas fa-bolt"></i></div>
+            <h1 class="login-modal-title">AI<span>Pro</span> Store</h1>
+            <p class="login-modal-subtitle">Tài khoản Gemini &amp; ChatGPT · Nạp tự động VietQR / Casso</p>
         </div>
 
         <div id="auth-tabs" class="login-modal-tabs relative z-10">
@@ -175,8 +178,8 @@
                 <i class="fas fa-bars"></i>
             </button>
             <button id="brand-btn" class="text-left shrink-0 min-w-0 flex-1 sm:flex-none">
-                <div class="brand-logo"><span class="brand-dot"></span>Shop<span style="color:#0ea5e9">.</span> Đức Hi</div>
-                <div class="brand-tagline hidden sm:block">Chào mừng đến Web Shop của Đức Hi</div>
+                <div class="brand-logo"><span class="brand-dot"></span>AI<span class="brand-accent" style="color:#2563eb">Pro</span> Store</div>
+                <div class="brand-tagline hidden sm:block">Tài khoản AI Premium · Gemini &amp; ChatGPT</div>
             </button>
             <div class="hidden md:flex items-center nav-pill-wrap">
                 <button data-view="products" class="nav-btn nav-pill"><i class="fas fa-box-open mr-1"></i>Sản phẩm</button>
@@ -184,7 +187,6 @@
                 <button data-view="orders" class="nav-btn nav-pill"><i class="fas fa-shopping-bag mr-1"></i>Đơn hàng</button>
                 <button data-view="transactions" class="nav-btn nav-pill"><i class="fas fa-clock-rotate-left mr-1"></i>Lịch sử</button>
                 <button type="button" id="nav-profile-btn" class="nav-btn nav-pill"><i class="fas fa-user-circle mr-1"></i>Hồ sơ</button>
-                <button data-view="dressroom" class="nav-btn nav-pill"><i class="fas fa-shirt mr-1"></i>Phòng Thay Đồ</button>
                 <button data-view="admin" id="admin-nav-btn" class="nav-btn nav-pill hidden"><i class="fas fa-shield-alt mr-1"></i>Quản trị</button>
             </div>
             <div class="flex items-center gap-2 sm:gap-3">
@@ -208,17 +210,17 @@
         <section id="view-products" class="app-section">
             <div class="shop-hero carousel-hero">
                 <div class="carousel-hero-glow" aria-hidden="true"></div>
-                <div class="carousel-hero-badge"><i class="fas fa-bolt"></i> AI Premium Store</div>
-                <h1 class="carousel-hero-title">Tài khoản AI <span>Chính Hãng</span></h1>
-                <p class="carousel-hero-sub">Gemini · ChatGPT · Claude · Grok — Mua nhanh, giao tự động, thanh toán VietQR</p>
+                <div class="carousel-hero-badge"><i class="fas fa-bolt"></i> AI Pro Store</div>
+                <h1 class="carousel-hero-title">Tài khoản AI <span>Premium</span></h1>
+                <p class="carousel-hero-sub">Gemini · ChatGPT — Mua nhanh, giao tự động, nạp tiền VietQR / Casso</p>
                 <button type="button" data-view="wallet" class="btn-primary px-6 py-3 rounded-2xl font-semibold shadow-lg">
                     <i class="fas fa-rocket"></i> Nạp tiền &amp; Mua ngay
                 </button>
                 <div class="category-row relative z-10">
                     <button type="button" data-view="products" class="category-pill"><span class="pill-icon"><i class="fas fa-box-open"></i></span>Sản phẩm</button>
                     <button type="button" data-view="wallet" class="category-pill"><span class="pill-icon"><i class="fas fa-wallet"></i></span>Ví tiền</button>
-                    <button type="button" data-view="dressroom" class="category-pill"><span class="pill-icon"><i class="fas fa-shirt"></i></span>Phòng Thay Đồ</button>
                     <button type="button" data-view="orders" class="category-pill"><span class="pill-icon"><i class="fas fa-shopping-bag"></i></span>Đơn hàng</button>
+                    <button type="button" data-view="transactions" class="category-pill"><span class="pill-icon"><i class="fas fa-clock-rotate-left"></i></span>Lịch sử</button>
                 </div>
             </div>
             <div class="section-header">
@@ -238,8 +240,8 @@
                         <div id="wallet-balance" class="text-4xl font-bold gradient-text mt-2">0đ</div>
                     </div>
                     <div class="glass-card padded">
-                        <h2 class="font-semibold mb-1">Nạp tiền tự động</h2>
-                        <p class="text-xs text-slate-500 mb-3">Mã nội dung CK cố định của bạn:</p>
+                        <h2 class="font-semibold mb-1">Nạp tiền tự động (Casso / VietQR)</h2>
+                        <p class="text-xs text-slate-500 mb-3">Chỉ chuyển khoản theo thông tin bên dưới — <strong>không cần chụp/gửi ảnh hóa đơn</strong>. Mã nội dung CK cố định:</p>
                         <div class="flex items-center gap-2 bg-sky-50 border border-sky-200 rounded-xl px-4 py-3 mb-4">
                             <code id="user-topup-code" class="text-brand-700 font-bold text-sm flex-1 break-all"></code>
                             <button id="copy-topup-code" class="text-brand-600 hover:text-brand-700 shrink-0" title="Sao chép">
@@ -253,7 +255,7 @@
                                 <i class="fas fa-qrcode mr-1"></i> Tạo QR & yêu cầu nạp tiền
                             </button>
                         </div>
-                        <p class="text-xs text-slate-500 mt-3">Chuyển khoản theo QR → hệ thống tự kiểm tra và cộng tiền.</p>
+                        <p class="text-xs text-slate-500 mt-3">Chuyển khoản đúng STK + số tiền + nội dung CK → Casso nhận diện tự động và cộng ví. Không upload ảnh.</p>
                     </div>
                 </div>
                 <div>
@@ -395,8 +397,7 @@
                             <button type="button" id="dr-upload-sticker-btn" class="flex-1 min-w-[100px] btn-ghost text-xs py-2"><i class="fas fa-paste mr-1"></i>Sticker</button>
                             <button type="button" id="dr-clear-upload-btn" class="hidden flex-1 min-w-[100px] bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-800 text-xs py-2 rounded-xl font-medium"><i class="fas fa-times mr-1"></i>Xóa ảnh tải</button>
                         </div>
-                        <input type="file" id="dr-upload-bg-input" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden">
-                        <input type="file" id="dr-upload-sticker-input" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden">
+                        <!-- file upload đã gỡ (cấm upload ảnh) -->
                         <p id="dr-upload-status" class="text-[10px] text-brand-400 mt-1 text-center hidden"></p>
                         <div class="grid grid-cols-2 gap-2 mt-3">
                             <button type="button" id="dr-save-outfit-btn" class="btn-primary text-sm py-2.5"><i class="fas fa-bookmark mr-1"></i>Lưu Outfit</button>
@@ -513,7 +514,7 @@
                         <div id="social-recipient-strip" class="social-recipient-strip hidden" aria-label="Chọn người nhận"></div>
                         <button type="button" id="social-unified-studio" class="hidden" aria-hidden="true" tabindex="-1"></button>
                         <button type="button" id="social-feed-folder" class="hidden" aria-hidden="true" tabindex="-1"></button>
-                        <input type="file" id="social-file-input" accept="image/*,video/webm,video/mp4" class="hidden">
+                        <!-- social-file-input đã gỡ -->
                         <button type="button" id="social-file-btn" class="hidden" aria-hidden="true" tabindex="-1"></button>
                         <button type="button" id="social-retake-btn" class="hidden" aria-hidden="true" tabindex="-1"></button>
                     </div>
@@ -585,7 +586,7 @@
                                     <button type="button" class="social-frame-option" data-frame="custom" title="Tuỳ chỉnh"><span class="social-frame-option-inner"><i class="fas fa-plus"></i></span></button>
                                 </div>
                                 <button type="button" id="social-frame-upload" class="social-frame-upload-btn"><i class="fas fa-upload mr-1"></i>Tải ảnh làm khung viền (PNG trong suốt giữa)</button>
-                                <input type="file" id="social-frame-file" accept="image/png,image/webp" class="hidden">
+                                <!-- social-frame-file đã gỡ -->
                                 <p class="social-creative-section-title mt-2"><i class="fas fa-font"></i> Caption đẹp</p>
                                 <div class="social-caption-editor">
                                     <div class="social-caption-presets">
@@ -747,7 +748,7 @@
                         </button>
                         <button data-admin-tab="transactions" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Giao dịch</button>
                         <button data-admin-tab="bank-transactions" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Bank TX</button>
-                        <button data-admin-tab="dressroom" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Phòng Thay Đồ</button>
+                        <!-- Phòng Thay Đồ (upload ảnh) đã ẩn -->
                         <button data-admin-tab="ai" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Cài đặt AI</button>
                         <button data-admin-tab="coupons" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">Mã giảm giá</button>
                         <button data-admin-tab="code" class="admin-tab-btn px-4 py-2 bg-slate-100 text-slate-600">
@@ -914,11 +915,7 @@
         </div>
         <div class="profile-modal-body pretty-scrollbar">
             <div id="profile-panel-info">
-                <div class="profile-social-link mb-4">
-                    <button type="button" id="profile-goto-social" class="btn-primary w-full py-2.5 text-sm">
-                        <i class="fas fa-camera mr-1"></i>Mở Chụp ảnh (MXH)
-                    </button>
-                </div>
+                <!-- Đã gỡ nút chụp ảnh MXH (cấm camera) -->
                 <div id="profile-view-mode" class="profile-info-grid">
                     <div class="profile-info-item full">
                         <div class="profile-info-label">Họ và tên</div>
@@ -979,23 +976,17 @@
     <div id="toast-inner" class="toast-inner success"></div>
 </div>
 
-<!-- Nút nổi Chụp ảnh (kiểu AI Hỗ Trợ) -->
-<div id="social-fab-wrap" class="fixed bottom-24 left-4 sm:left-6 z-50 hidden">
-    <button type="button" id="social-fab-btn" class="social-fab" title="Chụp ảnh gửi bạn bè">
-        <i class="fas fa-camera text-lg"></i>
-        <span>Chụp ảnh</span>
-    </button>
-</div>
+<!-- Social FAB đã gỡ — cấm camera/chụp ảnh -->
 
-<!-- AI Đức Hi Assistant -->
+<!-- AI Assistant (chỉ text, không upload ảnh) -->
 <div id="ai-chat-wrap" class="support-float-wrap fixed bottom-20 right-3 sm:right-5 z-50 hidden flex flex-col items-end gap-2 max-w-[calc(100vw-2rem)]">
     <div id="ai-chat-panel" class="hidden glass-card shadow-2xl overflow-hidden flex flex-col">
         <div class="ai-chat-header shrink-0">
             <div class="min-w-0">
                 <div class="font-bold flex items-center gap-2 text-sm sm:text-base">
-                    <i class="fas fa-robot"></i> AI Đức Hi Assistant
+                    <i class="fas fa-robot"></i> AI Pro Assistant
                 </div>
-                <div id="ai-chat-mode" class="text-[10px] sm:text-xs text-white/80 truncate">Trợ lý thông minh của Shop Đức Hi</div>
+                <div id="ai-chat-mode" class="text-[10px] sm:text-xs text-white/80 truncate">Hỗ trợ nạp tiền, mua hàng, đơn hàng</div>
             </div>
             <div class="ai-chat-header-actions shrink-0">
                 <button type="button" id="ai-chat-clear" class="ai-header-btn" title="Xóa cuộc trò chuyện"><i class="fas fa-trash-alt text-xs"></i></button>
@@ -1007,8 +998,8 @@
         <div class="p-3 border-t border-sky-100 bg-white/95 shrink-0">
             <div id="ai-quick-chips" class="flex flex-wrap gap-1.5 mb-2 max-h-16 overflow-y-auto pretty-scrollbar"></div>
             <form id="ai-chat-form" class="flex gap-2">
-                <input id="ai-chat-input" type="text" maxlength="1000" placeholder="Hỏi về nạp tiền, mua hàng, Phòng Thay Đồ..."
-                       class="flex-1 border border-sky-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-cyan-400 focus:outline-none">
+                <input id="ai-chat-input" type="text" maxlength="1000" placeholder="Hỏi về nạp tiền, mua hàng, đơn hàng..."
+                       class="flex-1 border border-sky-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none">
                 <button type="submit" class="btn-primary px-4 py-2.5 text-sm shrink-0">
                     <i class="fas fa-paper-plane"></i>
                 </button>
@@ -1030,12 +1021,9 @@
 </a>
 
 <script src="/security-client.js"></script>
-<link rel="stylesheet" href="/social-creative.css?v=locket-send-pill1">
-<script src="/social-creative.js?v=locket-send-pill1"></script>
-<script src="/social-feed.js?v=locket-send-pill1"></script>
+<!-- ĐÃ TẮT: social/camera/upload (social-creative, social-feed, post-composer) -->
 <script src="/shop-features.js?v=mxh1"></script>
-<script src="/sidebar-menu.js?v=1"></script>
-<script src="/post-composer.js?v=locket2"></script>
+<script src="/sidebar-menu.js?v=2"></script>
 <script>
 const API = '/api';
 
@@ -1322,20 +1310,21 @@ function updateHeader() {
 async function showApp() {
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
-    document.getElementById('social-fab-wrap')?.classList.remove('hidden');
+    // social-fab (camera) luôn ẩn — không mở lại
+    document.getElementById('social-fab-wrap')?.classList.add('hidden');
     document.getElementById('ai-chat-wrap')?.classList.remove('hidden');
     document.getElementById('zalo-float-btn')?.classList.remove('hidden');
     await refreshUser();
-    const driveReturn = new URLSearchParams(location.search).get('drive');
-    const startView = driveReturn ? 'social' : 'products';
-    navigateTo(startView);
-    if (!sessionStorage.getItem('social_fab_hint_shown')) {
-        sessionStorage.setItem('social_fab_hint_shown', '1');
-        setTimeout(() => toast('Bấm nút "Chụp ảnh" góc trái dưới để đăng ảnh cho bạn bè', false, 5500), 900);
-    }
+    // Không mở social/camera sau OAuth Drive — luôn về sản phẩm
+    navigateTo('products');
 }
 
 function navigateTo(view) {
+    // CẤM camera / social / dressroom / avatar — redirect về products
+    const blockedViews = ['social', 'dressroom', 'avatar', 'decoration', 'checkin'];
+    if (blockedViews.includes(view)) {
+        view = 'products';
+    }
     if (view === 'admin' && currentUser?.role !== 'admin') {
         currentView = view;
         document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
@@ -1352,12 +1341,14 @@ function navigateTo(view) {
         if (location.hash !== '#' + view) location.hash = view;
         return;
     }
-    const dressAliases = { avatar: 'dressroom', decoration: 'dressroom', checkin: 'social' };
-    const viewId = dressAliases[view] || view;
-    const prevView = currentView;
+    const viewId = view;
     currentView = viewId;
     document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
     const viewEl = document.getElementById('view-' + viewId);
+    if (!viewEl) {
+        navigateTo('products');
+        return;
+    }
     viewEl.classList.remove('hidden');
     viewEl.classList.remove('view-animate');
     void viewEl.offsetWidth;
@@ -1372,13 +1363,10 @@ function navigateTo(view) {
         stopOrderSupportPolling();
     }
     if (view === 'transactions') loadMyTransactions();
-    if (viewId === 'dressroom') loadDressRoom();
+    // dressroom / social đã tắt hoàn toàn
     if (viewId === 'admin') loadAdmin();
-    if (prevView === 'social' && viewId !== 'social') SocialFeed?.leaveView?.();
-    if (viewId === 'social') SocialFeed?.loadView?.();
     highlightNav(viewId);
     window.SideMenu?.setActive?.(viewId);
-    document.getElementById('social-fab-btn')?.classList.toggle('social-fab-active', viewId === 'social');
     if (location.hash !== '#' + viewId) location.hash = viewId;
 }
 
@@ -2732,11 +2720,24 @@ window.api = api;
     }
 })();
 </script>
-<script src="/particle-bg.js" defer></script>
+<!-- particle-bg, dressroom, decoration, social: ĐÃ TẮT (cấm camera/upload ảnh) -->
 <script src="/ai-assistant.js"></script>
 <script src="/admin-code-editor.js?v=1"></script>
-<script src="/dressroom-render.js"></script>
-<script src="/decoration.js"></script>
-<script>initAiAssistantEvents(); initDressRoomEvents(); initAdminDressRoomEvents();</script>
+<script>
+/* Stub an toàn nếu code cũ còn gọi dressroom/social */
+window.SocialFeed = window.SocialFeed || { leaveView() {}, loadView() {} };
+window.loadDressRoom = window.loadDressRoom || function () {};
+window.initDressRoomEvents = window.initDressRoomEvents || function () {};
+window.initAdminDressRoomEvents = window.initAdminDressRoomEvents || function () {};
+if (typeof initAiAssistantEvents === 'function') initAiAssistantEvents();
+/* Gỡ mọi input file còn sót (upload ảnh) — không đụng form text/number */
+document.querySelectorAll('input[type="file"]').forEach(function (el) {
+    el.removeAttribute('accept');
+    el.disabled = true;
+    el.style.display = 'none';
+    el.onchange = null;
+    try { el.remove(); } catch (_) {}
+});
+</script>
 </body>
 </html>

@@ -1,0 +1,383 @@
+/**
+ * AI Pro Store — Light Blue Professional UI
+ * Chỉ giao diện. Không đụng API / dữ liệu user / Casso.
+ * Ẩn toàn bộ camera, upload ảnh, social, phòng thay đồ.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* ═══ Palette: Light Blue professional ═══ */
+:root {
+  --aipro-blue-50: #eff6ff;
+  --aipro-blue-100: #dbeafe;
+  --aipro-blue-200: #bfdbfe;
+  --aipro-blue-500: #3b82f6;
+  --aipro-blue-600: #2563eb;
+  --aipro-blue-700: #1d4ed8;
+  --aipro-ink: #0f172a;
+  --aipro-muted: #64748b;
+  --aipro-border: #e2e8f0;
+  --aipro-surface: #ffffff;
+  --aipro-canvas: #f8fafc;
+  --aipro-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+  --aipro-shadow-md: 0 8px 28px rgba(37, 99, 235, 0.10);
+  --aipro-shadow-lg: 0 16px 40px rgba(37, 99, 235, 0.12);
+  --aipro-radius: 16px;
+
+  /* Override theme tokens sang light blue */
+  --color-canvas: var(--aipro-canvas) !important;
+  --color-surface: var(--aipro-surface) !important;
+  --color-ink: var(--aipro-ink) !important;
+  --color-muted: var(--aipro-muted) !important;
+  --color-border: var(--aipro-border) !important;
+  --color-accent: var(--aipro-blue-600) !important;
+  --color-accent-dark: var(--aipro-blue-700) !important;
+  --color-accent-wash: var(--aipro-blue-100) !important;
+  --color-cyan: #0ea5e9 !important;
+  --color-violet: var(--aipro-blue-500) !important;
+  --primary: var(--aipro-blue-600) !important;
+  --primary-dark: var(--aipro-blue-700) !important;
+  --shadow-card: var(--aipro-shadow) !important;
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.05) !important;
+  --shadow-accent: 0 4px 20px rgba(37, 99, 235, 0.18) !important;
+  --shadow-lift: var(--aipro-shadow-md) !important;
+}
+
+/* Force Light Mode — bỏ dark mode */
+body.app-dark,
+body.app-bg {
+  background: linear-gradient(180deg, #f0f7ff 0%, #f8fafc 40%, #ffffff 100%) !important;
+  color: var(--aipro-ink) !important;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+}
+body.app-dark .glass-card,
+body.app-dark .site-header,
+body.app-dark .modal-panel {
+  background: #fff !important;
+  color: var(--aipro-ink) !important;
+}
+body.app-bg::before,
+body.app-bg::after {
+  opacity: 0.22 !important;
+  filter: blur(80px) !important;
+}
+body.app-bg::before { background: #93c5fd !important; }
+body.app-bg::after { background: #bfdbfe !important; }
+
+/* Ẩn particle canvas (nếu còn) */
+#particle-canvas { display: none !important; }
+
+/* ═══ CẤM CAMERA / UPLOAD / SOCIAL / DRESSROOM ═══ */
+#view-social,
+#view-dressroom,
+#social-fab-wrap,
+#social-fab-btn,
+input[type="file"],
+#dr-upload-bg-btn,
+#dr-upload-sticker-btn,
+#dr-clear-upload-btn,
+#dr-upload-bg-input,
+#dr-upload-sticker-input,
+#social-file-input,
+#social-frame-file,
+#locket-media-input,
+#social-camera-wrap,
+#social-flip-camera,
+#social-shutter-btn,
+#social-mode-photo,
+#social-mode-video,
+#social-unified-left,
+#social-unified-right,
+#social-frame-upload,
+.social-page,
+.dress-room-bg,
+[data-view="dressroom"],
+[data-view="social"],
+[data-view="avatar"],
+[data-view="decoration"],
+[data-view="checkin"],
+#profile-goto-social,
+.profile-social-link,
+[data-admin-tab="dressroom"],
+#admin-dressroom {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Ẩn toggle dark mode trong side menu (chỉ light) */
+.side-menu-theme { display: none !important; }
+
+/* ═══ Header ═══ */
+.site-header {
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--aipro-border) !important;
+  box-shadow: 0 1px 0 rgba(37, 99, 235, 0.06), var(--aipro-shadow) !important;
+}
+.brand-logo {
+  font-weight: 800 !important;
+  letter-spacing: -0.03em;
+  color: var(--aipro-ink) !important;
+  font-size: 1.15rem !important;
+}
+.brand-logo .brand-accent,
+.brand-logo span[style] {
+  color: var(--aipro-blue-600) !important;
+}
+.brand-tagline {
+  color: var(--aipro-muted) !important;
+  font-size: 11px !important;
+}
+.user-balance-pill {
+  background: var(--aipro-blue-50) !important;
+  color: var(--aipro-blue-700) !important;
+  border: 1px solid var(--aipro-blue-100) !important;
+  font-weight: 700 !important;
+}
+
+/* Nav pills */
+.nav-pill-wrap {
+  background: #f1f5f9 !important;
+  border: 1px solid var(--aipro-border) !important;
+  border-radius: 14px !important;
+  padding: 4px !important;
+}
+.nav-btn.nav-pill {
+  color: var(--aipro-muted) !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  transition: all 0.18s ease !important;
+}
+.nav-btn.nav-pill:hover {
+  color: var(--aipro-blue-700) !important;
+  background: #fff !important;
+}
+.nav-btn.nav-pill.nav-active {
+  background: #fff !important;
+  color: var(--aipro-blue-700) !important;
+  box-shadow: var(--aipro-shadow) !important;
+}
+
+/* Buttons */
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28) !important;
+  transition: transform 0.15s, box-shadow 0.15s !important;
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35) !important;
+}
+.btn-ghost {
+  background: #fff !important;
+  border: 1px solid var(--aipro-border) !important;
+  color: #334155 !important;
+  border-radius: 12px !important;
+}
+.btn-ghost:hover {
+  border-color: var(--aipro-blue-200) !important;
+  background: var(--aipro-blue-50) !important;
+  color: var(--aipro-blue-700) !important;
+}
+.btn-profile {
+  background: var(--aipro-blue-50) !important;
+  color: var(--aipro-blue-700) !important;
+  border: 1px solid var(--aipro-blue-100) !important;
+  border-radius: 12px !important;
+}
+
+/* Cards */
+.glass-card,
+.product-card,
+.modal-panel,
+.login-modal-panel {
+  background: #fff !important;
+  border: 1px solid var(--aipro-border) !important;
+  border-radius: var(--aipro-radius) !important;
+  box-shadow: var(--aipro-shadow) !important;
+}
+.glass-card:hover,
+.product-card:hover,
+.hover-lift:hover {
+  box-shadow: var(--aipro-shadow-md) !important;
+  border-color: var(--aipro-blue-200) !important;
+}
+.product-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+}
+.product-card:hover {
+  transform: translateY(-3px);
+}
+
+/* Hero */
+.shop-hero.carousel-hero,
+.carousel-hero {
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 55%, #dbeafe 100%) !important;
+  border: 1px solid var(--aipro-blue-100) !important;
+  border-radius: 20px !important;
+  box-shadow: var(--aipro-shadow) !important;
+  padding: 1.75rem 1.5rem !important;
+}
+.carousel-hero-glow { display: none !important; }
+.carousel-hero-badge {
+  background: var(--aipro-blue-50) !important;
+  color: var(--aipro-blue-700) !important;
+  border: 1px solid var(--aipro-blue-100) !important;
+  font-weight: 700 !important;
+}
+.carousel-hero-title {
+  color: var(--aipro-ink) !important;
+  font-weight: 800 !important;
+}
+.carousel-hero-title span {
+  color: var(--aipro-blue-600) !important;
+}
+.carousel-hero-sub {
+  color: var(--aipro-muted) !important;
+}
+.category-pill {
+  background: #fff !important;
+  border: 1px solid var(--aipro-border) !important;
+  color: #334155 !important;
+  border-radius: 999px !important;
+  box-shadow: var(--aipro-shadow) !important;
+  font-weight: 600 !important;
+}
+.category-pill:hover {
+  border-color: var(--aipro-blue-300) !important;
+  color: var(--aipro-blue-700) !important;
+  background: var(--aipro-blue-50) !important;
+}
+.pill-icon {
+  background: var(--aipro-blue-50) !important;
+  color: var(--aipro-blue-600) !important;
+}
+
+/* Auth modal */
+.login-modal-overlay {
+  background: rgba(15, 23, 42, 0.35) !important;
+  backdrop-filter: blur(8px);
+}
+.login-modal-panel {
+  box-shadow: var(--aipro-shadow-lg) !important;
+  border-radius: 20px !important;
+}
+.login-modal-brand-icon {
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3) !important;
+}
+.login-modal-title {
+  color: var(--aipro-ink) !important;
+  font-weight: 800 !important;
+}
+.login-modal-title span { color: var(--aipro-blue-600) !important; }
+.login-modal-subtitle { color: var(--aipro-muted) !important; }
+.auth-tab-active {
+  color: var(--aipro-blue-700) !important;
+  border-bottom-color: var(--aipro-blue-600) !important;
+}
+.auth-submit {
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important;
+}
+.auth-input:focus {
+  border-color: var(--aipro-blue-500) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+}
+
+/* Modals */
+.modal-overlay {
+  background: rgba(15, 23, 42, 0.4) !important;
+  backdrop-filter: blur(6px);
+}
+.modal-panel {
+  box-shadow: var(--aipro-shadow-lg) !important;
+}
+
+/* Side menu light */
+.side-menu {
+  background: #fff !important;
+  border-right: 1px solid var(--aipro-border) !important;
+  box-shadow: var(--aipro-shadow-md) !important;
+}
+.side-menu-item {
+  color: #334155 !important;
+  border-radius: 12px !important;
+}
+.side-menu-item:hover,
+.side-menu-item.is-active {
+  background: var(--aipro-blue-50) !important;
+  color: var(--aipro-blue-700) !important;
+}
+.side-menu-user-balance {
+  color: var(--aipro-blue-600) !important;
+  font-weight: 700 !important;
+}
+
+/* Wallet / QR panel */
+#qr-panel,
+#qr-placeholder {
+  box-shadow: var(--aipro-shadow) !important;
+}
+#wallet-balance,
+.gradient-text {
+  background: none !important;
+  -webkit-text-fill-color: unset !important;
+  color: var(--aipro-blue-700) !important;
+  font-weight: 800 !important;
+}
+
+/* Section headers */
+.section-header .page-title {
+  color: var(--aipro-ink) !important;
+  font-weight: 700 !important;
+}
+
+/* Inputs */
+input, select, textarea {
+  border-color: var(--aipro-border) !important;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--aipro-blue-500) !important;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12) !important;
+}
+
+/* Admin tabs */
+.admin-tab-btn.active,
+.admin-tab-btn.btn-primary {
+  background: var(--aipro-blue-600) !important;
+  color: #fff !important;
+}
+
+/* Toast */
+.toast-inner {
+  border-radius: 12px !important;
+  box-shadow: var(--aipro-shadow-md) !important;
+}
+
+/* FAB AI / Zalo giữ lại, style nhẹ */
+.ai-fab, .zalo-float, .support-float-btn {
+  box-shadow: var(--aipro-shadow-md) !important;
+  border-radius: 999px !important;
+}
+.ai-fab {
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+}
+
+/* Responsive spacing */
+.app-main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 3rem;
+}
+@media (min-width: 640px) {
+  .app-main { padding: 1.75rem 1.25rem 3.5rem; }
+}
