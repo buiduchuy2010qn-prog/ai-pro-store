@@ -15,7 +15,7 @@ function aiQuickSuggestions() {
     }
     return aiState.status?.quickUser || [
         'Cách nạp tiền?', 'Mua hàng thế nào?', 'Xem đơn hàng ở đâu?',
-        'Quên mật khẩu?', 'Gợi ý phối đồ nữ Nhật', 'Liên hệ Zalo',
+        'Quên mật khẩu?', 'Xem số dư ví?', 'Liên hệ Zalo',
     ];
 }
 

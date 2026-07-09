@@ -2574,7 +2574,7 @@
     'Mua hàng thế nào?',
     'Xem đơn hàng ở đâu?',
     'Quên mật khẩu?',
-    'Xem số dư ví',
+    'Xem số dư ví?',
     'Liên hệ Zalo',
   ];
 
@@ -2629,9 +2629,9 @@
         actions: [{ label: 'Liên hệ Zalo', view: 'zalo' }],
       };
     }
-    if (/phòng thay đồ|dressroom|avatar|phoi do|phối đồ/.test(t)) {
+    if (/phòng thay đồ|dressroom|avatar|phoi do|phối đồ|thay đồ/.test(t)) {
       return {
-        reply: '**Phòng Thay Đồ** hiện đang không mở trên bản store tập trung bán tài khoản AI. Bạn vẫn mua gói ChatGPT/Gemini bình thường.\n\nCần hỗ trợ thêm: ' + zaloLine,
+        reply: '**Phòng Thay Đồ** đã **gỡ** khỏi AI Pro Store. Web chỉ bán tài khoản Gemini / ChatGPT.\n\nDùng **Sản phẩm**, **Ví**, **Đơn hàng** — hoặc ' + zaloLine,
         actions: [{ label: 'Sản phẩm', view: 'products' }, { label: 'Zalo', view: 'zalo' }],
       };
     }

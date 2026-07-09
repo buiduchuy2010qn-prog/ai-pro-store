@@ -644,22 +644,36 @@ def _seed_ai_settings(conn):
         'enabled': '1',
         'mode': 'auto',
         'greeting': (
-            'Xin chào! Mình là **AI Đức Hi Assistant** — trợ lý thông minh của Shop của Đức Hi.\n'
-            'Mình có thể hỗ trợ bạn **mua hàng**, **nạp tiền**, **xem đơn hàng**, **Phòng Thay Đồ** và nhiều hơn nữa!'
+            'Xin chào! Mình là **AI Đức Hi Assistant** — trợ lý hỗ trợ khách hàng AI Pro Store.\n'
+            'Mình giúp **mua hàng**, **nạp tiền**, **xem đơn hàng**, **số dư ví**, **quên mật khẩu**.\n'
+            'Cần người thật: **Zalo 0944255413**.'
         ),
         'quick_user': json.dumps([
             'Cách nạp tiền?', 'Mua hàng thế nào?', 'Xem đơn hàng ở đâu?',
-            'Quên mật khẩu?', 'Gợi ý phối đồ nữ Nhật', 'Liên hệ Zalo',
+            'Quên mật khẩu?', 'Xem số dư ví?', 'Liên hệ Zalo',
         ], ensure_ascii=False),
         'quick_admin': json.dumps([
             'Xem dashboard admin', 'Quản lý tài khoản', 'Kiểm tra giao dịch',
-            'Quản lý sản phẩm', 'Quản lý Phòng Thay Đồ',
+            'Quản lý sản phẩm', 'Quản lý đơn hàng',
         ], ensure_ascii=False),
     }
     for key, val in defaults.items():
         if not fetchone(conn, 'SELECT key FROM ai_settings WHERE key = ?', (key,)):
             execute(conn, 'INSERT INTO ai_settings (key, value) VALUES (?, ?)', (key, val))
+    # Force-update chip/greeting cũ còn "Phòng Thay Đồ"
+    try:
+        for key in ('quick_user', 'quick_admin', 'greeting'):
+            row = fetchone(conn, 'SELECT value FROM ai_settings WHERE key = ?', (key,))
+            if row and re_search_removed(row['value']):
+                execute(conn, 'UPDATE ai_settings SET value = ? WHERE key = ?', (defaults[key], key))
+    except Exception as e:
+        print(f'[AI seed cleanup] {e}')
     commit(conn)
+
+
+def re_search_removed(text):
+    import re
+    return bool(re.search(r'thay\s*đồ|thay\s*do|phối\s*đồ|phoi\s*do|Phòng\s*Thay', str(text or ''), re.I))
 
 
 def insert_ignore_mock(conn, tx_id, amount, description, account):

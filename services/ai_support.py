@@ -13,28 +13,38 @@ _rate = {}
 
 DEFAULT_QUICK_USER = [
     'Cách nạp tiền?', 'Mua hàng thế nào?', 'Xem đơn hàng ở đâu?',
-    'Quên mật khẩu?', 'Gợi ý phối đồ nữ Nhật', 'Liên hệ Zalo',
+    'Quên mật khẩu?', 'Xem số dư ví?', 'Liên hệ Zalo',
 ]
 DEFAULT_QUICK_ADMIN = [
     'Xem dashboard admin', 'Quản lý tài khoản', 'Kiểm tra giao dịch',
-    'Quản lý sản phẩm', 'Quản lý Phòng Thay Đồ',
+    'Quản lý sản phẩm', 'Quản lý đơn hàng',
 ]
 
-SYSTEM_PROMPT = """Bạn là AI Đức Hi Assistant, trợ lý thông minh của website Shop của Đức Hi.
+# Từ khóa gợi ý cũ cần loại (tính năng đã tắt)
+_REMOVED_CHIP_RE = re.compile(
+    r'thay\s*đồ|thay\s*do|phối\s*đồ|phoi\s*do|dressroom|outfit|nhân\s*vật|nhan\s*vat',
+    re.I,
+)
+
+DEFAULT_GREETING = (
+    'Xin chào! Mình là **AI Đức Hi Assistant** — trợ lý hỗ trợ khách hàng AI Pro Store.\n'
+    'Mình giúp **mua hàng**, **nạp tiền**, **xem đơn hàng**, **số dư ví**, **quên mật khẩu**.\n'
+    f'Cần người thật: **Zalo {ZALO_PHONE}**.'
+)
+
+SYSTEM_PROMPT = """Bạn là AI Đức Hi Assistant, trợ lý thông minh của website AI Pro Store / Shop của Đức Hi.
 
 Nhiệm vụ của bạn:
-- Hỗ trợ khách hàng mua hàng, nạp tiền, xem đơn hàng, xem lịch sử giao dịch.
-- Hướng dẫn dùng Phòng Thay Đồ nhân vật anime Nhật Bản.
-- Gợi ý phối đồ đẹp, phù hợp, không phản cảm.
+- Hỗ trợ khách hàng mua tài khoản AI (ChatGPT, Gemini…), nạp tiền, xem đơn hàng, xem lịch sử giao dịch.
 - Hỗ trợ đăng ký, đăng nhập, quên mật khẩu bằng OTP email.
+- Hướng dẫn xem hồ sơ / lịch sử đăng nhập.
 - Hỗ trợ admin nếu người dùng có role admin.
 - Trả lời ngắn gọn, thân thiện, dễ hiểu bằng tiếng Việt.
+- KHÔNG gợi ý "Phòng Thay Đồ" — tính năng này đã gỡ khỏi web bán hàng.
 
 Thông tin cố định:
-- Tên web: Shop của Đức Hi.
-- Lời chào web: Chào mừng đến Web Shop của Đức Hi.
-- Nạp tiền qua MB Bank, STK 0394709137.
-- User cần chuyển đúng nội dung nạp tiền riêng để hệ thống tự cộng tiền.
+- Tên web: AI Pro Store / Shop của Đức Hi.
+- Nạp tiền qua VietQR / Casso, chuyển đúng nội dung nạp riêng để tự cộng tiền.
 - Hỗ trợ Zalo: 0944255413.
 
 Quy tắc bảo mật:
@@ -58,6 +68,22 @@ def _check_rate(ip):
     return True
 
 
+def _clean_quick_chips(items, fallback):
+    """Loại chip gợi ý liên quan Phòng Thay Đồ / phối đồ (đã tắt)."""
+    if not isinstance(items, list):
+        return list(fallback)
+    cleaned = [str(x).strip() for x in items if str(x).strip() and not _REMOVED_CHIP_RE.search(str(x))]
+    return cleaned or list(fallback)
+
+
+def _clean_greeting(text):
+    if not text:
+        return DEFAULT_GREETING
+    if _REMOVED_CHIP_RE.search(text) or re.search(r'Phòng\s*Thay\s*Đồ', text, re.I):
+        return DEFAULT_GREETING
+    return text
+
+
 def get_settings():
     conn = db.get_conn()
     rows = db.fetchall(conn, 'SELECT key, value FROM ai_settings')
@@ -71,6 +97,20 @@ def get_settings():
         quick_admin = json.loads(data.get('quick_admin') or '[]')
     except json.JSONDecodeError:
         quick_admin = DEFAULT_QUICK_ADMIN
+    quick_user = _clean_quick_chips(quick_user, DEFAULT_QUICK_USER)
+    quick_admin = _clean_quick_chips(quick_admin, DEFAULT_QUICK_ADMIN)
+    # Đồng bộ DB nếu còn chip cũ
+    try:
+        raw_u = data.get('quick_user') or ''
+        raw_a = data.get('quick_admin') or ''
+        if _REMOVED_CHIP_RE.search(raw_u) or _REMOVED_CHIP_RE.search(raw_a) or _REMOVED_CHIP_RE.search(data.get('greeting') or ''):
+            update_settings({
+                'quick_user': DEFAULT_QUICK_USER,
+                'quick_admin': DEFAULT_QUICK_ADMIN,
+                'greeting': DEFAULT_GREETING,
+            })
+    except Exception:
+        pass
     mode_setting = data.get('mode', 'auto')
     has_key = bool(AI['api_key'])
     if mode_setting == 'rule':
@@ -83,11 +123,12 @@ def get_settings():
         'enabled': data.get('enabled', '1') == '1',
         'mode': mode,
         'modeSetting': mode_setting,
-        'greeting': data.get('greeting', ''),
+        'greeting': _clean_greeting(data.get('greeting', '')),
         'quickUser': quick_user or DEFAULT_QUICK_USER,
         'quickAdmin': quick_admin or DEFAULT_QUICK_ADMIN,
         'model': AI['model'] if has_key else 'Rule-based',
         'zalo': ZALO_PHONE,
+        'name': 'AI Đức Hi Assistant',
     }
 
 
@@ -251,10 +292,11 @@ INTENTS = [
     ('forgot', r'quên mật khẩu|quen mat khau|otp|đổi mật khẩu|doi mat khau|reset'),
     ('register', r'đăng ký|dang ky|tạo tài khoản|tao tai khoan'),
     ('login', r'đăng nhập|dang nhap'),
-    ('dressroom', r'phòng thay đồ|phong thay do|phối đồ|phoi do|outfit|nhân vật|nhan vat|tóc|toc|anime|nhật|nhat|kimono|sakura|váy|vay'),
+    ('dressroom', r'phòng thay đồ|phong thay do|phối đồ|phoi do|outfit|nhân vật|nhan vat|dressroom'),
     ('zalo', r'zalo|liên hệ|lien he|hotline|người thật|nguoi that|admin hỗ trợ'),
     ('admin', r'dashboard admin|quản trị|quan tri|admin panel|quản lý user|quan ly user|kiểm tra giao dịch admin'),
     ('products', r'gợi ý|goi y|nên mua|nen mua|recommend|tư vấn sản phẩm'),
+    ('profile', r'hồ sơ|ho so|profile|lịch sử đăng nhập|thiết bị'),
 ]
 
 
