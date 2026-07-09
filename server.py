@@ -3576,9 +3576,17 @@ def social_friend_respond():
 
 
 # ─── Static ───
+def _send_index_html():
+    """index.html không cache — tránh admin thấy badge tiếng Anh / thiếu nút Zalo."""
+    resp = send_from_directory(PUBLIC, 'index.html')
+    resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    resp.headers['Pragma'] = 'no-cache'
+    return resp
+
+
 @app.route('/')
 def index():
-    return send_from_directory(PUBLIC, 'index.html')
+    return _send_index_html()
 
 
 @app.route('/<path:path>')
@@ -3587,10 +3595,14 @@ def static_files(path):
         return jsonify({'error': 'Not found'}), 404
     full = PUBLIC / path
     if full.is_file():
-        return send_from_directory(PUBLIC, path)
+        resp = send_from_directory(PUBLIC, path)
+        # HTML luôn no-cache; JS/CSS cho cache ngắn
+        if str(path).endswith('.html'):
+            resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        return resp
     # SPA: /admin, /wallet, ... → index.html (hash routing phía client)
     if '.' not in path.rsplit('/', 1)[-1]:
-        return send_from_directory(PUBLIC, 'index.html')
+        return _send_index_html()
     return jsonify({'error': 'Not found'}), 404
 
 
