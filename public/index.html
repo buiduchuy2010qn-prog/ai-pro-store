@@ -5,51 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Pro Store — Tài khoản AI Premium</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta name="app-ui" content="v8-shadcn-mono">
+  <meta name="app-ui" content="v9-ocean-blue">
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <!-- CSRF / fingerprint (bắt buộc với backend) — không đụng dữ liệu user -->
   <script src="/security-client.js"></script>
   <script>
-    /* Map brand → monochrome shadcn tokens (giữ class HTML cũ) */
+    /* Theme xanh nước (ocean blue) — Light mode */
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            canvas: '#f5f5f5',
+            canvas: '#f0f9ff',
             paper: '#ffffff',
-            'surface-alt': '#fafafa',
-            ink: { DEFAULT: '#0a0a0a', soft: '#171717' },
-            mid: '#737373',
-            hairline: '#e5e5e5',
-            ember: '#e7000b',
+            mid: '#64748b',
+            hairline: '#e0f2fe',
+            ink: { DEFAULT: '#0f172a', soft: '#1e293b' },
             brand: {
-              50:  '#f5f5f5', 100: '#f5f5f5', 200: '#e5e5e5', 300: '#e5e5e5',
-              400: '#737373', 500: '#171717', 600: '#0a0a0a', 700: '#0a0a0a',
-              800: '#0a0a0a', 900: '#0a0a0a',
+              50:  '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
+              400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
+              800: '#1e40af', 900: '#1e3a8a',
             },
-            slate: {
-              50: '#fafafa', 100: '#f5f5f5', 200: '#e5e5e5', 300: '#d4d4d4',
-              400: '#a3a3a3', 500: '#737373', 600: '#525252', 700: '#404040',
-              800: '#262626', 900: '#171717',
-            },
-            emerald: { 50: '#f5f5f5', 100: '#f5f5f5', 600: '#171717', 700: '#0a0a0a' },
-            amber:   { 50: '#f5f5f5', 100: '#f5f5f5', 500: '#737373', 700: '#171717', 900: '#0a0a0a' },
-            red:     { 50: '#fef2f2', 100: '#fee2e2', 200: '#fecaca', 400: '#e7000b', 500: '#e7000b', 600: '#e7000b' },
-            sky:     { 50: '#f5f5f5', 200: '#e5e5e5', 700: '#171717' },
-          },
-          borderRadius: {
-            xl: '18px',
-            '2xl': '24px',
-            '3xl': '24px',
           },
           boxShadow: {
-            soft: '0 0 0 1px rgba(23,23,23,0.05), 0 1px 2px -1px rgba(0,0,0,0.08)',
-            card: '0 0 0 1px rgba(23,23,23,0.05), 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)',
-            lift: '0 0 0 1px rgba(23,23,23,0.06), 0 4px 12px rgba(0,0,0,0.08)',
-            glow: '0 0 0 1px rgba(23,23,23,0.08)',
-            subtle: '0 0 0 1px rgba(23,23,23,0.05), 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)',
+            soft: '0 4px 16px rgba(37, 99, 235, 0.08)',
+            card: '0 8px 24px rgba(37, 99, 235, 0.10)',
+            lift: '0 12px 32px rgba(37, 99, 235, 0.14)',
+            glow: '0 0 0 4px rgba(37, 99, 235, 0.15)',
           },
           fontFamily: {
             sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
@@ -59,101 +41,42 @@
     };
   </script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
     /* ═══════════════════════════════════════════════════════════
-       UI TOKENS — shadcn monochrome (clinical / frosted paper)
+       THEME XANH NƯỚC (Ocean Blue) — Light mode
        ═══════════════════════════════════════════════════════════ */
     :root {
-      --color-canvas: #f5f5f5;
+      --color-canvas: #f0f9ff;
       --color-paper: #ffffff;
-      --color-surface-alt: #fafafa;
-      --color-ink: #0a0a0a;
-      --color-ink-soft: #171717;
-      --color-mid-gray: #737373;
-      --color-hairline: #e5e5e5;
-      --color-ember: #e7000b;
-      --radius-cards: 24px;
-      --radius-buttons: 18px;
-      --radius-inputs: 18px;
-      --radius-badges: 18px;
-      --shadow-card: 0 0 0 1px rgba(23,23,23,0.05), 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1);
-      --page-max: 1280px;
+      --color-ink: #0f172a;
+      --color-mid: #64748b;
+      --color-brand: #2563eb;
+      --color-brand-dark: #1d4ed8;
+      --color-brand-soft: #dbeafe;
+      --color-hairline: #e0f2fe;
+      --shadow-card: 0 8px 24px rgba(37, 99, 235, 0.10);
+      --shadow-soft: 0 4px 16px rgba(37, 99, 235, 0.08);
     }
 
     body {
-      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      font-family: Inter, system-ui, sans-serif;
       font-size: 14px;
-      line-height: 1.43;
       color: var(--color-ink);
       background: var(--color-canvas);
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Typography hierarchy ── */
-    h1, .page-title, .text-2xl.font-extrabold, .text-3xl {
-      letter-spacing: -0.025em;
-      font-weight: 600;
-      color: var(--color-ink);
-    }
-
-    /* ── Nav ── */
     .nav-active {
-      background: var(--color-paper) !important;
-      color: var(--color-ink) !important;
-      box-shadow: var(--shadow-card);
-      font-weight: 500;
+      background: #fff !important;
+      color: #1d4ed8 !important;
+      box-shadow: 0 1px 3px rgba(37,99,235,.12);
+      font-weight: 600;
     }
     .nav-btn, .mobile-nav, .admin-tab, .profile-tab {
-      transition: background .2s ease, color .2s ease, box-shadow .2s ease, transform .15s ease;
-      border-radius: 18px !important;
-      font-size: 13px;
-      font-weight: 500;
+      transition: background .2s, color .2s, box-shadow .2s, transform .15s;
     }
 
-    /* Primary filled = ink black (shadcn) */
-    .bg-brand-600, .bg-brand-700, .from-brand-600, .to-brand-700,
-    .from-brand-500, .to-brand-700 {
-      background: var(--color-ink) !important;
-      background-image: none !important;
-    }
-    .hover\:bg-brand-700:hover, .hover\:bg-brand-600:hover { background: var(--color-ink-soft) !important; }
-    .text-brand-600, .text-brand-700, .text-brand-500, .text-brand-400 { color: var(--color-ink) !important; }
-    .text-brand-200, .text-brand-100 { color: #a3a3a3 !important; }
-    .bg-brand-50, .bg-brand-50\/40, .hover\:bg-brand-50:hover { background-color: var(--color-canvas) !important; }
-    .border-brand-100, .border-brand-200, .border-brand-300 { border-color: var(--color-hairline) !important; }
-    .ring-brand-400, .ring-brand-500, .focus\:ring-brand-500:focus { --tw-ring-color: var(--color-hairline) !important; }
-    .text-emerald-600, .text-emerald-700 { color: var(--color-ink) !important; }
-    .bg-emerald-50 { background: var(--color-canvas) !important; }
-    .border-emerald-100, .border-emerald-200 { border-color: var(--color-hairline) !important; }
-    .text-amber-500, .text-amber-700, .text-amber-900 { color: var(--color-mid-gray) !important; }
-    .bg-amber-50 { background: var(--color-canvas) !important; }
-    .border-amber-100, .border-amber-200 { border-color: var(--color-hairline) !important; }
-
-    /* Cards paper */
-    .shadow-soft, .shadow-card, .shadow-lift {
-      box-shadow: var(--shadow-card) !important;
-    }
-    .rounded-2xl { border-radius: 24px !important; }
-    .rounded-xl { border-radius: 18px !important; }
-
-    /* Inputs */
-    input, select, textarea {
-      border-radius: 18px !important;
-      background: var(--color-canvas) !important;
-      border-color: transparent !important;
-      font-size: 14px !important;
-      color: var(--color-ink) !important;
-    }
-    input:focus, select:focus, textarea:focus {
-      outline: none !important;
-      box-shadow: 0 0 0 1px var(--color-hairline) !important;
-      background: var(--color-paper) !important;
-      border-color: var(--color-hairline) !important;
-    }
-    input::placeholder, textarea::placeholder { color: var(--color-mid-gray) !important; }
-
-    /* ── View transitions ── */
     .view-section, .fade-in {
       animation: viewIn .32s cubic-bezier(.22, 1, .36, 1) both;
     }
@@ -162,43 +85,40 @@
       to   { opacity: 1; transform: translate3d(0, 0, 0); }
     }
 
-    /* ── Product card ── */
     .product-card {
       will-change: transform;
-      background: var(--color-paper);
-      border: 1px solid var(--color-hairline);
-      border-radius: 24px;
-      box-shadow: var(--shadow-card);
-      transition: transform .3s cubic-bezier(.22, 1, .36, 1), box-shadow .3s ease, border-color .3s ease;
+      background: #fff;
+      border: 1px solid #e0f2fe;
+      border-radius: 1rem;
+      box-shadow: var(--shadow-soft);
+      transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s, border-color .3s;
     }
     .product-card:hover {
-      transform: translate3d(0, -8px, 0);
-      box-shadow: 0 0 0 1px rgba(23,23,23,0.08), 0 8px 24px rgba(0,0,0,0.08);
-      border-color: var(--color-hairline);
+      transform: translate3d(0, -6px, 0) scale(1.02);
+      box-shadow: 0 16px 40px rgba(37, 99, 235, 0.16);
+      border-color: #93c5fd;
     }
     .product-card.stagger {
-      animation: cardPop .4s cubic-bezier(.22, 1, .36, 1) both;
+      animation: cardPop .4s cubic-bezier(.22,1,.36,1) both;
     }
     @keyframes cardPop {
-      from { opacity: 0; transform: translate3d(0, 16px, 0) scale(.97); }
-      to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+      from { opacity: 0; transform: translate3d(0, 16px, 0) scale(.96); }
+      to   { opacity: 1; transform: none; }
     }
 
-    /* ── Buttons ── */
     .btn-press {
       position: relative;
       overflow: hidden;
       transform: translateZ(0);
-      border-radius: 18px !important;
-      font-size: 14px;
-      font-weight: 500;
-      transition: transform .15s ease, background .2s ease, opacity .2s ease;
+      transition: transform .15s, background .2s, box-shadow .2s, opacity .2s;
+    }
+    .btn-press:hover:not(:disabled) {
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.25);
     }
     .btn-press:active:not(:disabled) { transform: scale(0.95); }
     .btn-press .ripple {
-      position: absolute;
-      border-radius: 50%;
-      background: rgba(255,255,255,.25);
+      position: absolute; border-radius: 50%;
+      background: rgba(255,255,255,.35);
       transform: scale(0);
       animation: ripple .5s ease-out forwards;
       pointer-events: none;
@@ -207,77 +127,67 @@
     .btn-loading { pointer-events: none; opacity: .75; }
     .btn-loading .btn-label { opacity: 0; }
     .btn-loading::after {
-      content: '';
-      position: absolute; inset: 0; margin: auto;
+      content: ''; position: absolute; inset: 0; margin: auto;
       width: 1.1rem; height: 1.1rem;
-      border: 2px solid rgba(255,255,255,.3);
-      border-top-color: #fff;
-      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.35);
+      border-top-color: #fff; border-radius: 50%;
       animation: spin .7s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Modal ── */
     .modal-backdrop { opacity: 0; transition: opacity .28s ease; }
     .modal-backdrop.is-open { opacity: 1; }
     .modal-panel {
       transform: translate3d(0, 14px, 0) scale(.96);
       opacity: 0;
-      border-radius: 24px !important;
-      border: 1px solid var(--color-hairline);
-      box-shadow: var(--shadow-card);
-      transition: transform .32s cubic-bezier(.22, 1, .36, 1), opacity .28s ease;
+      transition: transform .32s cubic-bezier(.22,1,.36,1), opacity .28s ease;
     }
     .modal-backdrop.is-open .modal-panel {
-      transform: translate3d(0, 0, 0) scale(1);
-      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1); opacity: 1;
     }
     .modal-backdrop.is-closing { opacity: 0; }
     .modal-backdrop.is-closing .modal-panel {
-      transform: translate3d(0, 10px, 0) scale(.97);
-      opacity: 0;
+      transform: translate3d(0, 10px, 0) scale(.97); opacity: 0;
     }
 
-    /* ── Toast ── */
-    #toast { transition: opacity .28s ease, transform .28s cubic-bezier(.22, 1, .36, 1); }
-    #toast.toast-show { opacity: 1; transform: translate3d(0, 0, 0); }
+    #toast { transition: opacity .28s, transform .28s cubic-bezier(.22,1,.36,1); }
+    #toast.toast-show { opacity: 1; transform: none; }
     #toast.toast-hide { opacity: 0; transform: translate3d(0, 12px, 0); }
-    #toast-inner { border-radius: 18px !important; background: var(--color-ink) !important; }
 
-    #cart-badge.pop { animation: badgePop .45s cubic-bezier(.22, 1, .36, 1); }
+    #cart-badge.pop { animation: badgePop .45s cubic-bezier(.22,1,.36,1); }
     @keyframes badgePop {
-      0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); }
+      0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); }
     }
     .balance-flash { animation: balFlash .7s ease; }
     @keyframes balFlash {
       0%,100% { color: inherit; transform: scale(1); }
-      30% { color: var(--color-ink); transform: scale(1.04); }
+      30% { color: #059669; transform: scale(1.05); }
     }
     .balance-deduct { animation: balDeduct .7s ease; }
     @keyframes balDeduct {
       0%,100% { color: inherit; transform: scale(1); }
-      30% { color: var(--color-ember); transform: scale(1.04); }
+      30% { color: #dc2626; transform: scale(1.05); }
     }
     .cart-float {
       position: fixed; z-index: 60; pointer-events: none;
-      font-weight: 600; font-size: 13px; color: var(--color-ink);
+      font-weight: 700; font-size: 13px; color: #2563eb;
       animation: cartFloat .7s ease-out forwards;
     }
     @keyframes cartFloat {
-      0% { opacity: 1; transform: translate3d(0, 0, 0); }
+      0% { opacity: 1; transform: none; }
       100% { opacity: 0; transform: translate3d(0, -40px, 0); }
     }
     .skel {
-      background: linear-gradient(90deg, #e5e5e5 25%, #f5f5f5 50%, #e5e5e5 75%);
+      background: linear-gradient(90deg, #e0f2fe 25%, #f0f9ff 50%, #e0f2fe 75%);
       background-size: 200% 100%;
       animation: skel 1.1s ease-in-out infinite;
-      border-radius: 18px;
+      border-radius: 1rem;
     }
     @keyframes skel {
       0% { background-position: 200% 0; }
       100% { background-position: -200% 0; }
     }
-    #qr-panel.panel-in { animation: viewIn .35s cubic-bezier(.22, 1, .36, 1) both; }
+    #qr-panel.panel-in { animation: viewIn .35s cubic-bezier(.22,1,.36,1) both; }
 
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
@@ -285,7 +195,7 @@
       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
     }
 
-    /* ── FAB only when logged-in ── */
+    /* FAB chỉ sau login */
     #support-floats, .floating-support { display: none !important; }
     body.logged-in #support-floats, body.logged-in .floating-support {
       display: flex !important;
@@ -293,14 +203,16 @@
     body:not(.logged-in) #support-floats {
       display: none !important; z-index: 1 !important; pointer-events: none !important;
     }
-    .support-fab { transition: transform .25s cubic-bezier(.22,1,.36,1); }
-    .support-fab:hover { transform: translateY(-2px); }
-    .ai-fab-active { box-shadow: 0 0 0 2px var(--color-hairline) !important; }
+    .support-fab { transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s; }
+    .support-fab:hover { transform: translateY(-2px) scale(1.03); }
+    .ai-fab-active {
+      box-shadow: 0 0 0 3px rgba(37,99,235,.25), 0 12px 32px rgba(37,99,235,.3) !important;
+    }
     .login-support-link {
       display: block; text-align: center; font-size: 12px;
-      color: var(--color-mid-gray); margin-top: 1rem; line-height: 1.5;
+      color: #64748b; margin-top: 1rem; line-height: 1.5;
     }
-    .login-support-link a { color: var(--color-ink); font-weight: 500; }
+    .login-support-link a { color: #2563eb; font-weight: 600; }
     .login-support-link a:hover { text-decoration: underline; }
 
     #ai-chat-panel.ai-panel-open {
@@ -309,7 +221,7 @@
     }
     @keyframes aiPanelIn {
       from { opacity: 0; transform: translate3d(0, 16px, 0) scale(.94); }
-      to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+      to   { opacity: 1; transform: none; }
     }
     .ai-msg-enter { animation: aiMsgIn .28s ease-out both; }
     @keyframes aiMsgIn {
@@ -317,52 +229,42 @@
       to   { opacity: 1; transform: none; }
     }
     .ai-bubble-user {
-      background: var(--color-ink);
-      color: #fafafa;
-      border-radius: 18px 18px 4px 18px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+      border-radius: 1.1rem 1.1rem 0.25rem 1.1rem;
       padding: 0.55rem 0.85rem;
-      font-size: 14px;
-      line-height: 1.45;
+      font-size: 0.875rem; line-height: 1.45;
+      box-shadow: 0 4px 12px rgba(37,99,235,.2);
     }
     .ai-bubble-ai {
-      background: var(--color-paper);
-      color: var(--color-ink);
-      border: 1px solid var(--color-hairline);
-      border-radius: 18px 18px 18px 4px;
+      background: #fff; color: #1e293b;
+      border: 1px solid #e2e8f0;
+      border-radius: 1.1rem 1.1rem 1.1rem 0.25rem;
       padding: 0.55rem 0.85rem;
-      font-size: 14px;
-      line-height: 1.45;
+      font-size: 0.875rem; line-height: 1.45;
     }
     .ai-avatar {
-      width: 1.75rem; height: 1.75rem;
-      border-radius: 10px;
-      background: var(--color-ink);
-      color: #fafafa;
-      display: flex; align-items: center; justify-content: center;
+      width: 1.75rem; height: 1.75rem; border-radius: 0.55rem;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      color: #fff; display: flex; align-items: center; justify-content: center;
       font-size: 0.7rem;
     }
     .ai-chip {
-      font-size: 12px; font-weight: 500;
-      padding: 0.3rem 0.65rem;
-      border-radius: 18px;
-      border: 1px solid var(--color-hairline);
-      background: var(--color-canvas);
-      color: var(--color-ink);
+      font-size: 0.7rem; font-weight: 600;
+      padding: 0.3rem 0.65rem; border-radius: 999px;
+      border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8;
       transition: background .2s, transform .15s;
     }
-    .ai-chip:hover { background: var(--color-hairline); }
+    .ai-chip:hover { background: #dbeafe; }
     .ai-chip:active { transform: scale(.95); }
     .ai-action-btn {
-      font-size: 12px; font-weight: 500;
-      padding: 0.25rem 0.6rem;
-      border-radius: 18px;
-      background: var(--color-canvas);
-      color: var(--color-ink);
-      border: 1px solid var(--color-hairline);
+      font-size: 0.7rem; font-weight: 600;
+      padding: 0.25rem 0.6rem; border-radius: 0.5rem;
+      background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;
     }
     .ai-typing-dots span {
       display: inline-block; width: 6px; height: 6px; margin: 0 2px;
-      border-radius: 50%; background: var(--color-mid-gray);
+      border-radius: 50%; background: #94a3b8;
       animation: aiDot 1s infinite ease-in-out;
     }
     .ai-typing-dots span:nth-child(2) { animation-delay: .15s; }
@@ -372,7 +274,6 @@
       40% { transform: translateY(-4px); opacity: 1; }
     }
 
-    /* ── Falling particles ── */
     #fx-fall {
       position: fixed; inset: 0; width: 100%; height: 100%;
       z-index: 0; pointer-events: none;
@@ -380,53 +281,28 @@
     body::before {
       content: '';
       position: fixed; inset: 0; z-index: 0; pointer-events: none;
-      background: var(--color-canvas);
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(59, 130, 246, 0.14), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(147, 197, 253, 0.18), transparent 50%),
+        #f0f9ff;
     }
     .app-layer { position: relative; z-index: 1; }
     .login-card-enter {
-      animation: loginEnter .55s cubic-bezier(.22, 1, .36, 1) both;
+      animation: loginEnter .55s cubic-bezier(.22,1,.36,1) both;
     }
     @keyframes loginEnter {
-      from { opacity: 0; transform: translate3d(0, 28px, 0) scale(.97); }
-      to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+      from { opacity: 0; transform: translate3d(0, 28px, 0) scale(.96); }
+      to   { opacity: 1; transform: none; }
     }
-
-    /* Header monochrome */
     header.sticky {
-      background: rgba(250,250,250,0.92) !important;
-      border-color: var(--color-hairline) !important;
+      background: rgba(255,255,255,0.92) !important;
+      border-color: #e0f2fe !important;
     }
-
-    /* FAB & accent — monochrome only (no blue/green) */
-    #ai-chat-toggle,
-    #zalo-float-btn,
-    .bg-\[\#0068FF\],
-    .hover\:bg-\[\#0054cc\]:hover {
-      background: var(--color-ink) !important;
-      background-image: none !important;
+    #ai-chat-toggle {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
     }
-    #zalo-float-btn:hover,
-    #ai-chat-toggle:hover {
-      background: var(--color-ink-soft) !important;
-    }
-    /* Kill leftover chromatic utilities if any slip through */
-    .text-blue-500, .text-blue-600, .text-blue-700,
-    .text-sky-600, .text-sky-700, .text-cyan-600,
-    .text-green-600, .text-green-700, .text-teal-600,
-    .text-violet-600, .text-purple-600, .text-indigo-600,
-    .text-orange-600, .text-yellow-600 {
-      color: var(--color-ink) !important;
-    }
-    .bg-blue-500, .bg-blue-600, .bg-sky-500, .bg-green-500,
-    .bg-emerald-500, .bg-violet-500, .bg-indigo-500 {
-      background: var(--color-ink) !important;
-    }
-    .border-blue-200, .border-sky-200, .border-green-200 {
-      border-color: var(--color-hairline) !important;
-    }
-    [class*="bg-gradient"] {
-      background-image: none !important;
-    }
+    #zalo-float-btn { background: #0068FF !important; }
+    #zalo-float-btn:hover { background: #0054cc !important; }
 
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
@@ -438,7 +314,7 @@
     }
   </style>
 </head>
-<body class="bg-canvas text-ink min-h-screen antialiased">
+<body class="bg-canvas text-slate-900 min-h-screen antialiased">
 
   <!--
     ════════════════════════════════════════════════════════════════
@@ -453,18 +329,18 @@
 
   <!-- ═══════════════════ AUTH ═══════════════════ -->
   <div id="auth-screen" class="app-layer min-h-screen flex items-center justify-center p-4">
-    <div class="login-card-enter w-full max-w-md bg-paper rounded-2xl shadow-card border border-hairline overflow-hidden">
-      <div class="px-8 pt-10 pb-6 text-center bg-ink text-paper">
-        <div class="inline-flex w-14 h-14 rounded-2xl bg-white/10 items-center justify-center mb-3">
+    <div class="login-card-enter w-full max-w-md bg-white/95 backdrop-blur-md rounded-2xl shadow-card border border-sky-100 overflow-hidden">
+      <div class="px-8 pt-10 pb-6 text-center bg-gradient-to-br from-brand-600 to-brand-700 text-white">
+        <div class="inline-flex w-14 h-14 rounded-2xl bg-white/15 items-center justify-center mb-3">
           <i class="fas fa-bolt text-2xl"></i>
         </div>
-        <h1 class="text-2xl font-semibold tracking-tight" style="letter-spacing:-0.025em">AI Pro Store</h1>
-        <p class="text-mid text-sm mt-1" style="color:#a3a3a3">Tài khoản Gemini · ChatGPT · Claude Premium</p>
+        <h1 class="text-2xl font-extrabold tracking-tight">AI<span class="text-brand-200">Pro</span> Store</h1>
+        <p class="text-brand-100 text-sm mt-1">Tài khoản Gemini · ChatGPT · Claude Premium</p>
       </div>
 
-      <div class="flex border-b border-hairline">
-        <button type="button" id="tab-login" class="flex-1 py-3 text-sm font-medium text-ink border-b-2 border-ink">Đăng nhập</button>
-        <button type="button" id="tab-register" class="flex-1 py-3 text-sm font-medium text-mid border-b-2 border-transparent">Đăng ký</button>
+      <div class="flex border-b border-slate-100">
+        <button type="button" id="tab-login" class="flex-1 py-3 text-sm font-semibold text-brand-700 border-b-2 border-brand-600">Đăng nhập</button>
+        <button type="button" id="tab-register" class="flex-1 py-3 text-sm font-medium text-slate-400 border-b-2 border-transparent">Đăng ký</button>
       </div>
 
       <div class="p-6 sm:p-8">
@@ -580,11 +456,11 @@
 
       <!-- ── Products ── -->
       <section id="view-products" class="fade-in">
-        <div class="rounded-2xl bg-paper border border-hairline p-6 sm:p-8 mb-6 shadow-card">
-          <p class="text-mid text-xs font-medium uppercase tracking-wider mb-2" style="letter-spacing:0.05em"><i class="fas fa-bolt mr-1"></i> AI Pro Store</p>
-          <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight text-ink" style="letter-spacing:-0.025em">Tài khoản AI Premium</h1>
-          <p class="text-mid text-sm mt-2 max-w-xl">Gemini · ChatGPT · Claude — Mua nhanh, nạp VietQR/Casso tự động.</p>
-          <button type="button" data-view="wallet" class="btn-press mt-4 inline-flex items-center gap-2 bg-ink text-paper font-medium px-4 py-2.5 rounded-xl hover:bg-ink-soft">
+        <div class="rounded-2xl bg-gradient-to-br from-brand-600 to-brand-700 text-white p-6 sm:p-8 mb-6 shadow-card">
+          <p class="text-brand-100 text-xs font-bold uppercase tracking-wider mb-2"><i class="fas fa-bolt mr-1"></i> AI Pro Store</p>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Tài khoản AI Premium</h1>
+          <p class="text-brand-100 text-sm mt-2 max-w-xl">Gemini · ChatGPT · Claude — Mua nhanh, nạp VietQR/Casso tự động.</p>
+          <button type="button" data-view="wallet" class="btn-press mt-4 inline-flex items-center gap-2 bg-white text-brand-700 font-semibold px-5 py-2.5 rounded-xl hover:bg-brand-50">
             <i class="fas fa-wallet"></i> Nạp tiền ngay
           </button>
         </div>
@@ -1084,18 +960,18 @@
       class="hidden w-[min(100vw-1.5rem,380px)] h-[min(72vh,520px)] flex flex-col bg-white rounded-2xl shadow-lift border border-slate-100 overflow-hidden origin-bottom-right"
       style="animation: none;">
       <!-- Header -->
-      <div class="shrink-0 bg-ink text-paper px-4 py-3 flex items-start justify-between gap-2">
+      <div class="shrink-0 bg-gradient-to-r from-brand-600 to-brand-700 text-white px-4 py-3 flex items-start justify-between gap-2">
         <div class="min-w-0">
-          <div class="font-medium text-sm sm:text-base flex items-center gap-2">
-            <span class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center"><i class="fas fa-robot"></i></span>
+          <div class="font-bold text-sm sm:text-base flex items-center gap-2">
+            <span class="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center"><i class="fas fa-robot"></i></span>
             AI Đức Hi Assistant
           </div>
-          <p id="ai-chat-mode" class="text-[11px] text-neutral-400 mt-0.5 pl-10">Trợ lý hỗ trợ khách hàng</p>
+          <p id="ai-chat-mode" class="text-[11px] text-white/80 mt-0.5 pl-10">Trợ lý hỗ trợ khách hàng</p>
         </div>
         <div class="flex items-center gap-1 shrink-0">
-          <button type="button" id="ai-chat-clear" class="btn-press w-8 h-8 rounded-lg hover:bg-white/10 text-white/90" title="Xóa lịch sử"><i class="fas fa-trash-alt text-xs"></i></button>
-          <button type="button" id="ai-chat-minimize" class="btn-press w-8 h-8 rounded-lg hover:bg-white/10 text-white/90" title="Thu nhỏ"><i class="fas fa-minus text-xs"></i></button>
-          <button type="button" id="ai-chat-close" class="btn-press w-8 h-8 rounded-lg hover:bg-white/10 text-white/90" title="Đóng"><i class="fas fa-times"></i></button>
+          <button type="button" id="ai-chat-clear" class="btn-press w-8 h-8 rounded-lg hover:bg-white/15 text-white/90" title="Xóa lịch sử"><i class="fas fa-trash-alt text-xs"></i></button>
+          <button type="button" id="ai-chat-minimize" class="btn-press w-8 h-8 rounded-lg hover:bg-white/15 text-white/90" title="Thu nhỏ"><i class="fas fa-minus text-xs"></i></button>
+          <button type="button" id="ai-chat-close" class="btn-press w-8 h-8 rounded-lg hover:bg-white/15 text-white/90" title="Đóng"><i class="fas fa-times"></i></button>
         </div>
       </div>
       <!-- Messages -->
@@ -1139,10 +1015,9 @@
 
   <script>
   /* =========================================================
-     AI Pro Store — Frontend rebuild (Light Blue)
-     - Giữ API backend: auth, products, topup/Casso, orders, admin
+     AI Pro Store — UI monochrome (shadcn) + API backend
+     - Không brand color ngoài ink/gray/ember(error)
      - KHÔNG camera / upload ảnh / social
-     - Giỏ hàng + mã giảm giá (localStorage shop_coupons)
      ========================================================= */
 
   const API = '/api';
@@ -1748,8 +1623,8 @@
       tbody.innerHTML = logs.map(l => {
         const ok = l.status === 'success';
         const st = ok
-          ? `<span class="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">Thành công</span>`
-          : `<span class="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-red-50 text-red-600 border border-red-100" title="${escapeHtml(l.reason || '')}">Thất bại${l.reason ? ': ' + escapeHtml(l.reason) : ''}</span>`;
+          ? `<span class="text-[12px] px-2 py-0.5 rounded-full font-medium bg-ink text-paper border border-ink">Thành công</span>`
+          : `<span class="text-[12px] px-2 py-0.5 rounded-full font-medium bg-paper text-ember border border-hairline" title="${escapeHtml(l.reason || '')}">Thất bại${l.reason ? ': ' + escapeHtml(l.reason) : ''}</span>`;
         const icon = l.deviceType === 'Mobile' ? 'fa-mobile-alt' : l.deviceType === 'Tablet' ? 'fa-tablet-alt' : 'fa-desktop';
         return `<tr class="hover:bg-brand-50/40 transition-colors">
           <td class="px-4 py-3 whitespace-nowrap text-slate-700 text-xs">${escapeHtml(l.createdAt || '—')}</td>
@@ -1786,7 +1661,7 @@
           <div class="flex-1 min-w-0">
             <div class="flex flex-wrap items-center gap-2">
               <span class="font-bold text-slate-800">${escapeHtml(s.deviceLabel || s.deviceType)}</span>
-              ${s.isCurrent ? '<span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-100">Thiết bị hiện tại</span>' : ''}
+              ${s.isCurrent ? '<span class="text-[10px] px-2 py-0.5 rounded-full bg-ink text-paper font-medium">Thiết bị hiện tại</span>' : ''}
             </div>
             <p class="text-xs text-slate-500 mt-1">
               ${escapeHtml(s.browser || '')} · ${escapeHtml(s.os || '')} · IP ${escapeHtml(s.ipAddress || '—')}
@@ -1990,8 +1865,8 @@
           <div class="flex flex-wrap gap-2 items-center mb-1">
             <span class="font-mono text-slate-500">${escapeHtml(l.createdAt || '')}</span>
             ${l.status === 'success'
-              ? '<span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold">Thành công</span>'
-              : `<span class="px-2 py-0.5 rounded-full bg-red-50 text-red-600 font-semibold">Thất bại${l.reason ? ': ' + escapeHtml(l.reason) : ''}</span>`}
+              ? '<span class="px-2 py-0.5 rounded-full bg-ink text-paper font-medium text-[11px]">Thành công</span>'
+              : `<span class="px-2 py-0.5 rounded-full bg-paper text-ember border border-hairline font-medium text-[11px]">Thất bại${l.reason ? ': ' + escapeHtml(l.reason) : ''}</span>`}
           </div>
           <div class="text-slate-600">IP <strong>${escapeHtml(l.ipAddress || '—')}</strong>
             · ${escapeHtml(l.deviceType)} · ${escapeHtml(l.browser)} · ${escapeHtml(l.os)}
@@ -2572,25 +2447,22 @@
       };
     }
 
-    /** Vẽ 1 cánh hoa đào (sakura petal) */
+    /** Cánh hoa monochrome (xám/trắng — không hồng) */
     function drawSakura(p) {
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(p.rot);
       ctx.globalAlpha = p.op;
       const s = p.r;
-      // gradient hồng nhạt → pink
       const g = ctx.createRadialGradient(0, 0, 0, 0, 0, s);
-      g.addColorStop(0, 'rgba(255, 214, 232, 0.95)');
-      g.addColorStop(0.55, 'rgba(251, 182, 206, 0.85)');
-      g.addColorStop(1, 'rgba(244, 114, 182, 0.35)');
+      g.addColorStop(0, 'rgba(255,255,255,0.95)');
+      g.addColorStop(0.55, 'rgba(229,229,229,0.8)');
+      g.addColorStop(1, 'rgba(163,163,163,0.15)');
       ctx.fillStyle = g;
       ctx.beginPath();
-      // ellipse cánh hoa
       ctx.ellipse(0, 0, s * 0.55, s, 0, 0, Math.PI * 2);
       ctx.fill();
-      // gân giữa cánh
-      ctx.strokeStyle = 'rgba(244, 114, 182, 0.25)';
+      ctx.strokeStyle = 'rgba(115,115,115,0.2)';
       ctx.lineWidth = 0.6;
       ctx.beginPath();
       ctx.moveTo(0, -s * 0.7);
@@ -2599,15 +2471,15 @@
       ctx.restore();
     }
 
-    /** Vẽ bông tuyết tròn mềm */
+    /** Tuyết monochrome (trắng/xám) */
     function drawSnow(p) {
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.globalAlpha = p.op;
       const g = ctx.createRadialGradient(0, 0, 0, 0, 0, p.r);
       g.addColorStop(0, 'rgba(255,255,255,0.95)');
-      g.addColorStop(0.6, 'rgba(191, 219, 254, 0.7)');
-      g.addColorStop(1, 'rgba(147, 197, 253, 0)');
+      g.addColorStop(0.55, 'rgba(229,229,229,0.65)');
+      g.addColorStop(1, 'rgba(163,163,163,0)');
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.arc(0, 0, p.r, 0, Math.PI * 2);
