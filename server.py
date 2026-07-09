@@ -36,16 +36,24 @@ VN_TZ = timezone(timedelta(hours=7))
 
 
 def format_dt_vn(val):
-    """Chuyển timestamp DB (UTC) sang chuỗi giờ Việt Nam."""
+    """Chuyển timestamp DB (UTC) sang chuỗi giờ Việt Nam (dd/mm/yyyy HH:mm:ss)."""
     if val is None or val == '':
         return ''
     s = str(val).strip()
+    if re.match(r'^\d{2}/\d{2}/\d{4}', s):
+        return s
     try:
-        clean = s.replace('Z', '').split('.')[0].replace(' ', 'T')
+        clean = s.replace('Z', '').replace('z', '')
+        if ' ' in clean and 'T' not in clean:
+            clean = clean.replace(' ', 'T', 1)
+        if '.' in clean:
+            main, rest = clean.split('.', 1)
+            rest = re.split(r'[+-]', rest)[0][:6]
+            clean = main + ('.' + rest if rest.isdigit() else '')
         dt = datetime.fromisoformat(clean)
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
-        return dt.astimezone(VN_TZ).strftime('%d/%m/%Y %H:%M')
+        return dt.astimezone(VN_TZ).strftime('%d/%m/%Y %H:%M:%S')
     except Exception:
         return s
 app = Flask(__name__, static_folder=str(PUBLIC), static_url_path='')
@@ -192,7 +200,8 @@ def fmt_order_row(row, extra=None):
         'price': row['price'],
         'quantity': qty,
         'status': row['status'],
-        'date': str(row.get('date') or row.get('created_at', '')),
+        'date': format_dt_vn(row.get('date') or row.get('created_at', '')),
+        'createdAt': format_dt_vn(row.get('date') or row.get('created_at', '')),
     }
     if extra:
         item.update(extra)
@@ -234,7 +243,7 @@ def fetch_order_detail(conn, oid, user_view=False):
             'amount': tx['amount'],
             'description': tx['description'],
             'status': tx['status'],
-            'date': str(tx['created_at']),
+            'date': format_dt_vn(tx['created_at']),
         }
     return detail
 
@@ -883,7 +892,7 @@ def profile_get():
     u = fmt_user(user)
     u['status'] = 'blocked' if user.get('is_blocked') else 'active'
     u['statusLabel'] = 'Bị khóa' if user.get('is_blocked') else 'Đang hoạt động'
-    u['lastLoginAt'] = str(user.get('last_login_at') or '')
+    u['lastLoginAt'] = format_dt_vn(user.get('last_login_at'))
     u['lastLoginIp'] = user.get('last_login_ip') or ''
     return jsonify({
         'user': u,
@@ -1167,7 +1176,8 @@ def user_transactions():
         (request.user['id'],))
     db.close(conn)
     for r in rows:
-        r['date'] = str(r['date'])
+        r['date'] = format_dt_vn(r['date'])
+        r['createdAt'] = r['date']
         r['transactionCode'] = gen_tx_code(r['id'])
         if r.get('order_id'):
             r['orderCode'] = gen_order_code(r['order_id'])
@@ -2264,7 +2274,7 @@ def admin_users():
     return jsonify({'users': [{
         'id': r['id'], 'fullName': r['name'], 'email': r['email'], 'role': r['role'],
         'balance': r['balance'], 'topupCode': r['topup_code'], 'isBlocked': bool(r.get('is_blocked')),
-        'createdAt': str(r['created_at'])
+        'createdAt': format_dt_vn(r['created_at'])
     } for r in rows]})
 
 
@@ -2456,7 +2466,8 @@ def admin_transactions():
             'status': r['status'], 'bankTransactionId': r.get('bankTransactionId'),
             'orderId': r.get('order_id'),
             'orderCode': gen_order_code(r['order_id']) if r.get('order_id') else None,
-            'email': r['email'], 'date': str(r['date']),
+            'email': r['email'], 'date': format_dt_vn(r['date']),
+            'createdAt': format_dt_vn(r['date']),
         })
     return jsonify({'transactions': items})
 
@@ -2589,7 +2600,7 @@ def admin_topups():
         FROM topup_requests tr JOIN users u ON u.id=tr.user_id ORDER BY tr.id DESC''')
     db.close(conn)
     for r in rows:
-        r['createdAt'] = str(r['createdAt'])
+        r['createdAt'] = format_dt_vn(r['createdAt'])
     return jsonify({'topups': rows})
 
 

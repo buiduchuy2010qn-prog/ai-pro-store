@@ -10,10 +10,45 @@ import re
 import time
 import urllib.error
 import urllib.request
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import database as db
 from services import security as sec
+
+# ── Giờ Việt Nam (UTC+7) ──
+VN_TZ = timezone(timedelta(hours=7))
+
+
+def format_dt_vn(val) -> str:
+    """Mọi thời gian hiển thị cho user/admin = giờ Việt Nam dd/mm/yyyy HH:mm:ss."""
+    if val is None or val == '':
+        return ''
+    s = str(val).strip()
+    # Đã format sẵn kiểu VN
+    if re.match(r'^\d{2}/\d{2}/\d{4}', s):
+        return s
+    try:
+        clean = s.replace('Z', '').replace('z', '')
+        if ' ' in clean and 'T' not in clean:
+            clean = clean.replace(' ', 'T', 1)
+        # bỏ microseconds dài
+        if '.' in clean:
+            main, frac = clean.split('.', 1)
+            frac = re.split(r'[+-]', frac)[0][:6]
+            clean = main + ('.' + frac if frac.isdigit() else '')
+        dt = datetime.fromisoformat(clean)
+        if dt.tzinfo is None:
+            # SQLite/UTC naive → coi là UTC
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(VN_TZ).strftime('%d/%m/%Y %H:%M:%S')
+    except Exception:
+        return s
+
+
+def now_vn_iso() -> str:
+    """Lưu log theo mốc UTC (ISO); hiển thị qua format_dt_vn."""
+    return datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S')
+
 
 # ── Geo cache (in-process) ──
 _GEO_CACHE = {}
@@ -224,7 +259,7 @@ def record_login(
         status if status in ('success', 'failed') else 'failed',
         (reason or '')[:200],
         session_jti,
-        datetime.utcnow().isoformat(),
+        now_vn_iso(),
     ))
     return ua_info, geo
 
@@ -300,7 +335,7 @@ def fmt_log(row, current_jti=None) -> dict:
         'statusLabel': 'Thành công' if status == 'success' else 'Thất bại',
         'reason': row.get('reason') or '',
         'isCurrentSession': bool(current_jti and row.get('session_jti') == current_jti),
-        'createdAt': str(row.get('created_at') or ''),
+        'createdAt': format_dt_vn(row.get('created_at')),
     }
 
 
@@ -350,8 +385,8 @@ def fmt_session(row, current_jti=None) -> dict:
         'city': city,
         'isActive': not bool(row.get('revoked')),
         'isCurrent': bool(current_jti and jti == current_jti),
-        'createdAt': str(row.get('created_at') or ''),
-        'lastActiveAt': str(row.get('last_seen') or ''),
+        'createdAt': format_dt_vn(row.get('created_at')),
+        'lastActiveAt': format_dt_vn(row.get('last_seen')),
         'revoked': bool(row.get('revoked')),
     }
 
