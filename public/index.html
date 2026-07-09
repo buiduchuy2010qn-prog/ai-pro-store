@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Pro Store — Tài khoản AI Premium</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta name="app-ui" content="v4-motion-light-blue">
+  <meta name="app-ui" content="v5-anim-60fps">
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -17,93 +17,217 @@
         extend: {
           colors: {
             brand: {
-              50:  '#eff6ff',
-              100: '#dbeafe',
-              200: '#bfdbfe',
-              300: '#93c5fd',
-              400: '#60a5fa',
-              500: '#3b82f6',
-              600: '#2563eb',
-              700: '#1d4ed8',
-              800: '#1e40af',
-              900: '#1e3a8a',
-            },
-            zalo: { DEFAULT: '#0068FF', dark: '#0054cc' }
+              50:  '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
+              400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
+              800: '#1e40af', 900: '#1e3a8a',
+            }
           },
           boxShadow: {
             soft: '0 4px 16px rgba(15, 23, 42, 0.06)',
             card: '0 8px 24px rgba(37, 99, 235, 0.08)',
-            lift: '0 12px 32px rgba(37, 99, 235, 0.12)',
-          },
-          transitionDuration: { 300: '300ms' },
-          keyframes: {
-            'modal-in': {
-              '0%': { opacity: '0', transform: 'translateY(12px) scale(0.98)' },
-              '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
-            },
-            'backdrop-in': {
-              '0%': { opacity: '0' },
-              '100%': { opacity: '1' },
-            },
-            'fade-up': {
-              '0%': { opacity: '0', transform: 'translateY(8px)' },
-              '100%': { opacity: '1', transform: 'translateY(0)' },
-            },
-          },
-          animation: {
-            'modal-in': 'modal-in 0.3s ease-out both',
-            'backdrop-in': 'backdrop-in 0.3s ease-out both',
-            'fade-up': 'fade-up 0.3s ease-out both',
-          },
+            lift: '0 12px 32px rgba(37, 99, 235, 0.14)',
+            glow: '0 0 0 4px rgba(37, 99, 235, 0.15)',
+          }
         }
       }
     };
   </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    body { font-family: 'Inter', system-ui, sans-serif; }
-    .nav-active { background: #fff; color: #1d4ed8; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
 
-    /* View transition mượt 300ms */
-    .fade-in { animation: fadeUp .3s ease-out both; }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(8px); }
-      to   { opacity: 1; transform: translateY(0); }
+    /* ── Base ── */
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      /* GPU layer nhẹ cho scroll mượt */
+      -webkit-font-smoothing: antialiased;
+    }
+    .nav-active {
+      background: #fff;
+      color: #1d4ed8;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+      transition: background .25s ease, color .25s ease, box-shadow .25s ease;
+    }
+    .nav-btn, .mobile-nav, .admin-tab {
+      transition: background .25s ease, color .25s ease, box-shadow .25s ease, transform .15s ease;
     }
 
-    /* Product card motion */
+    /* ── View / Tab transition (transform+opacity = 60fps) ── */
+    .view-section {
+      animation: viewIn .32s cubic-bezier(.22, 1, .36, 1) both;
+    }
+    .fade-in { animation: viewIn .32s cubic-bezier(.22, 1, .36, 1) both; }
+    @keyframes viewIn {
+      from { opacity: 0; transform: translate3d(0, 10px, 0); }
+      to   { opacity: 1; transform: translate3d(0, 0, 0); }
+    }
+    .view-out {
+      animation: viewOut .2s ease-in both;
+    }
+    @keyframes viewOut {
+      from { opacity: 1; transform: translate3d(0, 0, 0); }
+      to   { opacity: 0; transform: translate3d(0, -6px, 0); }
+    }
+
+    /* ── Product card: hover lift + scale (GPU) ── */
     .product-card {
-      transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease;
+      will-change: transform;
+      transition:
+        transform .3s cubic-bezier(.22, 1, .36, 1),
+        box-shadow .3s ease,
+        border-color .3s ease;
     }
     .product-card:hover {
-      transform: scale(1.02) translateY(-2px);
-      box-shadow: 0 12px 32px rgba(37, 99, 235, 0.12);
+      transform: translate3d(0, -4px, 0) scale(1.02);
+      box-shadow: 0 16px 40px rgba(37, 99, 235, 0.14);
       border-color: #93c5fd;
     }
-
-    /* Buttons: nhấn thật active:scale-95 */
-    .btn-press {
-      transition: transform .15s ease, background-color .3s ease, box-shadow .3s ease, opacity .3s ease;
+    .product-card:active {
+      transform: translate3d(0, -1px, 0) scale(1.01);
     }
-    .btn-press:active:not(:disabled) { transform: scale(0.95); }
+    /* Stagger enter */
+    .product-card.stagger {
+      animation: cardPop .4s cubic-bezier(.22, 1, .36, 1) both;
+    }
+    @keyframes cardPop {
+      from { opacity: 0; transform: translate3d(0, 16px, 0) scale(.96); }
+      to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+    }
 
-    /* Modal open state */
+    /* ── Buttons: press + ripple ── */
+    .btn-press {
+      position: relative;
+      overflow: hidden;
+      transform: translateZ(0);
+      transition:
+        transform .15s ease,
+        background-color .25s ease,
+        box-shadow .25s ease,
+        opacity .25s ease;
+    }
+    .btn-press:hover:not(:disabled) {
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.22);
+    }
+    .btn-press:active:not(:disabled) {
+      transform: scale(0.95);
+    }
+    .btn-press .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,.35);
+      transform: scale(0);
+      animation: ripple .5s ease-out forwards;
+      pointer-events: none;
+    }
+    @keyframes ripple {
+      to { transform: scale(2.6); opacity: 0; }
+    }
+    .btn-loading {
+      pointer-events: none;
+      opacity: .75;
+    }
+    .btn-loading .btn-label { opacity: 0; }
+    .btn-loading::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      width: 1.15rem; height: 1.15rem;
+      border: 2px solid rgba(255,255,255,.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Modal: fade + scale ── */
     .modal-backdrop {
-      transition: opacity .3s ease;
+      opacity: 0;
+      transition: opacity .28s ease;
+    }
+    .modal-backdrop.is-open {
+      opacity: 1;
     }
     .modal-panel {
-      animation: modalIn .3s ease-out both;
+      transform: translate3d(0, 14px, 0) scale(.96);
+      opacity: 0;
+      transition:
+        transform .32s cubic-bezier(.22, 1, .36, 1),
+        opacity .28s ease;
     }
-    @keyframes modalIn {
-      from { opacity: 0; transform: translateY(16px) scale(0.98); }
-      to   { opacity: 1; transform: translateY(0) scale(1); }
+    .modal-backdrop.is-open .modal-panel {
+      transform: translate3d(0, 0, 0) scale(1);
+      opacity: 1;
+    }
+    .modal-backdrop.is-closing {
+      opacity: 0;
+    }
+    .modal-backdrop.is-closing .modal-panel {
+      transform: translate3d(0, 10px, 0) scale(.97);
+      opacity: 0;
     }
 
-    /* Skeleton pulse */
+    /* ── Toast ── */
+    #toast {
+      transition: opacity .28s ease, transform .28s cubic-bezier(.22, 1, .36, 1);
+    }
+    #toast.toast-show {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+    #toast.toast-hide {
+      opacity: 0;
+      transform: translate3d(0, 12px, 0);
+    }
+
+    /* ── Cart badge bounce ── */
+    #cart-badge.pop {
+      animation: badgePop .45s cubic-bezier(.22, 1, .36, 1);
+    }
+    @keyframes badgePop {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.35); }
+      100% { transform: scale(1); }
+    }
+
+    /* ── Wallet balance flash ── */
+    .balance-flash {
+      animation: balFlash .7s ease;
+    }
+    @keyframes balFlash {
+      0%   { color: inherit; transform: scale(1); }
+      30%  { color: #059669; transform: scale(1.06); }
+      100% { color: inherit; transform: scale(1); }
+    }
+    .balance-deduct {
+      animation: balDeduct .7s ease;
+    }
+    @keyframes balDeduct {
+      0%   { color: inherit; transform: scale(1); }
+      30%  { color: #dc2626; transform: scale(1.05); }
+      100% { color: inherit; transform: scale(1); }
+    }
+
+    /* ── Floating +N cart particle ── */
+    .cart-float {
+      position: fixed;
+      z-index: 60;
+      pointer-events: none;
+      font-weight: 800;
+      font-size: 13px;
+      color: #2563eb;
+      text-shadow: 0 1px 0 #fff;
+      animation: cartFloat .7s ease-out forwards;
+    }
+    @keyframes cartFloat {
+      0%   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+      100% { opacity: 0; transform: translate3d(0, -40px, 0) scale(1.2); }
+    }
+
+    /* ── Skeleton ── */
     .skel {
-      background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+      background: linear-gradient(90deg, #e2e8f0 25%, #f8fafc 50%, #e2e8f0 75%);
       background-size: 200% 100%;
-      animation: skel 1.2s ease-in-out infinite;
+      animation: skel 1.1s ease-in-out infinite;
       border-radius: 1rem;
     }
     @keyframes skel {
@@ -111,13 +235,24 @@
       100% { background-position: -200% 0; }
     }
 
+    /* ── QR panel enter ── */
+    #qr-panel.panel-in {
+      animation: viewIn .35s cubic-bezier(.22, 1, .36, 1) both;
+    }
+
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
-    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
 
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
       }
     }
@@ -283,7 +418,7 @@
             </div>
             <p class="text-xs text-slate-500 mb-4">Số dư ví: <strong id="cart-balance" class="text-brand-600">0đ</strong></p>
             <button type="button" id="checkout-btn" class="btn-press w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-soft disabled:opacity-50">
-              <i class="fas fa-credit-card mr-2"></i>Thanh toán bằng ví
+              <span class="btn-label"><i class="fas fa-credit-card mr-2"></i>Thanh toán bằng ví</span>
             </button>
             <button type="button" data-view="products" class="w-full mt-2 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">
               Tiếp tục mua sắm
@@ -324,8 +459,8 @@
                 <button type="button" data-amount="500000" class="quick-amt px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold hover:border-brand-400 hover:text-brand-700">500K</button>
                 <button type="button" data-amount="1000000" class="quick-amt px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold hover:border-brand-400 hover:text-brand-700">1M</button>
               </div>
-              <button type="button" id="create-topup-btn" class="btn-press w-full mt-4 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-soft">
-                <i class="fas fa-qrcode mr-2"></i>Tạo QR &amp; yêu cầu nạp
+                <button type="button" id="create-topup-btn" class="btn-press w-full mt-4 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-soft">
+                <span class="btn-label"><i class="fas fa-qrcode mr-2"></i>Tạo QR &amp; yêu cầu nạp</span>
               </button>
             </div>
           </div>
@@ -568,8 +703,16 @@
   </div>
 
   <!-- Toast -->
-  <div id="toast" class="fixed bottom-6 right-4 left-4 sm:left-auto z-50 hidden">
+  <div id="toast" class="fixed bottom-6 right-4 left-4 sm:left-auto z-50 pointer-events-none toast-hide opacity-0">
     <div id="toast-inner" class="bg-slate-800 text-white px-5 py-3 rounded-xl shadow-lift text-sm max-w-sm mx-auto sm:mx-0"></div>
+  </div>
+
+  <!-- Global loading overlay (mua / nạp) -->
+  <div id="global-loader" class="fixed inset-0 z-[70] hidden items-center justify-center bg-slate-900/25 backdrop-blur-[2px]">
+    <div class="bg-white rounded-2xl shadow-lift px-6 py-5 flex items-center gap-3 border border-slate-100">
+      <span class="inline-block w-6 h-6 border-2 border-brand-200 border-t-brand-600 rounded-full animate-spin"></span>
+      <span id="global-loader-text" class="text-sm font-semibold text-slate-700">Đang xử lý…</span>
+    </div>
   </div>
 
   <script>
@@ -605,9 +748,72 @@
     const inner = document.getElementById('toast-inner');
     inner.textContent = msg;
     inner.className = `px-5 py-3 rounded-xl shadow-lift text-sm max-w-sm mx-auto sm:mx-0 text-white ${err ? 'bg-red-600' : 'bg-slate-800'}`;
-    el.classList.remove('hidden');
+    el.classList.remove('toast-hide');
+    el.classList.add('toast-show');
     clearTimeout(toast._t);
-    toast._t = setTimeout(() => el.classList.add('hidden'), 3200);
+    toast._t = setTimeout(() => {
+      el.classList.remove('toast-show');
+      el.classList.add('toast-hide');
+    }, 3000);
+  }
+
+  function showLoader(text) {
+    const el = document.getElementById('global-loader');
+    document.getElementById('global-loader-text').textContent = text || 'Đang xử lý…';
+    el.classList.remove('hidden');
+    el.classList.add('flex');
+  }
+  function hideLoader() {
+    const el = document.getElementById('global-loader');
+    el.classList.add('hidden');
+    el.classList.remove('flex');
+  }
+
+  function setBtnLoading(btn, on) {
+    if (!btn) return;
+    btn.classList.toggle('btn-loading', !!on);
+    btn.disabled = !!on;
+  }
+
+  /** Ripple trên nút .btn-press */
+  function attachRipple(root) {
+    (root || document).querySelectorAll('.btn-press').forEach(btn => {
+      if (btn._rippleBound) return;
+      btn._rippleBound = true;
+      btn.addEventListener('click', function (e) {
+        if (btn.disabled) return;
+        const rect = btn.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height);
+        const span = document.createElement('span');
+        span.className = 'ripple';
+        span.style.width = span.style.height = size + 'px';
+        span.style.left = (e.clientX - rect.left - size / 2) + 'px';
+        span.style.top = (e.clientY - rect.top - size / 2) + 'px';
+        btn.appendChild(span);
+        setTimeout(() => span.remove(), 520);
+      });
+    });
+  }
+
+  function flashBalance(kind) {
+    ['header-balance', 'wallet-balance', 'cart-balance'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('balance-flash', 'balance-deduct');
+      void el.offsetWidth;
+      el.classList.add(kind === 'add' ? 'balance-flash' : 'balance-deduct');
+    });
+  }
+
+  function cartFloatFx(fromEl) {
+    const r = fromEl?.getBoundingClientRect?.() || { left: window.innerWidth / 2, top: window.innerHeight / 2, width: 0 };
+    const n = document.createElement('div');
+    n.className = 'cart-float';
+    n.textContent = '+1';
+    n.style.left = (r.left + r.width / 2) + 'px';
+    n.style.top = r.top + 'px';
+    document.body.appendChild(n);
+    setTimeout(() => n.remove(), 720);
   }
   function emptyState(msg, icon = 'fa-inbox') {
     return `<div class="bg-white rounded-2xl border border-slate-100 shadow-soft text-center py-14 text-slate-400">
@@ -665,13 +871,20 @@
   }
   function saveCart(c) {
     localStorage.setItem(LS_CART, JSON.stringify(c));
-    updateCartBadge();
+    updateCartBadge(false);
   }
-  function updateCartBadge() {
+  function updateCartBadge(pop) {
     const n = getCart().reduce((s, i) => s + i.qty, 0);
     const b = document.getElementById('cart-badge');
-    if (n > 0) { b.textContent = n > 99 ? '99+' : n; b.classList.remove('hidden'); }
-    else b.classList.add('hidden');
+    if (n > 0) {
+      b.textContent = n > 99 ? '99+' : n;
+      b.classList.remove('hidden');
+      if (pop) {
+        b.classList.remove('pop');
+        void b.offsetWidth;
+        b.classList.add('pop');
+      }
+    } else b.classList.add('hidden');
   }
 
   /* ─── Coupons (localStorage — tương thích shop_coupons cũ) ─── */
@@ -707,17 +920,26 @@
   function navigateTo(view) {
     if (view === 'admin' && currentUser?.role !== 'admin') {
       document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
-      document.getElementById('view-admin').classList.remove('hidden');
+      const adminEl = document.getElementById('view-admin');
+      adminEl.classList.remove('hidden');
+      adminEl.classList.add('view-section');
       document.getElementById('admin-denied').classList.remove('hidden');
       document.getElementById('admin-content').classList.add('hidden');
       highlightNav('admin');
       return;
     }
+    const prev = document.getElementById('view-' + currentView);
     currentView = view;
-    document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('[id^="view-"]').forEach(el => {
+      el.classList.add('hidden');
+      el.classList.remove('view-section', 'view-out');
+    });
     const el = document.getElementById('view-' + view);
     if (!el) return navigateTo('products');
     el.classList.remove('hidden');
+    // Replay enter animation
+    void el.offsetWidth;
+    el.classList.add('view-section');
     document.getElementById('mobile-menu').classList.add('hidden');
     highlightNav(view);
     if (view === 'products') loadProducts();
@@ -727,6 +949,7 @@
     if (view === 'transactions') loadTransactions();
     if (view === 'admin') loadAdmin();
     if (location.hash !== '#' + view) location.hash = view;
+    attachRipple(el);
   }
   function highlightNav(view) {
     document.querySelectorAll('.nav-btn').forEach(b => {
@@ -769,8 +992,8 @@
         const col = COLOR_MAP[p.color] || COLOR_MAP.blue;
         const icon = p.icon || 'fa-box';
         return `
-        <article class="product-card bg-white rounded-2xl border border-slate-100 shadow-soft p-5 flex flex-col"
-                 style="animation-delay:${Math.min(i * 40, 240)}ms">
+        <article class="product-card stagger bg-white rounded-2xl border border-slate-100 shadow-soft p-5 flex flex-col"
+                 style="animation-delay:${Math.min(i * 45, 270)}ms">
           <div class="flex items-start gap-3 mb-3">
             <div class="w-12 h-12 rounded-xl ${col} flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-105">
               <i class="fas ${escapeHtml(icon)} text-lg"></i>
@@ -784,30 +1007,33 @@
           <div class="flex items-center justify-between gap-2 pt-3 border-t border-slate-50">
             <span class="text-lg font-extrabold text-brand-700">${formatMoney(p.price)}</span>
             <div class="flex gap-2">
-              <button type="button" onclick="addToCart(${p.id})"
+              <button type="button" onclick="addToCart(${p.id},1,event)"
                 class="btn-press px-3 py-2 rounded-xl border border-slate-200 text-slate-600 hover:border-brand-300 hover:text-brand-700 text-sm" title="Thêm giỏ">
                 <i class="fas fa-cart-plus"></i>
               </button>
               <button type="button" onclick="buyNow(${p.id})"
                 class="btn-press px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-sm">
-                Mua ngay
+                <span class="btn-label">Mua ngay</span>
               </button>
             </div>
           </div>
         </article>`;
       }).join('');
+      attachRipple(grid);
     } catch (e) {
       grid.innerHTML = emptyState(e.message || 'Không tải được sản phẩm.', 'fa-exclamation-circle');
     }
   }
 
-  function addToCart(productId, qty = 1) {
+  function addToCart(productId, qty = 1, evt) {
     const p = productsCache[productId];
     if (!p) return toast('Sản phẩm không tồn tại', true);
     const cart = getCart();
     const row = cart.find(i => i.productId === productId);
     if (row) row.qty += qty; else cart.push({ productId, qty });
     saveCart(cart);
+    updateCartBadge(true);
+    cartFloatFx(evt?.target || evt?.currentTarget);
     toast('Đã thêm vào giỏ: ' + p.name);
     if (currentView === 'cart') renderCart();
   }
@@ -929,12 +1155,25 @@
     await processCheckout(lines, appliedCoupon, {}, {});
   }
 
-  function replayModalAnim(modalEl) {
-    const panel = modalEl.querySelector('.modal-panel');
-    if (!panel) return;
-    panel.style.animation = 'none';
-    void panel.offsetWidth;
-    panel.style.animation = '';
+  function openModal(id) {
+    const m = document.getElementById(id);
+    if (!m) return;
+    m.classList.remove('hidden', 'is-closing');
+    m.classList.add('flex');
+    // next frame → is-open (CSS transition)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => m.classList.add('is-open'));
+    });
+  }
+  function closeModal(id) {
+    const m = document.getElementById(id);
+    if (!m) return;
+    m.classList.remove('is-open');
+    m.classList.add('is-closing');
+    setTimeout(() => {
+      m.classList.add('hidden');
+      m.classList.remove('flex', 'is-closing');
+    }, 280);
   }
   function openPurchaseModal(line) {
     const mode = line.contactMode || 'none';
@@ -943,13 +1182,10 @@
     document.getElementById('purchase-phone-wrap').classList.toggle('hidden', !(mode === 'zalo' || mode === 'both'));
     document.getElementById('purchase-email').value = '';
     document.getElementById('purchase-phone').value = '';
-    const m = document.getElementById('purchase-modal');
-    m.classList.remove('hidden'); m.classList.add('flex');
-    replayModalAnim(m);
+    openModal('purchase-modal');
   }
   function closePurchaseModal() {
-    const m = document.getElementById('purchase-modal');
-    m.classList.add('hidden'); m.classList.remove('flex');
+    closeModal('purchase-modal');
   }
 
   async function processCheckout(lines, coupon, contactEmail, contactPhone) {
@@ -957,6 +1193,9 @@
     const couponCode = coupon?.code || '';
     const discountPercent = Number(coupon?.percent) || 0;
     let ok = 0;
+    const btn = document.getElementById('checkout-btn');
+    setBtnLoading(btn, true);
+    showLoader('Đang thanh toán…');
     try {
       for (const line of lines) {
         const body = {
@@ -978,12 +1217,16 @@
       document.getElementById('coupon-input').value = '';
       document.getElementById('coupon-msg').classList.add('hidden');
       await refreshUser();
+      flashBalance('deduct');
       toast(`Đã mua ${ok} đơn thành công!`);
       navigateTo('orders');
     } catch (e) {
       await refreshUser();
       toast(e.message || 'Thanh toán lỗi', true);
-      if (ok > 0) { saveCart([]); navigateTo('orders'); }
+      if (ok > 0) { saveCart([]); flashBalance('deduct'); navigateTo('orders'); }
+    } finally {
+      setBtnLoading(btn, false);
+      hideLoader();
     }
   }
 
@@ -997,6 +1240,9 @@
   async function createTopup() {
     const amount = parseInt(document.getElementById('topup-amount').value, 10);
     if (!amount || amount < 10000) return toast('Tối thiểu 10.000đ', true);
+    const btn = document.getElementById('create-topup-btn');
+    setBtnLoading(btn, true);
+    showLoader('Đang tạo mã QR…');
     try {
       const r = await api('/topup/create', { method: 'POST', body: JSON.stringify({ amount }) });
       activeTopupId = r.id;
@@ -1005,7 +1251,10 @@
       document.getElementById('qr-bank-account').textContent = r.bank?.account || '';
       document.getElementById('qr-amount').textContent = formatMoney(r.amount);
       document.getElementById('qr-add-info').textContent = r.topupCode || '';
-      document.getElementById('qr-panel').classList.remove('hidden');
+      const panel = document.getElementById('qr-panel');
+      panel.classList.remove('hidden', 'panel-in');
+      void panel.offsetWidth;
+      panel.classList.add('panel-in');
       document.getElementById('qr-placeholder').classList.add('hidden');
       document.getElementById('polling-hint').classList.remove('hidden');
       document.getElementById('topup-banner').textContent = 'Đang chờ chuyển khoản…';
@@ -1013,6 +1262,9 @@
       toast('Đã tạo yêu cầu nạp ' + formatMoney(amount));
     } catch (e) {
       toast(e.message, true);
+    } finally {
+      setBtnLoading(btn, false);
+      hideLoader();
     }
   }
   function startTopupPoll(id) {
@@ -1027,6 +1279,7 @@
           document.getElementById('topup-banner').textContent = 'Nạp thành công! Số dư đã được cộng.';
           await refreshUser();
           document.getElementById('wallet-balance').textContent = formatMoney(currentUser.balance);
+          flashBalance('add');
           toast('Nạp tiền thành công!');
         } else if (s.status === 'rejected') {
           clearInterval(pollTimer);
@@ -1286,15 +1539,10 @@
     document.getElementById('fulfill-zalo').value = o.contactPhone || sup.customerPhone || '';
     document.getElementById('fulfill-note').value = sup.adminNote || '';
     document.getElementById('fulfill-status').value = sup.status || 'pending';
-    const m = document.getElementById('fulfill-modal');
-    m.classList.remove('hidden');
-    m.classList.add('flex');
-    replayModalAnim(m);
+    openModal('fulfill-modal');
   }
   function closeFulfillModal() {
-    const m = document.getElementById('fulfill-modal');
-    m.classList.add('hidden');
-    m.classList.remove('flex');
+    closeModal('fulfill-modal');
   }
 
   async function loadAdminSupport() {
@@ -1574,7 +1822,8 @@
   /* ─── Boot ─── */
   async function boot() {
     bindEvents();
-    updateCartBadge();
+    attachRipple(document);
+    updateCartBadge(false);
     if (window.SecurityClient) {
       await SecurityClient.bootstrap();
       await SecurityClient.renderTurnstile('turnstile-login');
