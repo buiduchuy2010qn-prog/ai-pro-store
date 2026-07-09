@@ -320,6 +320,13 @@ def _ensure_security_tables(conn):
             commit(conn)
         except Exception as e:
             print(f'[SecurityTables] {e}')
+    # login_logs + enrich sessions
+    try:
+        from services import login_history as lh
+        lh.ensure_tables(conn)
+        commit(conn)
+    except Exception as e:
+        print(f'[SecurityTables] login_logs: {e}')
 
 
 def init_schema():

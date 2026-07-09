@@ -551,58 +551,139 @@
         <div id="tx-list" class="space-y-3"></div>
       </section>
 
-      <!-- ── Security Profile (Hồ sơ bảo mật) ── -->
+      <!-- ── Hồ Sơ / Bảo mật ── -->
       <section id="view-profile" class="hidden fade-in">
-        <h1 class="text-2xl font-extrabold mb-2 text-slate-800">
-          <i class="fas fa-shield-alt text-brand-600 mr-2"></i>Hồ sơ bảo mật
-        </h1>
-        <p class="text-sm text-slate-500 mb-6">Thông tin tài khoản và lịch sử đăng nhập trên các thiết bị.</p>
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6">
+          <div>
+            <h1 class="text-2xl font-extrabold text-slate-800">
+              <i class="fas fa-user-circle text-brand-600 mr-2"></i>Hồ sơ của tôi
+            </h1>
+            <p class="text-sm text-slate-500 mt-1">Tài khoản · Bảo mật · Lịch sử đăng nhập · Thiết bị</p>
+          </div>
+          <button type="button" id="profile-refresh-btn" class="btn-press px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-brand-50">
+            <i class="fas fa-sync-alt mr-1"></i>Làm mới
+          </button>
+        </div>
 
-        <!-- User summary cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-soft p-5">
-            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Họ tên</p>
-            <p id="profile-name" class="mt-1 font-bold text-slate-800 truncate">—</p>
+        <!-- Cảnh báo thiết bị mới -->
+        <div id="profile-security-alert" class="hidden mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <i class="fas fa-exclamation-triangle mr-2 text-amber-500"></i>
+          <span id="profile-security-alert-text">Phát hiện đăng nhập từ thiết bị mới. Nếu không phải bạn, hãy đổi mật khẩu và đăng xuất thiết bị khác.</span>
+        </div>
+
+        <!-- Profile tabs -->
+        <div class="flex flex-wrap gap-2 mb-5 p-1 bg-slate-100/80 rounded-xl w-fit">
+          <button type="button" data-ptab="info" class="profile-tab btn-press px-4 py-2 rounded-lg text-sm font-semibold bg-white text-brand-700 shadow-sm">Thông tin</button>
+          <button type="button" data-ptab="security" class="profile-tab btn-press px-4 py-2 rounded-lg text-sm font-semibold text-slate-500">Bảo mật</button>
+          <button type="button" data-ptab="logs" class="profile-tab btn-press px-4 py-2 rounded-lg text-sm font-semibold text-slate-500">Lịch sử đăng nhập</button>
+          <button type="button" data-ptab="devices" class="profile-tab btn-press px-4 py-2 rounded-lg text-sm font-semibold text-slate-500">Thiết bị đang online</button>
+        </div>
+
+        <!-- Tab: Thông tin -->
+        <div id="ptab-info" class="space-y-4">
+          <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-soft p-6">
+            <div class="flex flex-col sm:flex-row gap-5 items-start">
+              <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center text-3xl font-extrabold shadow-card shrink-0" id="profile-avatar">?</div>
+              <div class="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                <div>
+                  <p class="text-[11px] font-semibold text-slate-400 uppercase">Họ tên</p>
+                  <p id="profile-name" class="font-bold text-slate-800">—</p>
+                </div>
+                <div>
+                  <p class="text-[11px] font-semibold text-slate-400 uppercase">Email</p>
+                  <p id="profile-email" class="font-medium text-slate-700 text-sm break-all">—</p>
+                </div>
+                <div>
+                  <p class="text-[11px] font-semibold text-slate-400 uppercase">Vai trò</p>
+                  <p id="profile-role" class="font-semibold text-brand-700">—</p>
+                </div>
+                <div>
+                  <p class="text-[11px] font-semibold text-slate-400 uppercase">Trạng thái</p>
+                  <p id="profile-status" class="font-semibold">—</p>
+                </div>
+                <div>
+                  <p class="text-[11px] font-semibold text-slate-400 uppercase">Số dư ví</p>
+                  <p id="profile-balance" class="font-extrabold text-emerald-600 text-lg">—</p>
+                </div>
+                <div>
+                  <p class="text-[11px] font-semibold text-slate-400 uppercase">Mã nạp tiền</p>
+                  <p id="profile-topup" class="font-mono font-bold text-brand-700">—</p>
+                </div>
+                <div class="sm:col-span-2">
+                  <p class="text-[11px] font-semibold text-slate-400 uppercase">Ngày tạo tài khoản</p>
+                  <p id="profile-created" class="text-slate-600 text-sm">—</p>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-soft p-5">
-            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Email</p>
-            <p id="profile-email" class="mt-1 font-bold text-slate-800 truncate text-sm">—</p>
-          </div>
-          <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-soft p-5">
-            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Số dư ví</p>
-            <p id="profile-balance" class="mt-1 font-extrabold text-brand-700">—</p>
+          <div class="bg-white/90 rounded-2xl border border-slate-100 shadow-soft p-5">
+            <h3 class="font-bold mb-3 text-slate-800">Cập nhật thông tin</h3>
+            <form id="profile-edit-form" class="flex flex-col sm:flex-row gap-3">
+              <input id="profile-edit-name" type="text" required minlength="2" placeholder="Họ tên mới"
+                class="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+              <button type="submit" class="btn-press px-5 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold">Lưu tên</button>
+            </form>
+            <p class="text-xs text-slate-400 mt-2">Email và số dư do hệ thống quản lý. Đổi mật khẩu dùng mục Bảo mật.</p>
           </div>
         </div>
 
-        <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-soft overflow-hidden">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-slate-100">
-            <div>
-              <h2 class="font-bold text-slate-800"><i class="fas fa-laptop mr-2 text-brand-500"></i>Lịch sử đăng nhập</h2>
-              <p class="text-xs text-slate-500 mt-0.5">Các phiên đăng nhập gần đây (thiết bị / IP)</p>
-            </div>
-            <button type="button" id="revoke-sessions-btn"
-              class="btn-press px-4 py-2 rounded-xl border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50">
-              <i class="fas fa-sign-out-alt mr-1"></i>Đăng xuất thiết bị khác
+        <!-- Tab: Bảo mật -->
+        <div id="ptab-security" class="hidden space-y-4">
+          <div class="bg-white/90 rounded-2xl border border-slate-100 shadow-soft p-5">
+            <h3 class="font-bold text-slate-800 mb-2"><i class="fas fa-key text-brand-500 mr-2"></i>Đổi mật khẩu</h3>
+            <p class="text-sm text-slate-500 mb-4">Dùng luồng quên mật khẩu qua email OTP (an toàn hơn đổi trực tiếp không xác minh).</p>
+            <a href="#" id="profile-goto-forgot" class="btn-press inline-flex items-center px-4 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold">
+              <i class="fas fa-lock mr-2"></i>Đặt lại mật khẩu qua email
+            </a>
+          </div>
+          <div class="bg-white/90 rounded-2xl border border-slate-100 shadow-soft p-5">
+            <h3 class="font-bold text-slate-800 mb-2"><i class="fas fa-sign-out-alt text-red-400 mr-2"></i>Phiên đăng nhập</h3>
+            <p class="text-sm text-slate-500 mb-3">Đăng xuất mọi thiết bị khác, giữ phiên hiện tại.</p>
+            <button type="button" id="revoke-sessions-btn" class="btn-press px-4 py-2.5 rounded-xl border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50">
+              Đăng xuất tất cả thiết bị khác
             </button>
           </div>
+        </div>
 
-          <!-- Table: Thời gian | Địa điểm | Thiết bị | IP -->
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm text-left min-w-[640px]">
-              <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th class="px-5 py-3 font-semibold">Thời gian</th>
-                  <th class="px-5 py-3 font-semibold">Địa điểm</th>
-                  <th class="px-5 py-3 font-semibold">Thiết bị / Trình duyệt</th>
-                  <th class="px-5 py-3 font-semibold">Địa chỉ IP</th>
-                  <th class="px-5 py-3 font-semibold">Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody id="login-history-body" class="divide-y divide-slate-50">
-                <tr><td colspan="5" class="px-5 py-10 text-center text-slate-400">Đang tải…</td></tr>
-              </tbody>
-            </table>
+        <!-- Tab: Lịch sử đăng nhập -->
+        <div id="ptab-logs" class="hidden">
+          <div class="bg-white/90 rounded-2xl border border-slate-100 shadow-soft overflow-hidden">
+            <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-slate-100">
+              <div>
+                <h2 class="font-bold text-slate-800">Lịch sử đăng nhập</h2>
+                <p class="text-xs text-slate-500">Tối đa 50–100 lần gần nhất · không lưu mật khẩu</p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <select id="logs-filter-status" class="rounded-xl border border-slate-200 px-3 py-2 text-xs bg-white">
+                  <option value="">Tất cả</option>
+                  <option value="success">Thành công</option>
+                  <option value="failed">Thất bại</option>
+                </select>
+                <button type="button" id="logs-refresh-btn" class="btn-press px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold">Refresh</button>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm text-left min-w-[720px]">
+                <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th class="px-4 py-3 font-semibold">Thời gian</th>
+                    <th class="px-4 py-3 font-semibold">IP</th>
+                    <th class="px-4 py-3 font-semibold">Thiết bị</th>
+                    <th class="px-4 py-3 font-semibold">Trình duyệt</th>
+                    <th class="px-4 py-3 font-semibold">Hệ điều hành</th>
+                    <th class="px-4 py-3 font-semibold">Vị trí ~</th>
+                    <th class="px-4 py-3 font-semibold">Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody id="login-history-body" class="divide-y divide-slate-50"></tbody>
+              </table>
+            </div>
           </div>
+        </div>
+
+        <!-- Tab: Thiết bị đang đăng nhập -->
+        <div id="ptab-devices" class="hidden">
+          <div id="active-sessions-list" class="space-y-3"></div>
         </div>
       </section>
 
@@ -617,6 +698,7 @@
             <h1 class="text-2xl font-extrabold text-slate-800"><i class="fas fa-shield-alt text-brand-600 mr-2"></i>Admin</h1>
             <div class="flex flex-wrap gap-2">
               <button type="button" data-atab="dashboard" class="admin-tab px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-brand-600 text-white">Dashboard</button>
+              <button type="button" data-atab="users" class="admin-tab px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white border border-slate-200 text-slate-600">Người dùng</button>
               <button type="button" data-atab="products" class="admin-tab px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white border border-slate-200 text-slate-600">Sản phẩm</button>
               <button type="button" data-atab="topups" class="admin-tab px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white border border-slate-200 text-slate-600">Nạp tiền <span id="admin-pending-badge" class="ml-1 bg-red-500 text-white text-[10px] px-1.5 rounded-full">0</span></button>
               <button type="button" data-atab="orders" class="admin-tab px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white border border-slate-200 text-slate-600">Đơn hàng / Cấp TK</button>
@@ -631,6 +713,29 @@
             <div class="bg-white rounded-2xl border border-slate-100 shadow-soft p-4"><p class="text-xs text-slate-500">Đơn hàng</p><p id="stat-orders" class="text-xl font-extrabold mt-1">0</p></div>
             <div class="bg-white rounded-2xl border border-slate-100 shadow-soft p-4"><p class="text-xs text-slate-500">Nạp chờ</p><p id="stat-pending" class="text-xl font-extrabold text-amber-500 mt-1">0</p></div>
             <div class="bg-white rounded-2xl border border-slate-100 shadow-soft p-4"><p class="text-xs text-slate-500">Users</p><p id="stat-users" class="text-xl font-extrabold mt-1">0</p></div>
+          </div>
+
+          <!-- Admin: Người dùng + lịch sử đăng nhập -->
+          <div id="atab-users" class="hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div>
+                <h3 class="font-bold mb-3 text-slate-800">Danh sách user</h3>
+                <div id="admin-users-list" class="space-y-2 max-h-[480px] overflow-y-auto"></div>
+              </div>
+              <div>
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                  <h3 class="font-bold text-slate-800">Lịch sử đăng nhập <span id="admin-user-log-title" class="text-sm font-normal text-slate-500"></span></h3>
+                  <select id="admin-logs-filter" class="rounded-xl border border-slate-200 px-2 py-1.5 text-xs bg-white">
+                    <option value="">Tất cả</option>
+                    <option value="success">Thành công</option>
+                    <option value="failed">Thất bại</option>
+                  </select>
+                </div>
+                <div id="admin-user-logs" class="bg-white rounded-2xl border border-slate-100 shadow-soft min-h-[200px] max-h-[480px] overflow-y-auto p-3 text-sm text-slate-400">
+                  Chọn một user để xem lịch sử đăng nhập.
+                </div>
+              </div>
+            </div>
           </div>
 
           <div id="atab-products" class="hidden">
@@ -1334,53 +1439,150 @@
     }
   }
 
-  /* ─── Security Profile + Login history table ─── */
+  /* ─── Profile tabs + login logs + sessions ─── */
+  let profileTab = 'info';
+
+  function switchProfileTab(tab) {
+    profileTab = tab;
+    ['info', 'security', 'logs', 'devices'].forEach(t => {
+      document.getElementById('ptab-' + t)?.classList.toggle('hidden', t !== tab);
+    });
+    document.querySelectorAll('.profile-tab').forEach(b => {
+      const on = b.dataset.ptab === tab;
+      b.className = `profile-tab btn-press px-4 py-2 rounded-lg text-sm font-semibold ${
+        on ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500'
+      }`;
+    });
+    if (tab === 'logs') loadLoginLogs();
+    if (tab === 'devices') loadActiveSessions();
+  }
+
   async function loadProfile() {
-    await refreshUser();
-    document.getElementById('profile-name').textContent = currentUser.fullName || currentUser.name || '—';
-    document.getElementById('profile-email').textContent = currentUser.email || '—';
-    document.getElementById('profile-balance').textContent = formatMoney(currentUser.balance);
+    try {
+      const data = await api('/profile');
+      const u = data.user || currentUser;
+      currentUser = { ...currentUser, ...u };
+      window.currentUser = currentUser;
+      const name = u.fullName || u.name || '—';
+      document.getElementById('profile-name').textContent = name;
+      document.getElementById('profile-email').textContent = u.email || '—';
+      document.getElementById('profile-balance').textContent = formatMoney(u.balance);
+      document.getElementById('profile-role').textContent = (u.role === 'admin' ? 'Admin' : 'User');
+      document.getElementById('profile-status').innerHTML = u.status === 'blocked' || u.isBlocked
+        ? '<span class="text-red-600">Bị khóa</span>'
+        : '<span class="text-emerald-600">Đang hoạt động</span>';
+      document.getElementById('profile-topup').textContent = u.topupCode || currentUser.topupCode || '—';
+      document.getElementById('profile-created').textContent = u.createdAt || '—';
+      document.getElementById('profile-edit-name').value = name === '—' ? '' : name;
+      const av = document.getElementById('profile-avatar');
+      if (av) av.textContent = (name && name !== '—') ? name.charAt(0).toUpperCase() : '?';
+      await refreshUser();
+    } catch (e) {
+      toast(e.message, true);
+    }
+    switchProfileTab(profileTab);
+  }
+
+  async function loadLoginLogs() {
     const tbody = document.getElementById('login-history-body');
-    tbody.innerHTML = `<tr><td colspan="5" class="px-5 py-8 text-center text-slate-400">
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="7" class="px-5 py-8 text-center text-slate-400">
       <span class="inline-block w-5 h-5 border-2 border-brand-200 border-t-brand-600 rounded-full animate-spin"></span>
     </td></tr>`;
+    const status = document.getElementById('logs-filter-status')?.value || '';
     try {
-      const { sessions } = await api('/auth/sessions');
-      if (!sessions?.length) {
-        tbody.innerHTML = `<tr><td colspan="5" class="px-5 py-10 text-center text-slate-400">Chưa có lịch sử đăng nhập.</td></tr>`;
+      const qs = status ? `?status=${encodeURIComponent(status)}&limit=80` : '?limit=80';
+      const { logs } = await api('/profile/login-logs' + qs);
+      // Cảnh báo thiết bị mới: có log success gần đây khác browser/os so với session list
+      const alertEl = document.getElementById('profile-security-alert');
+      if (logs?.length) {
+        const success = logs.filter(l => l.status === 'success');
+        if (success.length >= 2) {
+          const a = success[0], b = success[1];
+          if (a.browser !== b.browser || a.os !== b.os || a.ipAddress !== b.ipAddress) {
+            alertEl?.classList.remove('hidden');
+          } else {
+            alertEl?.classList.add('hidden');
+          }
+        }
+      }
+      if (!logs?.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="px-5 py-10 text-center text-slate-400">Chưa có lịch sử đăng nhập.</td></tr>`;
         return;
       }
-      tbody.innerHTML = sessions.map(s => {
-        const time = s.lastSeen || s.createdAt || '—';
-        const loc = s.location || '—';
-        const device = s.device || s.userAgent || '—';
-        const ip = s.ip || '—';
-        const st = s.revoked
-          ? '<span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">Đã thu hồi</span>'
-          : s.current
-            ? '<span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold border border-emerald-100">Phiên hiện tại</span>'
-            : '<span class="text-[11px] px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 font-semibold border border-brand-100">Hoạt động</span>';
-        return `
-        <tr class="hover:bg-brand-50/40 transition-colors duration-200">
-          <td class="px-5 py-3.5 text-slate-700 whitespace-nowrap">
-            <i class="far fa-clock text-brand-400 mr-1.5"></i>${escapeHtml(time)}
-          </td>
-          <td class="px-5 py-3.5 text-slate-600">
-            <i class="fas fa-map-marker-alt text-brand-400 mr-1.5"></i>${escapeHtml(loc)}
-          </td>
-          <td class="px-5 py-3.5 text-slate-700 max-w-[220px]">
-            <div class="truncate" title="${escapeHtml(s.userAgent || device)}">
-              <i class="fas fa-laptop text-brand-400 mr-1.5"></i>${escapeHtml(device)}
-            </div>
-          </td>
-          <td class="px-5 py-3.5 font-mono text-xs text-slate-600">${escapeHtml(ip)}</td>
-          <td class="px-5 py-3.5">${st}</td>
+      tbody.innerHTML = logs.map(l => {
+        const ok = l.status === 'success';
+        const st = ok
+          ? `<span class="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">Thành công</span>`
+          : `<span class="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-red-50 text-red-600 border border-red-100" title="${escapeHtml(l.reason || '')}">Thất bại${l.reason ? ': ' + escapeHtml(l.reason) : ''}</span>`;
+        const icon = l.deviceType === 'Mobile' ? 'fa-mobile-alt' : l.deviceType === 'Tablet' ? 'fa-tablet-alt' : 'fa-desktop';
+        return `<tr class="hover:bg-brand-50/40 transition-colors">
+          <td class="px-4 py-3 whitespace-nowrap text-slate-700 text-xs">${escapeHtml(l.createdAt || '—')}</td>
+          <td class="px-4 py-3 font-mono text-xs text-slate-600">${escapeHtml(l.ipAddress || '—')}</td>
+          <td class="px-4 py-3 text-xs"><i class="fas ${icon} text-brand-400 mr-1"></i>${escapeHtml(l.deviceType || '—')}</td>
+          <td class="px-4 py-3 text-xs">${escapeHtml(l.browser || '—')}</td>
+          <td class="px-4 py-3 text-xs">${escapeHtml(l.os || '—')}</td>
+          <td class="px-4 py-3 text-xs text-slate-500">${escapeHtml(l.location || '—')}</td>
+          <td class="px-4 py-3">${st}</td>
         </tr>`;
       }).join('');
     } catch (e) {
-      tbody.innerHTML = `<tr><td colspan="5" class="px-5 py-8 text-center text-red-500 text-sm">${escapeHtml(e.message)}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="px-5 py-8 text-center text-red-500 text-sm">${escapeHtml(e.message)}</td></tr>`;
     }
   }
+
+  async function loadActiveSessions() {
+    const box = document.getElementById('active-sessions-list');
+    if (!box) return;
+    box.innerHTML = '<div class="text-center text-slate-400 py-8">Đang tải…</div>';
+    try {
+      const { sessions } = await api('/profile/sessions');
+      if (!sessions?.length) {
+        box.innerHTML = emptyState('Không có phiên đang hoạt động.', 'fa-laptop');
+        return;
+      }
+      box.innerHTML = sessions.map(s => {
+        const icon = s.deviceType === 'Mobile' ? 'fa-mobile-alt' : s.deviceType === 'Tablet' ? 'fa-tablet-alt' : 'fa-desktop';
+        return `
+        <div class="bg-white/90 rounded-2xl border border-slate-100 shadow-soft p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center text-xl shrink-0">
+            <i class="fas ${icon}"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="font-bold text-slate-800">${escapeHtml(s.deviceLabel || s.deviceType)}</span>
+              ${s.isCurrent ? '<span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-100">Thiết bị hiện tại</span>' : ''}
+            </div>
+            <p class="text-xs text-slate-500 mt-1">
+              ${escapeHtml(s.browser || '')} · ${escapeHtml(s.os || '')} · IP ${escapeHtml(s.ipAddress || '—')}
+              · ${escapeHtml(s.location || '')}
+            </p>
+            <p class="text-[11px] text-slate-400 mt-0.5">
+              Đăng nhập: ${escapeHtml(s.createdAt || '—')} · Hoạt động: ${escapeHtml(s.lastActiveAt || '—')}
+            </p>
+          </div>
+          ${!s.isCurrent ? `
+          <button type="button" onclick="revokeSession(${s.id})"
+            class="btn-press px-3 py-2 rounded-xl border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 shrink-0">
+            Đăng xuất thiết bị này
+          </button>` : `
+          <span class="text-xs text-slate-400 shrink-0">Phiên bạn đang dùng</span>`}
+        </div>`;
+      }).join('');
+    } catch (e) {
+      box.innerHTML = emptyState(e.message, 'fa-exclamation-circle');
+    }
+  }
+
+  async function revokeSession(sid) {
+    if (!confirm('Đăng xuất thiết bị này?')) return;
+    try {
+      await api('/profile/sessions/' + sid + '/revoke', { method: 'POST' });
+      toast('Đã đăng xuất thiết bị');
+      loadActiveSessions();
+    } catch (e) { toast(e.message, true); }
+  }
+  window.revokeSession = revokeSession;
 
   /* ─── Wallet / Topup (Casso) ─── */
   async function renderWallet() {
@@ -1493,7 +1695,7 @@
   /* ─── Admin ─── */
   function switchAdminTab(tab) {
     adminTab = tab;
-    ['dashboard','products','topups','orders','support','coupons','transactions'].forEach(t => {
+    ['dashboard','users','products','topups','orders','support','coupons','transactions'].forEach(t => {
       document.getElementById('atab-' + t)?.classList.toggle('hidden', t !== tab);
     });
     document.querySelectorAll('.admin-tab').forEach(b => {
@@ -1501,12 +1703,68 @@
       b.className = `admin-tab px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold ${on ? 'bg-brand-600 text-white' : 'bg-white border border-slate-200 text-slate-600'}`;
     });
     if (tab === 'dashboard') loadAdminDash();
+    if (tab === 'users') loadAdminUsers();
     if (tab === 'products') loadAdminProducts();
     if (tab === 'topups') loadAdminTopups();
     if (tab === 'orders') loadAdminOrders();
     if (tab === 'support') loadAdminSupport();
     if (tab === 'coupons') renderAdminCoupons();
     if (tab === 'transactions') loadAdminTx();
+  }
+
+  let adminSelectedUserId = null;
+  async function loadAdminUsers() {
+    const list = document.getElementById('admin-users-list');
+    try {
+      const data = await api('/admin/users');
+      const users = data.users || data || [];
+      if (!users.length) { list.innerHTML = emptyState('Chưa có user'); return; }
+      window._adminUsers = users;
+      list.innerHTML = users.map(u => `
+        <button type="button" onclick="selectAdminUser(${u.id})"
+          class="w-full text-left bg-white rounded-xl border border-slate-100 shadow-soft p-3 hover:border-brand-300 transition ${adminSelectedUserId === u.id ? 'ring-2 ring-brand-400' : ''}">
+          <div class="font-semibold text-sm text-slate-800">${escapeHtml(u.fullName || u.name || u.email)}</div>
+          <div class="text-xs text-slate-500">${escapeHtml(u.email)} · ${escapeHtml(u.role || 'user')} · ${formatMoney(u.balance || 0)}</div>
+        </button>`).join('');
+    } catch (e) {
+      list.innerHTML = emptyState(e.message);
+    }
+  }
+  async function selectAdminUser(uid) {
+    adminSelectedUserId = uid;
+    const u = (window._adminUsers || []).find(x => x.id === uid);
+    document.getElementById('admin-user-log-title').textContent = u ? '· ' + (u.email || '') : '';
+    loadAdminUserLogs();
+    loadAdminUsers();
+  }
+  window.selectAdminUser = selectAdminUser;
+  async function loadAdminUserLogs() {
+    const box = document.getElementById('admin-user-logs');
+    if (!adminSelectedUserId) return;
+    const status = document.getElementById('admin-logs-filter')?.value || '';
+    box.innerHTML = '<p class="text-center text-slate-400 py-6">Đang tải…</p>';
+    try {
+      const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+      const { logs } = await api('/admin/users/' + adminSelectedUserId + '/login-logs' + qs);
+      if (!logs?.length) {
+        box.innerHTML = '<p class="text-center text-slate-400 py-6">Chưa có log đăng nhập.</p>';
+        return;
+      }
+      box.innerHTML = `<div class="space-y-2">${logs.map(l => `
+        <div class="border border-slate-100 rounded-xl p-3 text-xs">
+          <div class="flex flex-wrap gap-2 items-center mb-1">
+            <span class="font-mono text-slate-500">${escapeHtml(l.createdAt || '')}</span>
+            ${l.status === 'success'
+              ? '<span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold">Thành công</span>'
+              : `<span class="px-2 py-0.5 rounded-full bg-red-50 text-red-600 font-semibold">Thất bại${l.reason ? ': ' + escapeHtml(l.reason) : ''}</span>`}
+          </div>
+          <div class="text-slate-600">IP <strong>${escapeHtml(l.ipAddress || '—')}</strong>
+            · ${escapeHtml(l.deviceType)} · ${escapeHtml(l.browser)} · ${escapeHtml(l.os)}
+            · ${escapeHtml(l.location || '')}</div>
+        </div>`).join('')}</div>`;
+    } catch (e) {
+      box.innerHTML = `<p class="text-red-500 text-center py-6">${escapeHtml(e.message)}</p>`;
+    }
   }
   function loadAdmin() {
     document.getElementById('admin-denied').classList.add('hidden');
@@ -1864,10 +2122,31 @@
     document.getElementById('revoke-sessions-btn')?.addEventListener('click', async () => {
       if (!confirm('Đăng xuất tất cả thiết bị khác? Phiên hiện tại vẫn giữ.')) return;
       try {
-        await api('/auth/sessions/revoke-all', { method: 'POST' });
+        await api('/profile/sessions/revoke-others', { method: 'POST' });
         toast('Đã đăng xuất các thiết bị khác');
-        loadProfile();
+        loadActiveSessions();
       } catch (e) { toast(e.message, true); }
+    });
+    document.querySelectorAll('.profile-tab').forEach(b => {
+      b.addEventListener('click', () => switchProfileTab(b.dataset.ptab));
+    });
+    document.getElementById('profile-refresh-btn')?.addEventListener('click', () => loadProfile());
+    document.getElementById('logs-refresh-btn')?.addEventListener('click', loadLoginLogs);
+    document.getElementById('logs-filter-status')?.addEventListener('change', loadLoginLogs);
+    document.getElementById('admin-logs-filter')?.addEventListener('change', loadAdminUserLogs);
+    document.getElementById('profile-edit-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fullName = document.getElementById('profile-edit-name').value.trim();
+      try {
+        await api('/profile', { method: 'PATCH', body: JSON.stringify({ fullName }) });
+        toast('Đã cập nhật họ tên');
+        loadProfile();
+        await refreshUser();
+      } catch (ex) { toast(ex.message, true); }
+    });
+    document.getElementById('profile-goto-forgot')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      toast('Đăng xuất rồi dùng Quên mật khẩu trên form đăng nhập, hoặc liên hệ admin.', false);
     });
     document.querySelectorAll('.quick-amt').forEach(b => {
       b.onclick = () => { document.getElementById('topup-amount').value = b.dataset.amount; };

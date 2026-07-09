@@ -656,17 +656,65 @@ def turnstile_config():
 
 
 def _complete_login(user, conn, ip, ua, fingerprint):
+    from services import login_history as lh
     token, jti = sec.sign_token(user['id'])
     try:
+        is_new = lh.is_new_device(conn, user['id'], fingerprint, ua)
         sec.create_session(conn, user['id'], jti, ip, ua, fingerprint)
+        lh.enrich_session(conn, jti, ip, ua)
         sec.clear_lock(conn, user['id'])
         sec.record_login_attempt(conn, user['email'], ip, ua, fingerprint, True)
+        ua_info, geo = lh.record_login(
+            conn,
+            user_id=user['id'],
+            email_attempt=user['email'],
+            ip=ip,
+            user_agent=ua,
+            status='success',
+            reason='',
+            session_jti=jti,
+        )
+        if fingerprint:
+            try:
+                sec.trust_device(conn, user['id'], fingerprint, ip, label=ua_info.get('deviceLabel', ''))
+            except Exception:
+                pass
         sec.log_event('login_success', 'low', user_id=user['id'], ip=ip, conn=conn)
         db.commit(conn)
+        if is_new:
+            try:
+                lh.try_security_email(user['email'], ip, ua_info, geo)
+            except Exception as e:
+                print(f'[Login] new-device email: {e}')
     except Exception as e:
         print(f'[Login] session log skipped: {e}')
-        db.commit(conn)
+        try:
+            db.commit(conn)
+        except Exception:
+            pass
     return token
+
+
+def _record_failed_login(conn, email, ip, ua, fingerprint, user=None, reason='Sai mật khẩu'):
+    from services import login_history as lh
+    try:
+        sec.record_login_attempt(conn, email, ip, ua, fingerprint, False)
+        lh.record_login(
+            conn,
+            user_id=user['id'] if user else None,
+            email_attempt=email,
+            ip=ip,
+            user_agent=ua,
+            status='failed',
+            reason=reason,
+        )
+        db.commit(conn)
+    except Exception as e:
+        print(f'[Login] failed log: {e}')
+        try:
+            db.commit(conn)
+        except Exception:
+            pass
 
 
 # ─── Auth ───
@@ -741,12 +789,13 @@ def login():
     if user:
         locked, remain = sec.is_account_locked(user)
         if locked:
+            _record_failed_login(conn, email, ip, ua, fingerprint, user, reason='Tài khoản bị khóa tạm thời')
             db.close(conn)
             return jsonify({'error': f'Tài khoản tạm khóa. Thử lại sau {remain // 60 + 1} phút.'}), 423
 
     if not user or not bcrypt.checkpw(pw.encode(), user['password_hash'].encode()):
-        sec.record_login_attempt(conn, email, ip, ua, fingerprint, False)
-        db.commit(conn)
+        reason = 'Email không tồn tại' if not user else 'Sai mật khẩu'
+        _record_failed_login(conn, email, ip, ua, fingerprint, user, reason=reason)
         if user:
             _, fe = sec.get_failed_attempts(conn, email, ip)
             if fe >= SECURITY['lockout_attempts']:
@@ -755,10 +804,11 @@ def login():
                 sec.log_event('login_lockout', 'high', user_id=user['id'], ip=ip, conn=conn)
         db.close(conn)
         sec.log_event('login_failed', 'medium', user_id=user['id'] if user else None, ip=ip,
-                      details={'email': email})
+                      details={'email': email, 'reason': reason})
         return jsonify({'error': 'Email hoặc mật khẩu không đúng.'}), 401
 
     if user.get('is_blocked'):
+        _record_failed_login(conn, email, ip, ua, fingerprint, user, reason='Tài khoản bị khóa')
         db.close(conn)
         return jsonify({'error': 'Tài khoản đã bị khóa. Liên hệ hỗ trợ.'}), 403
 
@@ -789,28 +839,25 @@ def auth_logout():
 @app.route('/api/auth/sessions', methods=['GET'])
 @auth_required
 def auth_sessions():
+    from services import login_history as lh
     conn = db.get_conn()
-    rows = db.fetchall(conn, '''
-        SELECT jti, ip, user_agent, fingerprint, created_at, last_seen, revoked
-        FROM user_sessions WHERE user_id = ? ORDER BY last_seen DESC LIMIT 20
-    ''', (request.user['id'],))
-    db.close(conn)
     current_jti = (getattr(request, 'jwt_payload', None) or {}).get('jti')
-    sessions = []
-    for r in rows:
-        ua = r['user_agent'] or ''
-        sessions.append({
-            'jti': r['jti'],
-            'ip': r['ip'] or '',
-            'userAgent': ua[:200],
-            'device': _parse_device_from_ua(ua),
-            'location': _location_from_ip(r['ip']),
-            'current': r['jti'] == current_jti,
-            'revoked': bool(r.get('revoked')),
-            'lastSeen': str(r['last_seen'] or ''),
-            'createdAt': str(r['created_at'] or r['last_seen'] or ''),
+    sessions = lh.list_sessions(conn, request.user['id'], current_jti=current_jti, active_only=False)
+    db.close(conn)
+    # backward-compatible shape + full fields
+    out = []
+    for s in sessions:
+        out.append({
+            **s,
+            'ip': s.get('ipAddress'),
+            'userAgent': s.get('userAgent'),
+            'device': s.get('deviceLabel'),
+            'location': s.get('location'),
+            'current': s.get('isCurrent'),
+            'lastSeen': s.get('lastActiveAt'),
+            'createdAt': s.get('createdAt'),
         })
-    return jsonify({'sessions': sessions})
+    return jsonify({'sessions': out})
 
 
 @app.route('/api/auth/sessions/revoke-all', methods=['POST'])
@@ -825,6 +872,163 @@ def auth_revoke_sessions():
     return jsonify({'ok': True, 'message': 'Đã đăng xuất tất cả thiết bị khác.'})
 
 
+# ─── Profile & login history ───
+@app.route('/api/profile', methods=['GET'])
+@app.route('/api/profile/me', methods=['GET'])
+@auth_required
+def profile_get():
+    conn = db.get_conn()
+    user = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (request.user['id'],))
+    db.close(conn)
+    u = fmt_user(user)
+    u['status'] = 'blocked' if user.get('is_blocked') else 'active'
+    u['statusLabel'] = 'Bị khóa' if user.get('is_blocked') else 'Đang hoạt động'
+    u['lastLoginAt'] = str(user.get('last_login_at') or '')
+    u['lastLoginIp'] = user.get('last_login_ip') or ''
+    return jsonify({
+        'user': u,
+        'clientMeta': {'ip': sec.client_ip(request)},
+    })
+
+
+@app.route('/api/profile', methods=['PATCH'])
+@auth_required
+def profile_patch():
+    d = request.get_json() or {}
+    name = (d.get('fullName') or d.get('name') or '').strip()
+    if not name or len(name) < 2:
+        return jsonify({'error': 'Họ tên không hợp lệ.'}), 400
+    try:
+        name = sec.sanitize_string(name, max_len=120)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    conn = db.get_conn()
+    db.execute(conn, 'UPDATE users SET name = ? WHERE id = ?', (name, request.user['id']))
+    db.commit(conn)
+    user = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (request.user['id'],))
+    db.close(conn)
+    return jsonify({'user': fmt_user(user), 'ok': True})
+
+
+@app.route('/api/profile/login-logs', methods=['GET'])
+@auth_required
+def profile_login_logs():
+    from services import login_history as lh
+    status = (request.args.get('status') or '').strip() or None
+    q_ip = (request.args.get('ip') or '').strip() or None
+    try:
+        limit = min(int(request.args.get('limit', 50)), 100)
+        offset = max(int(request.args.get('offset', 0)), 0)
+    except ValueError:
+        limit, offset = 50, 0
+    conn = db.get_conn()
+    jti = (getattr(request, 'jwt_payload', None) or {}).get('jti')
+    logs = lh.list_user_logs(conn, request.user['id'], status=status, limit=limit, offset=offset, q_ip=q_ip)
+    # mark current session on logs
+    for item in logs:
+        if jti and item.get('isCurrentSession') is False:
+            pass
+    db.close(conn)
+    return jsonify({'logs': logs, 'limit': limit, 'offset': offset})
+
+
+@app.route('/api/profile/sessions', methods=['GET'])
+@auth_required
+def profile_sessions():
+    from services import login_history as lh
+    conn = db.get_conn()
+    jti = (getattr(request, 'jwt_payload', None) or {}).get('jti')
+    sessions = lh.list_sessions(conn, request.user['id'], current_jti=jti, active_only=True)
+    db.close(conn)
+    return jsonify({'sessions': sessions})
+
+
+@app.route('/api/profile/sessions/<int:sid>/revoke', methods=['POST'])
+@auth_required
+def profile_session_revoke(sid):
+    from services import login_history as lh
+    conn = db.get_conn()
+    jti = (getattr(request, 'jwt_payload', None) or {}).get('jti')
+    row = db.fetchone(conn, 'SELECT jti FROM user_sessions WHERE id = ? AND user_id = ?',
+                      (sid, request.user['id']))
+    if not row:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy phiên.'}), 404
+    if row['jti'] == jti:
+        db.close(conn)
+        return jsonify({'error': 'Không thể đăng xuất phiên hiện tại tại đây. Dùng nút Đăng xuất.'}), 400
+    ok, err = lh.revoke_session(conn, request.user['id'], session_id=sid)
+    if not ok:
+        db.close(conn)
+        return jsonify({'error': err}), 400
+    db.commit(conn)
+    db.close(conn)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/profile/sessions/revoke-others', methods=['POST'])
+@auth_required
+def profile_sessions_revoke_others():
+    jti = (getattr(request, 'jwt_payload', None) or {}).get('jti')
+    conn = db.get_conn()
+    sec.revoke_all_sessions(conn, request.user['id'], except_jti=jti)
+    db.commit(conn)
+    db.close(conn)
+    return jsonify({'ok': True, 'message': 'Đã đăng xuất tất cả thiết bị khác.'})
+
+
+@app.route('/api/admin/users/<int:uid>/login-logs', methods=['GET'])
+@admin_required
+def admin_user_login_logs(uid):
+    from services import login_history as lh
+    status = (request.args.get('status') or '').strip() or None
+    q_ip = (request.args.get('ip') or '').strip() or None
+    try:
+        limit = min(int(request.args.get('limit', 100)), 200)
+        offset = max(int(request.args.get('offset', 0)), 0)
+    except ValueError:
+        limit, offset = 100, 0
+    conn = db.get_conn()
+    user = db.fetchone(conn, 'SELECT id, email, name FROM users WHERE id = ?', (uid,))
+    if not user:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy user.'}), 404
+    logs = lh.list_admin_logs(conn, uid, status=status, limit=limit, offset=offset, q_ip=q_ip)
+    db.close(conn)
+    return jsonify({
+        'user': {'id': user['id'], 'email': user['email'], 'name': user['name']},
+        'logs': logs,
+    })
+
+
+@app.route('/api/admin/users/<int:uid>/sessions', methods=['GET'])
+@admin_required
+def admin_user_sessions(uid):
+    from services import login_history as lh
+    conn = db.get_conn()
+    user = db.fetchone(conn, 'SELECT id FROM users WHERE id = ?', (uid,))
+    if not user:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy user.'}), 404
+    sessions = lh.list_sessions(conn, uid, active_only=False)
+    db.close(conn)
+    return jsonify({'sessions': sessions})
+
+
+@app.route('/api/admin/users/<int:uid>/sessions/<int:sid>/revoke', methods=['POST'])
+@admin_required
+def admin_user_session_revoke(uid, sid):
+    from services import login_history as lh
+    conn = db.get_conn()
+    ok, err = lh.revoke_session(conn, uid, session_id=sid)
+    if not ok:
+        db.close(conn)
+        return jsonify({'error': err or 'Lỗi'}), 400
+    db.commit(conn)
+    db.close(conn)
+    return jsonify({'ok': True})
+
+
 @app.route('/api/auth/me')
 @app.route('/api/me')
 @auth_required
@@ -832,8 +1036,11 @@ def me():
     conn = db.get_conn()
     user = db.fetchone(conn, 'SELECT * FROM users WHERE id = ?', (request.user['id'],))
     db.close(conn)
+    u = fmt_user(user)
+    u['status'] = 'blocked' if user.get('is_blocked') else 'active'
+    u['statusLabel'] = 'Bị khóa' if user.get('is_blocked') else 'Đang hoạt động'
     return jsonify({
-        'user': fmt_user(user),
+        'user': u,
         'clientMeta': {'ip': sec.client_ip(request)},
     })
 

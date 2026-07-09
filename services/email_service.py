@@ -31,3 +31,36 @@ Nếu bạn không yêu cầu, hãy bỏ qua email này.
         s.login(SMTP['user'], SMTP['password'])
         s.send_message(msg)
     return {'ok': True, 'dev': False}
+
+
+def send_security_alert_email(to_email, ip='', device='', browser='', os_name='', location=''):
+    """Cảnh báo đăng nhập từ thiết bị / IP mới."""
+    subject = f'[{SITE_NAME}] Cảnh báo: đăng nhập từ thiết bị mới'
+    body = f'''Xin chào,
+
+Phát hiện đăng nhập vào tài khoản của bạn tại {SITE_NAME}.
+
+Thời gian: vừa xong (UTC)
+IP: {ip or "—"}
+Thiết bị: {device or "—"}
+Trình duyệt: {browser or "—"}
+Hệ điều hành: {os_name or "—"}
+Vị trí gần đúng: {location or "—"}
+
+Nếu không phải bạn, hãy đổi mật khẩu ngay và đăng xuất tất cả thiết bị khác.
+
+— {SITE_NAME}
+'''
+    if not SMTP['host'] or not SMTP['user'] or not SMTP['password']:
+        print(f'[EMAIL-DEV] Security alert for {to_email}: new device IP={ip}')
+        return {'ok': True, 'dev': True}
+
+    msg = MIMEText(body, 'plain', 'utf-8')
+    msg['Subject'] = subject
+    msg['From'] = SMTP['from'] or SMTP['user']
+    msg['To'] = to_email
+    with smtplib.SMTP(SMTP['host'], SMTP['port']) as s:
+        s.starttls()
+        s.login(SMTP['user'], SMTP['password'])
+        s.send_message(msg)
+    return {'ok': True, 'dev': False}
