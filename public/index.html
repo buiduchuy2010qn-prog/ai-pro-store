@@ -996,27 +996,27 @@
     <!-- FABs -->
     <div class="flex flex-col items-end gap-2">
       <button type="button" id="ai-chat-toggle"
-        class="btn-press support-fab ai-fab group flex items-center gap-2 pl-3 pr-4 py-3 rounded-full bg-ink text-paper shadow-card">
-        <span class="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-lg">
+        class="btn-press support-fab ai-fab group flex items-center gap-2 pl-3 pr-4 py-3 rounded-full bg-gradient-to-r from-brand-600 to-brand-700 text-white shadow-lift">
+        <span class="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-lg">
           <i class="fas fa-robot"></i>
         </span>
-        <span class="font-medium text-sm hidden sm:inline">AI Hỗ Trợ</span>
+        <span class="font-bold text-sm hidden sm:inline">AI Hỗ Trợ</span>
       </button>
       <a id="zalo-float-btn" href="https://zalo.me/0944255413" target="_blank" rel="noopener noreferrer"
-         class="btn-press support-fab flex items-center gap-2 pl-3 pr-4 py-3 rounded-full bg-canvas text-ink border border-hairline shadow-soft"
+         class="btn-press support-fab flex items-center gap-2 pl-3 pr-4 py-3 rounded-full bg-[#0068FF] hover:bg-[#0054cc] text-white shadow-lift"
          title="Hỗ trợ Zalo 0944255413">
-        <span class="w-9 h-9 rounded-full bg-ink text-paper flex items-center justify-center text-lg">
+        <span class="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-lg">
           <i class="fas fa-comment-dots"></i>
         </span>
-        <span class="font-medium text-sm hidden sm:inline">Hỗ trợ Zalo</span>
+        <span class="font-bold text-sm hidden sm:inline">Hỗ trợ Zalo</span>
       </a>
     </div>
   </div>
 
   <script>
   /* =========================================================
-     AI Pro Store — UI monochrome (shadcn) + API backend
-     - Không brand color ngoài ink/gray/ember(error)
+     AI Pro Store — UI xanh nước (ocean blue) + API backend
+     - Brand blue #2563eb · canvas #f0f9ff · Zalo #0068FF
      - KHÔNG camera / upload ảnh / social
      ========================================================= */
 
@@ -1117,19 +1117,19 @@
       <i class="fas ${icon} text-4xl mb-3 opacity-30"></i>
       <p class="text-sm">${escapeHtml(msg)}</p></div>`;
   }
-  /** Badge trạng thái — Việt hóa · monochrome (chỉ ember cho lỗi) */
+  /** Badge trạng thái — Việt hóa 100%, chỉ 1 badge / đơn */
   function badge(status) {
     const raw = String(status || '').toLowerCase();
     const map = {
-      success:     { label: 'Hoàn tất',    cls: 'bg-ink text-paper border-ink' },
-      completed:   { label: 'Hoàn tất',    cls: 'bg-ink text-paper border-ink' },
-      pending:     { label: 'Chờ xử lý',   cls: 'bg-canvas text-ink-soft border-hairline' },
-      in_progress: { label: 'Đang hỗ trợ', cls: 'bg-canvas text-ink border-hairline' },
-      cancelled:   { label: 'Đã hủy',      cls: 'bg-red-50 text-ember border-red-200' },
-      rejected:    { label: 'Đã từ chối',  cls: 'bg-red-50 text-ember border-red-200' },
+      success:     { label: 'Hoàn tất',    cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+      completed:   { label: 'Hoàn tất',    cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+      pending:     { label: 'Chờ xử lý',   cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+      in_progress: { label: 'Đang hỗ trợ', cls: 'bg-sky-50 text-sky-700 border-sky-200' },
+      cancelled:   { label: 'Đã hủy',      cls: 'bg-red-50 text-red-600 border-red-200' },
+      rejected:    { label: 'Đã từ chối',  cls: 'bg-slate-100 text-slate-600 border-slate-200' },
     };
-    const conf = map[raw] || { label: status || '—', cls: 'bg-canvas text-mid border-hairline' };
-    return `<span class="inline-flex items-center text-[12px] px-2 py-0.5 rounded-full font-medium border ${conf.cls}">${escapeHtml(conf.label)}</span>`;
+    const conf = map[raw] || { label: status || '—', cls: 'bg-slate-50 text-slate-600 border-slate-100' };
+    return `<span class="inline-flex items-center text-[11px] px-2.5 py-0.5 rounded-full font-semibold border ${conf.cls}">${escapeHtml(conf.label)}</span>`;
   }
 
   /** Ưu tiên 1 trạng thái hiển thị trên thẻ đơn (không dồn 2 badge) */
@@ -1278,14 +1278,14 @@
 
   /* ─── Products ─── */
   const COLOR_MAP = {
-    emerald: 'bg-canvas text-ink',
-    orange: 'bg-canvas text-ink',
-    violet: 'bg-canvas text-ink',
-    blue: 'bg-canvas text-ink',
-    sky: 'bg-canvas text-ink',
-    teal: 'bg-canvas text-ink',
-    red: 'bg-canvas text-ink',
-    amber: 'bg-canvas text-ink',
+    emerald: 'bg-emerald-50 text-emerald-600',
+    orange: 'bg-orange-50 text-orange-600',
+    violet: 'bg-violet-50 text-violet-600',
+    blue: 'bg-brand-50 text-brand-600',
+    sky: 'bg-sky-50 text-sky-600',
+    teal: 'bg-teal-50 text-teal-600',
+    red: 'bg-red-50 text-red-600',
+    amber: 'bg-amber-50 text-amber-600',
   };
   function skeletonProducts(n = 6) {
     return Array.from({ length: n }, () =>
@@ -1623,8 +1623,8 @@
       tbody.innerHTML = logs.map(l => {
         const ok = l.status === 'success';
         const st = ok
-          ? `<span class="text-[12px] px-2 py-0.5 rounded-full font-medium bg-ink text-paper border border-ink">Thành công</span>`
-          : `<span class="text-[12px] px-2 py-0.5 rounded-full font-medium bg-paper text-ember border border-hairline" title="${escapeHtml(l.reason || '')}">Thất bại${l.reason ? ': ' + escapeHtml(l.reason) : ''}</span>`;
+          ? `<span class="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">Thành công</span>`
+          : `<span class="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-red-50 text-red-600 border border-red-100" title="${escapeHtml(l.reason || '')}">Thất bại${l.reason ? ': ' + escapeHtml(l.reason) : ''}</span>`;
         const icon = l.deviceType === 'Mobile' ? 'fa-mobile-alt' : l.deviceType === 'Tablet' ? 'fa-tablet-alt' : 'fa-desktop';
         return `<tr class="hover:bg-brand-50/40 transition-colors">
           <td class="px-4 py-3 whitespace-nowrap text-slate-700 text-xs">${escapeHtml(l.createdAt || '—')}</td>
@@ -1661,7 +1661,7 @@
           <div class="flex-1 min-w-0">
             <div class="flex flex-wrap items-center gap-2">
               <span class="font-bold text-slate-800">${escapeHtml(s.deviceLabel || s.deviceType)}</span>
-              ${s.isCurrent ? '<span class="text-[10px] px-2 py-0.5 rounded-full bg-ink text-paper font-medium">Thiết bị hiện tại</span>' : ''}
+              ${s.isCurrent ? '<span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-100">Thiết bị hiện tại</span>' : ''}
             </div>
             <p class="text-xs text-slate-500 mt-1">
               ${escapeHtml(s.browser || '')} · ${escapeHtml(s.os || '')} · IP ${escapeHtml(s.ipAddress || '—')}
@@ -1865,8 +1865,8 @@
           <div class="flex flex-wrap gap-2 items-center mb-1">
             <span class="font-mono text-slate-500">${escapeHtml(l.createdAt || '')}</span>
             ${l.status === 'success'
-              ? '<span class="px-2 py-0.5 rounded-full bg-ink text-paper font-medium text-[11px]">Thành công</span>'
-              : `<span class="px-2 py-0.5 rounded-full bg-paper text-ember border border-hairline font-medium text-[11px]">Thất bại${l.reason ? ': ' + escapeHtml(l.reason) : ''}</span>`}
+              ? '<span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold">Thành công</span>'
+              : `<span class="px-2 py-0.5 rounded-full bg-red-50 text-red-600 font-semibold">Thất bại${l.reason ? ': ' + escapeHtml(l.reason) : ''}</span>`}
           </div>
           <div class="text-slate-600">IP <strong>${escapeHtml(l.ipAddress || '—')}</strong>
             · ${escapeHtml(l.deviceType)} · ${escapeHtml(l.browser)} · ${escapeHtml(l.os)}
@@ -2023,17 +2023,17 @@
               <span class="font-extrabold text-emerald-600 text-base mr-1">${formatMoney(o.price || 0)}</span>
               ${zLink
                 ? `<a href="${escapeHtml(zLink)}" target="_blank" rel="noopener noreferrer"
-                      class="btn-press inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-canvas text-ink border border-hairline text-xs font-medium">
+                      class="btn-press inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#0068FF] hover:bg-[#0054cc] text-white text-xs font-semibold shadow-sm">
                      <i class="fas fa-comment-dots"></i> Zalo
                    </a>`
                 : `<button type="button" disabled
-                      class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-canvas text-mid border border-hairline text-xs font-medium cursor-not-allowed"
+                      class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200 text-slate-400 text-xs font-semibold cursor-not-allowed"
                       title="Chưa có số Zalo">
                      <i class="fas fa-comment-dots"></i> Zalo
                    </button>`
               }
               <button type="button" onclick="openFulfillModal(${o.id})"
-                class="btn-press inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ink text-paper text-xs font-medium">
+                class="btn-press inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold shadow-sm">
                 <i class="fas fa-user-check"></i> Cấp / nâng cấp
               </button>
             </div>
@@ -2382,12 +2382,12 @@
      Không chặn click (canvas pointer-events: none, z-index: 0)
      ═══════════════════════════════════════════════════════════════ */
   const FALL_FX = {
-    mode: 'snow',     // monochrome UI → tuyết xám/trắng (sakura = hoa đào)
-    count: 40,        // số lượng hạt desktop
-    speed: 0.7,       // tốc độ rơi
-    wind: 0.25,       // gió ngang
-    opacity: 0.4,     // độ trong suốt
-    mobileCount: 22,  // số hạt mobile (mượt hơn)
+    mode: 'sakura',   // 'sakura' | 'snow'
+    count: 50,
+    speed: 0.85,
+    wind: 0.35,
+    opacity: 0.5,
+    mobileCount: 26,
   };
 
   function initFallingFx() {
@@ -2447,7 +2447,6 @@
       };
     }
 
-    /** Cánh hoa monochrome (xám/trắng — không hồng) */
     function drawSakura(p) {
       ctx.save();
       ctx.translate(p.x, p.y);
@@ -2455,31 +2454,24 @@
       ctx.globalAlpha = p.op;
       const s = p.r;
       const g = ctx.createRadialGradient(0, 0, 0, 0, 0, s);
-      g.addColorStop(0, 'rgba(255,255,255,0.95)');
-      g.addColorStop(0.55, 'rgba(229,229,229,0.8)');
-      g.addColorStop(1, 'rgba(163,163,163,0.15)');
+      g.addColorStop(0, 'rgba(255, 214, 232, 0.95)');
+      g.addColorStop(0.55, 'rgba(251, 182, 206, 0.85)');
+      g.addColorStop(1, 'rgba(244, 114, 182, 0.25)');
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.ellipse(0, 0, s * 0.55, s, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = 'rgba(115,115,115,0.2)';
-      ctx.lineWidth = 0.6;
-      ctx.beginPath();
-      ctx.moveTo(0, -s * 0.7);
-      ctx.lineTo(0, s * 0.7);
-      ctx.stroke();
       ctx.restore();
     }
 
-    /** Tuyết monochrome (trắng/xám) */
     function drawSnow(p) {
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.globalAlpha = p.op;
       const g = ctx.createRadialGradient(0, 0, 0, 0, 0, p.r);
       g.addColorStop(0, 'rgba(255,255,255,0.95)');
-      g.addColorStop(0.55, 'rgba(229,229,229,0.65)');
-      g.addColorStop(1, 'rgba(163,163,163,0)');
+      g.addColorStop(0.55, 'rgba(191, 219, 254, 0.7)');
+      g.addColorStop(1, 'rgba(147, 197, 253, 0)');
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.arc(0, 0, p.r, 0, Math.PI * 2);
