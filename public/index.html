@@ -538,14 +538,36 @@
       <i class="fas ${icon} text-4xl mb-3 opacity-30"></i>
       <p class="text-sm">${escapeHtml(msg)}</p></div>`;
   }
+  /** Badge trạng thái — Việt hóa 100%, chỉ 1 badge / đơn */
   function badge(status) {
+    const raw = String(status || '').toLowerCase();
     const map = {
-      success: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-      completed: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-      pending: 'bg-amber-50 text-amber-700 border-amber-100',
-      rejected: 'bg-red-50 text-red-600 border-red-100',
+      success:     { label: 'Hoàn tất',   cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+      completed:   { label: 'Hoàn tất',   cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+      pending:     { label: 'Chờ xử lý',  cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+      in_progress: { label: 'Đang hỗ trợ', cls: 'bg-sky-50 text-sky-700 border-sky-200' },
+      cancelled:   { label: 'Đã hủy',     cls: 'bg-red-50 text-red-600 border-red-200' },
+      rejected:    { label: 'Đã từ chối', cls: 'bg-slate-100 text-slate-600 border-slate-200' },
     };
-    return `<span class="text-[11px] px-2.5 py-0.5 rounded-full font-semibold border ${map[status] || 'bg-slate-50 text-slate-600 border-slate-100'}">${escapeHtml(status || '')}</span>`;
+    const conf = map[raw] || { label: status || '—', cls: 'bg-slate-50 text-slate-600 border-slate-100' };
+    return `<span class="inline-flex items-center text-[11px] px-2.5 py-0.5 rounded-full font-semibold border ${conf.cls}">${escapeHtml(conf.label)}</span>`;
+  }
+
+  /** Ưu tiên 1 trạng thái hiển thị trên thẻ đơn (không dồn 2 badge) */
+  function orderDisplayStatus(order) {
+    const sup = order.support?.status;
+    // Ưu tiên trạng thái hỗ trợ nếu có (pending/in_progress/completed/cancelled)
+    if (sup && ['pending', 'in_progress', 'completed', 'cancelled'].includes(sup)) return sup;
+    return order.status || 'completed';
+  }
+
+  /** Chuẩn hóa SĐT → link zalo.me (chỉ số) */
+  function zaloLink(phone) {
+    const digits = String(phone || '').replace(/\D/g, '');
+    if (!digits) return '';
+    // 0xxxxxxxxx → 84xxxxxxxxx (Zalo hay dùng mã quốc gia)
+    const z = digits.startsWith('0') ? '84' + digits.slice(1) : digits;
+    return 'https://zalo.me/' + z;
   }
   function getToken() { return localStorage.getItem('auth_token'); }
   function setToken(t) { if (t) localStorage.setItem('auth_token', t); else localStorage.removeItem('auth_token'); }
@@ -1095,29 +1117,56 @@
         const sup = o.support || {};
         const email = o.contactEmail || sup.customerEmail || '';
         const phone = o.contactPhone || sup.customerPhone || '';
+        const zLink = zaloLink(phone);
+        const statusHtml = badge(orderDisplayStatus(o));
         return `
-        <div class="bg-white rounded-xl border border-slate-100 shadow-soft p-4">
-          <div class="flex flex-wrap gap-2 items-center mb-1">
-            <span class="font-bold">${escapeHtml(o.orderCode || '#' + o.id)}</span>
-            ${badge(o.status)}
-            ${sup.status ? badge(sup.status) : ''}
-            <span class="text-xs text-slate-400">${escapeHtml(o.email || o.customerName || '')}</span>
+        <!-- Order Card — Admin -->
+        <article class="bg-white rounded-2xl border border-slate-100 shadow-soft p-4 sm:p-5">
+          <!-- Header: mã đơn + 1 badge trạng thái + email mua -->
+          <div class="flex flex-wrap items-center gap-2 mb-2">
+            <span class="font-bold text-slate-800 tracking-tight">${escapeHtml(o.orderCode || ('DH' + String(o.id).padStart(6, '0')))}</span>
+            ${statusHtml}
+            <span class="text-xs text-slate-400 truncate max-w-full sm:max-w-[220px]" title="${escapeHtml(o.email || '')}">${escapeHtml(o.email || o.customerName || '')}</span>
           </div>
-          <p class="text-sm text-slate-700 font-medium">${escapeHtml(o.product || o.productName || '')}</p>
-          <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs text-slate-500">
-            <div><i class="fas fa-envelope mr-1 text-brand-500"></i>Email cấp TK: <strong class="text-slate-700">${escapeHtml(email || '— chưa có')}</strong></div>
-            <div><i class="fab fa-facebook-messenger mr-1 text-brand-500"></i>Zalo: <strong class="text-slate-700">${escapeHtml(phone || '— chưa có')}</strong></div>
+
+          <!-- Sản phẩm -->
+          <p class="text-sm font-semibold text-slate-700 mb-2">${escapeHtml(o.product || o.productName || '')}${o.quantity > 1 ? ' ×' + o.quantity : ''}</p>
+
+          <!-- Email cấp TK + Zalo -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-slate-500 mb-3">
+            <div class="flex items-start gap-1.5 min-w-0">
+              <i class="fas fa-envelope mt-0.5 text-brand-500 shrink-0"></i>
+              <span>Email cấp TK: <strong class="text-slate-700 break-all">${escapeHtml(email || '— chưa có')}</strong></span>
+            </div>
+            <div class="flex items-start gap-1.5 min-w-0">
+              <i class="fas fa-comment-dots mt-0.5 text-brand-500 shrink-0"></i>
+              <span>Zalo: <strong class="text-slate-700">${escapeHtml(phone || '— chưa có')}</strong></span>
+            </div>
           </div>
-          <div class="flex flex-wrap justify-between items-center gap-2 mt-3">
+
+          <!-- Footer: thời gian + tiền + actions -->
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-slate-50">
             <span class="text-xs text-slate-400">${escapeHtml(o.date || o.createdAt || '')}</span>
-            <div class="flex items-center gap-2">
-              <span class="font-bold text-emerald-600">${formatMoney(o.price || 0)}</span>
-              <button type="button" onclick="openFulfillModal(${o.id})" class="px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold">
-                <i class="fas fa-user-check mr-1"></i>Cấp / nâng cấp
+            <div class="flex flex-wrap items-center justify-end gap-2">
+              <span class="font-extrabold text-emerald-600 text-base mr-1">${formatMoney(o.price || 0)}</span>
+              ${zLink
+                ? `<a href="${escapeHtml(zLink)}" target="_blank" rel="noopener noreferrer"
+                      class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold shadow-sm transition">
+                     <i class="fas fa-comment-dots"></i> Liên hệ Zalo
+                   </a>`
+                : `<button type="button" disabled
+                      class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200 text-slate-400 text-xs font-semibold cursor-not-allowed"
+                      title="Chưa có số Zalo">
+                     <i class="fas fa-comment-dots"></i> Liên hệ Zalo
+                   </button>`
+              }
+              <button type="button" onclick="openFulfillModal(${o.id})"
+                class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold shadow-sm transition">
+                <i class="fas fa-user-check"></i> Cấp / nâng cấp
               </button>
             </div>
           </div>
-        </div>`;
+        </article>`;
       }).join('');
     } catch (e) { list.innerHTML = emptyState(e.message); }
   }
