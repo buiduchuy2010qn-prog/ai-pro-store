@@ -777,7 +777,7 @@
       document.getElementById('qr-panel').classList.remove('hidden');
       document.getElementById('qr-placeholder').classList.add('hidden');
       document.getElementById('polling-hint').classList.remove('hidden');
-      document.getElementById('topup-banner').textContent = 'Đang chờ chuyển khoản… Hệ thống Casso sẽ cộng tiền tự động.';
+      document.getElementById('topup-banner').textContent = 'Đang chờ chuyển khoản…';
       startTopupPoll(r.id);
       toast('Đã tạo yêu cầu nạp ' + formatMoney(amount));
     } catch (e) {
