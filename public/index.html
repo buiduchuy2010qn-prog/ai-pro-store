@@ -249,7 +249,21 @@
       overflow: hidden;
     }
 
-    /* ── AI Chat + Zalo FABs ── */
+    /* ── AI Chat + Zalo FABs: chỉ hiện khi đã đăng nhập ── */
+    #support-floats,
+    .floating-support {
+      display: none !important;
+    }
+    body.logged-in #support-floats,
+    body.logged-in .floating-support {
+      display: flex !important;
+    }
+    /* Màn login: z-index thấp, không đè form */
+    body:not(.logged-in) #support-floats {
+      display: none !important;
+      z-index: 1 !important;
+      pointer-events: none !important;
+    }
     .support-fab {
       transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s ease;
     }
@@ -257,6 +271,19 @@
     .ai-fab-active {
       box-shadow: 0 0 0 3px rgba(37,99,235,.25), 0 12px 32px rgba(37,99,235,.3) !important;
     }
+    .login-support-link {
+      display: block;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 1rem;
+      line-height: 1.5;
+    }
+    .login-support-link a {
+      color: #2563eb;
+      font-weight: 600;
+    }
+    .login-support-link a:hover { text-decoration: underline; }
     #ai-chat-panel.ai-panel-open {
       display: flex !important;
       animation: aiPanelIn .32s cubic-bezier(.22,1,.36,1) both;
@@ -421,6 +448,10 @@
           <button type="submit" class="btn-press w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-soft">
             <i class="fas fa-sign-in-alt mr-2"></i>Đăng nhập
           </button>
+          <p class="login-support-link">
+            Cần hỗ trợ? Zalo:
+            <a href="https://zalo.me/0944255413" target="_blank" rel="noopener noreferrer">0944255413</a>
+          </p>
         </form>
 
         <form id="register-form" class="space-y-4 hidden">
@@ -449,6 +480,10 @@
           <button type="submit" class="btn-press w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-soft">
             <i class="fas fa-user-plus mr-2"></i>Tạo tài khoản
           </button>
+          <p class="login-support-link">
+            Cần hỗ trợ? Zalo:
+            <a href="https://zalo.me/0944255413" target="_blank" rel="noopener noreferrer">0944255413</a>
+          </p>
         </form>
       </div>
     </div>
