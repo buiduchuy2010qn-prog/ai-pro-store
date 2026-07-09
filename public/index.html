@@ -5,285 +5,304 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Pro Store — Tài khoản AI Premium</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta name="app-ui" content="v7-security-profile">
+  <meta name="app-ui" content="v8-shadcn-mono">
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <!-- CSRF / fingerprint (bắt buộc với backend) — không đụng dữ liệu user -->
   <script src="/security-client.js"></script>
   <script>
+    /* Map brand → monochrome shadcn tokens (giữ class HTML cũ) */
     tailwind.config = {
       theme: {
         extend: {
           colors: {
+            canvas: '#f5f5f5',
+            paper: '#ffffff',
+            'surface-alt': '#fafafa',
+            ink: { DEFAULT: '#0a0a0a', soft: '#171717' },
+            mid: '#737373',
+            hairline: '#e5e5e5',
+            ember: '#e7000b',
             brand: {
-              50:  '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
-              400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
-              800: '#1e40af', 900: '#1e3a8a',
-            }
+              50:  '#f5f5f5', 100: '#f5f5f5', 200: '#e5e5e5', 300: '#e5e5e5',
+              400: '#737373', 500: '#171717', 600: '#0a0a0a', 700: '#0a0a0a',
+              800: '#0a0a0a', 900: '#0a0a0a',
+            },
+            slate: {
+              50: '#fafafa', 100: '#f5f5f5', 200: '#e5e5e5', 300: '#d4d4d4',
+              400: '#a3a3a3', 500: '#737373', 600: '#525252', 700: '#404040',
+              800: '#262626', 900: '#171717',
+            },
+            emerald: { 50: '#f5f5f5', 100: '#f5f5f5', 600: '#171717', 700: '#0a0a0a' },
+            amber:   { 50: '#f5f5f5', 100: '#f5f5f5', 500: '#737373', 700: '#171717', 900: '#0a0a0a' },
+            red:     { 50: '#fef2f2', 100: '#fee2e2', 200: '#fecaca', 400: '#e7000b', 500: '#e7000b', 600: '#e7000b' },
+            sky:     { 50: '#f5f5f5', 200: '#e5e5e5', 700: '#171717' },
+          },
+          borderRadius: {
+            xl: '18px',
+            '2xl': '24px',
+            '3xl': '24px',
           },
           boxShadow: {
-            soft: '0 4px 16px rgba(15, 23, 42, 0.06)',
-            card: '0 8px 24px rgba(37, 99, 235, 0.08)',
-            lift: '0 12px 32px rgba(37, 99, 235, 0.14)',
-            glow: '0 0 0 4px rgba(37, 99, 235, 0.15)',
-          }
+            soft: '0 0 0 1px rgba(23,23,23,0.05), 0 1px 2px -1px rgba(0,0,0,0.08)',
+            card: '0 0 0 1px rgba(23,23,23,0.05), 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)',
+            lift: '0 0 0 1px rgba(23,23,23,0.06), 0 4px 12px rgba(0,0,0,0.08)',
+            glow: '0 0 0 1px rgba(23,23,23,0.08)',
+            subtle: '0 0 0 1px rgba(23,23,23,0.05), 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)',
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          },
         }
       }
     };
   </script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
-    /* ── Base ── */
+    /* ═══════════════════════════════════════════════════════════
+       UI TOKENS — shadcn monochrome (clinical / frosted paper)
+       ═══════════════════════════════════════════════════════════ */
+    :root {
+      --color-canvas: #f5f5f5;
+      --color-paper: #ffffff;
+      --color-surface-alt: #fafafa;
+      --color-ink: #0a0a0a;
+      --color-ink-soft: #171717;
+      --color-mid-gray: #737373;
+      --color-hairline: #e5e5e5;
+      --color-ember: #e7000b;
+      --radius-cards: 24px;
+      --radius-buttons: 18px;
+      --radius-inputs: 18px;
+      --radius-badges: 18px;
+      --shadow-card: 0 0 0 1px rgba(23,23,23,0.05), 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1);
+      --page-max: 1280px;
+    }
+
     body {
-      font-family: 'Inter', system-ui, sans-serif;
-      /* GPU layer nhẹ cho scroll mượt */
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.43;
+      color: var(--color-ink);
+      background: var(--color-canvas);
       -webkit-font-smoothing: antialiased;
     }
-    .nav-active {
-      background: #fff;
-      color: #1d4ed8;
-      box-shadow: 0 1px 3px rgba(0,0,0,.06);
-      transition: background .25s ease, color .25s ease, box-shadow .25s ease;
-    }
-    .nav-btn, .mobile-nav, .admin-tab {
-      transition: background .25s ease, color .25s ease, box-shadow .25s ease, transform .15s ease;
+
+    /* ── Typography hierarchy ── */
+    h1, .page-title, .text-2xl.font-extrabold, .text-3xl {
+      letter-spacing: -0.025em;
+      font-weight: 600;
+      color: var(--color-ink);
     }
 
-    /* ── View / Tab transition (transform+opacity = 60fps) ── */
-    .view-section {
+    /* ── Nav ── */
+    .nav-active {
+      background: var(--color-paper) !important;
+      color: var(--color-ink) !important;
+      box-shadow: var(--shadow-card);
+      font-weight: 500;
+    }
+    .nav-btn, .mobile-nav, .admin-tab, .profile-tab {
+      transition: background .2s ease, color .2s ease, box-shadow .2s ease, transform .15s ease;
+      border-radius: 18px !important;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    /* Primary filled = ink black (shadcn) */
+    .bg-brand-600, .bg-brand-700, .from-brand-600, .to-brand-700,
+    .from-brand-500, .to-brand-700 {
+      background: var(--color-ink) !important;
+      background-image: none !important;
+    }
+    .hover\:bg-brand-700:hover, .hover\:bg-brand-600:hover { background: var(--color-ink-soft) !important; }
+    .text-brand-600, .text-brand-700, .text-brand-500, .text-brand-400 { color: var(--color-ink) !important; }
+    .text-brand-200, .text-brand-100 { color: #a3a3a3 !important; }
+    .bg-brand-50, .bg-brand-50\/40, .hover\:bg-brand-50:hover { background-color: var(--color-canvas) !important; }
+    .border-brand-100, .border-brand-200, .border-brand-300 { border-color: var(--color-hairline) !important; }
+    .ring-brand-400, .ring-brand-500, .focus\:ring-brand-500:focus { --tw-ring-color: var(--color-hairline) !important; }
+    .text-emerald-600, .text-emerald-700 { color: var(--color-ink) !important; }
+    .bg-emerald-50 { background: var(--color-canvas) !important; }
+    .border-emerald-100, .border-emerald-200 { border-color: var(--color-hairline) !important; }
+    .text-amber-500, .text-amber-700, .text-amber-900 { color: var(--color-mid-gray) !important; }
+    .bg-amber-50 { background: var(--color-canvas) !important; }
+    .border-amber-100, .border-amber-200 { border-color: var(--color-hairline) !important; }
+
+    /* Cards paper */
+    .shadow-soft, .shadow-card, .shadow-lift {
+      box-shadow: var(--shadow-card) !important;
+    }
+    .rounded-2xl { border-radius: 24px !important; }
+    .rounded-xl { border-radius: 18px !important; }
+
+    /* Inputs */
+    input, select, textarea {
+      border-radius: 18px !important;
+      background: var(--color-canvas) !important;
+      border-color: transparent !important;
+      font-size: 14px !important;
+      color: var(--color-ink) !important;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none !important;
+      box-shadow: 0 0 0 1px var(--color-hairline) !important;
+      background: var(--color-paper) !important;
+      border-color: var(--color-hairline) !important;
+    }
+    input::placeholder, textarea::placeholder { color: var(--color-mid-gray) !important; }
+
+    /* ── View transitions ── */
+    .view-section, .fade-in {
       animation: viewIn .32s cubic-bezier(.22, 1, .36, 1) both;
     }
-    .fade-in { animation: viewIn .32s cubic-bezier(.22, 1, .36, 1) both; }
     @keyframes viewIn {
       from { opacity: 0; transform: translate3d(0, 10px, 0); }
       to   { opacity: 1; transform: translate3d(0, 0, 0); }
     }
-    .view-out {
-      animation: viewOut .2s ease-in both;
-    }
-    @keyframes viewOut {
-      from { opacity: 1; transform: translate3d(0, 0, 0); }
-      to   { opacity: 0; transform: translate3d(0, -6px, 0); }
-    }
 
-    /* ── Product card: hover lift + scale (GPU) ── */
+    /* ── Product card ── */
     .product-card {
       will-change: transform;
-      transition:
-        transform .3s cubic-bezier(.22, 1, .36, 1),
-        box-shadow .3s ease,
-        border-color .3s ease;
+      background: var(--color-paper);
+      border: 1px solid var(--color-hairline);
+      border-radius: 24px;
+      box-shadow: var(--shadow-card);
+      transition: transform .3s cubic-bezier(.22, 1, .36, 1), box-shadow .3s ease, border-color .3s ease;
     }
     .product-card:hover {
-      transform: translate3d(0, -4px, 0) scale(1.02);
-      box-shadow: 0 16px 40px rgba(37, 99, 235, 0.14);
-      border-color: #93c5fd;
+      transform: translate3d(0, -8px, 0);
+      box-shadow: 0 0 0 1px rgba(23,23,23,0.08), 0 8px 24px rgba(0,0,0,0.08);
+      border-color: var(--color-hairline);
     }
-    .product-card:active {
-      transform: translate3d(0, -1px, 0) scale(1.01);
-    }
-    /* Stagger enter */
     .product-card.stagger {
       animation: cardPop .4s cubic-bezier(.22, 1, .36, 1) both;
     }
     @keyframes cardPop {
-      from { opacity: 0; transform: translate3d(0, 16px, 0) scale(.96); }
+      from { opacity: 0; transform: translate3d(0, 16px, 0) scale(.97); }
       to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
     }
 
-    /* ── Buttons: press + ripple ── */
+    /* ── Buttons ── */
     .btn-press {
       position: relative;
       overflow: hidden;
       transform: translateZ(0);
-      transition:
-        transform .15s ease,
-        background-color .25s ease,
-        box-shadow .25s ease,
-        opacity .25s ease;
+      border-radius: 18px !important;
+      font-size: 14px;
+      font-weight: 500;
+      transition: transform .15s ease, background .2s ease, opacity .2s ease;
     }
-    .btn-press:hover:not(:disabled) {
-      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.22);
-    }
-    .btn-press:active:not(:disabled) {
-      transform: scale(0.95);
-    }
+    .btn-press:active:not(:disabled) { transform: scale(0.95); }
     .btn-press .ripple {
       position: absolute;
       border-radius: 50%;
-      background: rgba(255,255,255,.35);
+      background: rgba(255,255,255,.25);
       transform: scale(0);
       animation: ripple .5s ease-out forwards;
       pointer-events: none;
     }
-    @keyframes ripple {
-      to { transform: scale(2.6); opacity: 0; }
-    }
-    .btn-loading {
-      pointer-events: none;
-      opacity: .75;
-    }
+    @keyframes ripple { to { transform: scale(2.6); opacity: 0; } }
+    .btn-loading { pointer-events: none; opacity: .75; }
     .btn-loading .btn-label { opacity: 0; }
     .btn-loading::after {
       content: '';
-      position: absolute;
-      inset: 0;
-      margin: auto;
-      width: 1.15rem; height: 1.15rem;
-      border: 2px solid rgba(255,255,255,.35);
+      position: absolute; inset: 0; margin: auto;
+      width: 1.1rem; height: 1.1rem;
+      border: 2px solid rgba(255,255,255,.3);
       border-top-color: #fff;
       border-radius: 50%;
       animation: spin .7s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Modal: fade + scale ── */
-    .modal-backdrop {
-      opacity: 0;
-      transition: opacity .28s ease;
-    }
-    .modal-backdrop.is-open {
-      opacity: 1;
-    }
+    /* ── Modal ── */
+    .modal-backdrop { opacity: 0; transition: opacity .28s ease; }
+    .modal-backdrop.is-open { opacity: 1; }
     .modal-panel {
       transform: translate3d(0, 14px, 0) scale(.96);
       opacity: 0;
-      transition:
-        transform .32s cubic-bezier(.22, 1, .36, 1),
-        opacity .28s ease;
+      border-radius: 24px !important;
+      border: 1px solid var(--color-hairline);
+      box-shadow: var(--shadow-card);
+      transition: transform .32s cubic-bezier(.22, 1, .36, 1), opacity .28s ease;
     }
     .modal-backdrop.is-open .modal-panel {
       transform: translate3d(0, 0, 0) scale(1);
       opacity: 1;
     }
-    .modal-backdrop.is-closing {
-      opacity: 0;
-    }
+    .modal-backdrop.is-closing { opacity: 0; }
     .modal-backdrop.is-closing .modal-panel {
       transform: translate3d(0, 10px, 0) scale(.97);
       opacity: 0;
     }
 
     /* ── Toast ── */
-    #toast {
-      transition: opacity .28s ease, transform .28s cubic-bezier(.22, 1, .36, 1);
-    }
-    #toast.toast-show {
-      opacity: 1;
-      transform: translate3d(0, 0, 0);
-    }
-    #toast.toast-hide {
-      opacity: 0;
-      transform: translate3d(0, 12px, 0);
-    }
+    #toast { transition: opacity .28s ease, transform .28s cubic-bezier(.22, 1, .36, 1); }
+    #toast.toast-show { opacity: 1; transform: translate3d(0, 0, 0); }
+    #toast.toast-hide { opacity: 0; transform: translate3d(0, 12px, 0); }
+    #toast-inner { border-radius: 18px !important; background: var(--color-ink) !important; }
 
-    /* ── Cart badge bounce ── */
-    #cart-badge.pop {
-      animation: badgePop .45s cubic-bezier(.22, 1, .36, 1);
-    }
+    #cart-badge.pop { animation: badgePop .45s cubic-bezier(.22, 1, .36, 1); }
     @keyframes badgePop {
-      0%   { transform: scale(1); }
-      40%  { transform: scale(1.35); }
-      100% { transform: scale(1); }
+      0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); }
     }
-
-    /* ── Wallet balance flash ── */
-    .balance-flash {
-      animation: balFlash .7s ease;
-    }
+    .balance-flash { animation: balFlash .7s ease; }
     @keyframes balFlash {
-      0%   { color: inherit; transform: scale(1); }
-      30%  { color: #059669; transform: scale(1.06); }
-      100% { color: inherit; transform: scale(1); }
+      0%,100% { color: inherit; transform: scale(1); }
+      30% { color: var(--color-ink); transform: scale(1.04); }
     }
-    .balance-deduct {
-      animation: balDeduct .7s ease;
-    }
+    .balance-deduct { animation: balDeduct .7s ease; }
     @keyframes balDeduct {
-      0%   { color: inherit; transform: scale(1); }
-      30%  { color: #dc2626; transform: scale(1.05); }
-      100% { color: inherit; transform: scale(1); }
+      0%,100% { color: inherit; transform: scale(1); }
+      30% { color: var(--color-ember); transform: scale(1.04); }
     }
-
-    /* ── Floating +N cart particle ── */
     .cart-float {
-      position: fixed;
-      z-index: 60;
-      pointer-events: none;
-      font-weight: 800;
-      font-size: 13px;
-      color: #2563eb;
-      text-shadow: 0 1px 0 #fff;
+      position: fixed; z-index: 60; pointer-events: none;
+      font-weight: 600; font-size: 13px; color: var(--color-ink);
       animation: cartFloat .7s ease-out forwards;
     }
     @keyframes cartFloat {
-      0%   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-      100% { opacity: 0; transform: translate3d(0, -40px, 0) scale(1.2); }
+      0% { opacity: 1; transform: translate3d(0, 0, 0); }
+      100% { opacity: 0; transform: translate3d(0, -40px, 0); }
     }
-
-    /* ── Skeleton ── */
     .skel {
-      background: linear-gradient(90deg, #e2e8f0 25%, #f8fafc 50%, #e2e8f0 75%);
+      background: linear-gradient(90deg, #e5e5e5 25%, #f5f5f5 50%, #e5e5e5 75%);
       background-size: 200% 100%;
       animation: skel 1.1s ease-in-out infinite;
-      border-radius: 1rem;
+      border-radius: 18px;
     }
     @keyframes skel {
       0% { background-position: 200% 0; }
       100% { background-position: -200% 0; }
     }
-
-    /* ── QR panel enter ── */
-    #qr-panel.panel-in {
-      animation: viewIn .35s cubic-bezier(.22, 1, .36, 1) both;
-    }
+    #qr-panel.panel-in { animation: viewIn .35s cubic-bezier(.22, 1, .36, 1) both; }
 
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
     .line-clamp-2 {
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
     }
 
-    /* ── AI Chat + Zalo FABs: chỉ hiện khi đã đăng nhập ── */
-    #support-floats,
-    .floating-support {
-      display: none !important;
-    }
-    body.logged-in #support-floats,
-    body.logged-in .floating-support {
+    /* ── FAB only when logged-in ── */
+    #support-floats, .floating-support { display: none !important; }
+    body.logged-in #support-floats, body.logged-in .floating-support {
       display: flex !important;
     }
-    /* Màn login: z-index thấp, không đè form */
     body:not(.logged-in) #support-floats {
-      display: none !important;
-      z-index: 1 !important;
-      pointer-events: none !important;
+      display: none !important; z-index: 1 !important; pointer-events: none !important;
     }
-    .support-fab {
-      transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s ease;
-    }
-    .support-fab:hover { transform: translateY(-2px) scale(1.03); }
-    .ai-fab-active {
-      box-shadow: 0 0 0 3px rgba(37,99,235,.25), 0 12px 32px rgba(37,99,235,.3) !important;
-    }
+    .support-fab { transition: transform .25s cubic-bezier(.22,1,.36,1); }
+    .support-fab:hover { transform: translateY(-2px); }
+    .ai-fab-active { box-shadow: 0 0 0 2px var(--color-hairline) !important; }
     .login-support-link {
-      display: block;
-      text-align: center;
-      font-size: 0.75rem;
-      color: #64748b;
-      margin-top: 1rem;
-      line-height: 1.5;
+      display: block; text-align: center; font-size: 12px;
+      color: var(--color-mid-gray); margin-top: 1rem; line-height: 1.5;
     }
-    .login-support-link a {
-      color: #2563eb;
-      font-weight: 600;
-    }
+    .login-support-link a { color: var(--color-ink); font-weight: 500; }
     .login-support-link a:hover { text-decoration: underline; }
+
     #ai-chat-panel.ai-panel-open {
       display: flex !important;
       animation: aiPanelIn .32s cubic-bezier(.22,1,.36,1) both;
@@ -298,57 +317,52 @@
       to   { opacity: 1; transform: none; }
     }
     .ai-bubble-user {
-      background: linear-gradient(135deg, #2563eb, #1d4ed8);
-      color: #fff;
-      border-radius: 1.1rem 1.1rem 0.25rem 1.1rem;
+      background: var(--color-ink);
+      color: #fafafa;
+      border-radius: 18px 18px 4px 18px;
       padding: 0.55rem 0.85rem;
-      font-size: 0.875rem;
+      font-size: 14px;
       line-height: 1.45;
-      box-shadow: 0 4px 12px rgba(37,99,235,.2);
     }
     .ai-bubble-ai {
-      background: #fff;
-      color: #1e293b;
-      border: 1px solid #e2e8f0;
-      border-radius: 1.1rem 1.1rem 1.1rem 0.25rem;
+      background: var(--color-paper);
+      color: var(--color-ink);
+      border: 1px solid var(--color-hairline);
+      border-radius: 18px 18px 18px 4px;
       padding: 0.55rem 0.85rem;
-      font-size: 0.875rem;
+      font-size: 14px;
       line-height: 1.45;
-      box-shadow: 0 2px 8px rgba(15,23,42,.04);
     }
     .ai-avatar {
       width: 1.75rem; height: 1.75rem;
-      border-radius: 0.55rem;
-      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-      color: #fff;
+      border-radius: 10px;
+      background: var(--color-ink);
+      color: #fafafa;
       display: flex; align-items: center; justify-content: center;
       font-size: 0.7rem;
     }
     .ai-chip {
-      font-size: 0.7rem;
-      font-weight: 600;
+      font-size: 12px; font-weight: 500;
       padding: 0.3rem 0.65rem;
-      border-radius: 999px;
-      border: 1px solid #bfdbfe;
-      background: #eff6ff;
-      color: #1d4ed8;
+      border-radius: 18px;
+      border: 1px solid var(--color-hairline);
+      background: var(--color-canvas);
+      color: var(--color-ink);
       transition: background .2s, transform .15s;
     }
-    .ai-chip:hover { background: #dbeafe; }
+    .ai-chip:hover { background: var(--color-hairline); }
     .ai-chip:active { transform: scale(.95); }
     .ai-action-btn {
-      font-size: 0.7rem;
-      font-weight: 600;
+      font-size: 12px; font-weight: 500;
       padding: 0.25rem 0.6rem;
-      border-radius: 0.5rem;
-      background: #eff6ff;
-      color: #2563eb;
-      border: 1px solid #bfdbfe;
+      border-radius: 18px;
+      background: var(--color-canvas);
+      color: var(--color-ink);
+      border: 1px solid var(--color-hairline);
     }
-    .ai-action-btn:hover { background: #dbeafe; }
     .ai-typing-dots span {
       display: inline-block; width: 6px; height: 6px; margin: 0 2px;
-      border-radius: 50%; background: #94a3b8;
+      border-radius: 50%; background: var(--color-mid-gray);
       animation: aiDot 1s infinite ease-in-out;
     }
     .ai-typing-dots span:nth-child(2) { animation-delay: .15s; }
@@ -358,39 +372,38 @@
       40% { transform: translateY(-4px); opacity: 1; }
     }
 
-    /* ── Falling particles canvas (dưới UI, không chặn click) ── */
+    /* ── Falling particles ── */
     #fx-fall {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 0;
-      pointer-events: none;
-      /* Lớp nền mờ phía dưới canvas để gradient nhẹ */
+      position: fixed; inset: 0; width: 100%; height: 100%;
+      z-index: 0; pointer-events: none;
     }
     body::before {
       content: '';
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      background:
-        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(59, 130, 246, 0.12), transparent 55%),
-        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(147, 197, 253, 0.15), transparent 50%),
-        #f8fafc;
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background: var(--color-canvas);
     }
-    .app-layer {
-      position: relative;
-      z-index: 1;
-    }
-    /* Login form entrance */
+    .app-layer { position: relative; z-index: 1; }
     .login-card-enter {
       animation: loginEnter .55s cubic-bezier(.22, 1, .36, 1) both;
     }
     @keyframes loginEnter {
-      from { opacity: 0; transform: translate3d(0, 28px, 0) scale(.96); }
+      from { opacity: 0; transform: translate3d(0, 28px, 0) scale(.97); }
       to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
     }
+
+    /* Header monochrome */
+    header.sticky {
+      background: rgba(250,250,250,0.92) !important;
+      border-color: var(--color-hairline) !important;
+    }
+
+    /* AI FAB — ink instead of blue gradient */
+    #ai-chat-toggle {
+      background: var(--color-ink) !important;
+      background-image: none !important;
+    }
+    /* Zalo keeps brand blue (third-party) */
+    #zalo-float-btn { background: #0068FF !important; }
 
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
@@ -402,7 +415,7 @@
     }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-900 min-h-screen antialiased">
+<body class="bg-canvas text-ink min-h-screen antialiased">
 
   <!--
     ════════════════════════════════════════════════════════════════
@@ -417,18 +430,18 @@
 
   <!-- ═══════════════════ AUTH ═══════════════════ -->
   <div id="auth-screen" class="app-layer min-h-screen flex items-center justify-center p-4">
-    <div class="login-card-enter w-full max-w-md bg-white/90 backdrop-blur-md rounded-2xl shadow-card border border-slate-100/80 overflow-hidden">
-      <div class="px-8 pt-10 pb-6 text-center bg-gradient-to-br from-brand-600 to-brand-700 text-white">
-        <div class="inline-flex w-14 h-14 rounded-2xl bg-white/15 items-center justify-center mb-3">
+    <div class="login-card-enter w-full max-w-md bg-paper rounded-2xl shadow-card border border-hairline overflow-hidden">
+      <div class="px-8 pt-10 pb-6 text-center bg-ink text-paper">
+        <div class="inline-flex w-14 h-14 rounded-2xl bg-white/10 items-center justify-center mb-3">
           <i class="fas fa-bolt text-2xl"></i>
         </div>
-        <h1 class="text-2xl font-extrabold tracking-tight">AI<span class="text-brand-200">Pro</span> Store</h1>
-        <p class="text-brand-100 text-sm mt-1">Tài khoản Gemini · ChatGPT · Claude Premium</p>
+        <h1 class="text-2xl font-semibold tracking-tight" style="letter-spacing:-0.025em">AI Pro Store</h1>
+        <p class="text-mid text-sm mt-1" style="color:#a3a3a3">Tài khoản Gemini · ChatGPT · Claude Premium</p>
       </div>
 
-      <div class="flex border-b border-slate-100">
-        <button type="button" id="tab-login" class="flex-1 py-3 text-sm font-semibold text-brand-700 border-b-2 border-brand-600">Đăng nhập</button>
-        <button type="button" id="tab-register" class="flex-1 py-3 text-sm font-medium text-slate-400 border-b-2 border-transparent">Đăng ký</button>
+      <div class="flex border-b border-hairline">
+        <button type="button" id="tab-login" class="flex-1 py-3 text-sm font-medium text-ink border-b-2 border-ink">Đăng nhập</button>
+        <button type="button" id="tab-register" class="flex-1 py-3 text-sm font-medium text-mid border-b-2 border-transparent">Đăng ký</button>
       </div>
 
       <div class="p-6 sm:p-8">
@@ -1041,7 +1054,8 @@
   </div>
 
   <!-- ═══════════ AI Hỗ Trợ + Zalo (floating) ═══════════ -->
-  <div id="support-floats" class="fixed bottom-4 right-3 sm:right-5 z-[55] flex flex-col items-end gap-2.5 max-w-[calc(100vw-1.5rem)]">
+  <div id="support-floats" class="floating-support fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-[45] flex-col items-end gap-3 max-w-[calc(100vw-2rem)]"
+       aria-hidden="true" hidden>
     <!-- Chat panel -->
     <div id="ai-chat-panel"
       class="hidden w-[min(100vw-1.5rem,380px)] h-[min(72vh,520px)] flex flex-col bg-white rounded-2xl shadow-lift border border-slate-100 overflow-hidden origin-bottom-right"
@@ -1205,19 +1219,19 @@
       <i class="fas ${icon} text-4xl mb-3 opacity-30"></i>
       <p class="text-sm">${escapeHtml(msg)}</p></div>`;
   }
-  /** Badge trạng thái — Việt hóa 100%, chỉ 1 badge / đơn */
+  /** Badge trạng thái — Việt hóa · monochrome (chỉ ember cho lỗi) */
   function badge(status) {
     const raw = String(status || '').toLowerCase();
     const map = {
-      success:     { label: 'Hoàn tất',   cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-      completed:   { label: 'Hoàn tất',   cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-      pending:     { label: 'Chờ xử lý',  cls: 'bg-amber-50 text-amber-700 border-amber-200' },
-      in_progress: { label: 'Đang hỗ trợ', cls: 'bg-sky-50 text-sky-700 border-sky-200' },
-      cancelled:   { label: 'Đã hủy',     cls: 'bg-red-50 text-red-600 border-red-200' },
-      rejected:    { label: 'Đã từ chối', cls: 'bg-slate-100 text-slate-600 border-slate-200' },
+      success:     { label: 'Hoàn tất',    cls: 'bg-ink text-paper border-ink' },
+      completed:   { label: 'Hoàn tất',    cls: 'bg-ink text-paper border-ink' },
+      pending:     { label: 'Chờ xử lý',   cls: 'bg-canvas text-ink-soft border-hairline' },
+      in_progress: { label: 'Đang hỗ trợ', cls: 'bg-canvas text-ink border-hairline' },
+      cancelled:   { label: 'Đã hủy',      cls: 'bg-red-50 text-ember border-red-200' },
+      rejected:    { label: 'Đã từ chối',  cls: 'bg-red-50 text-ember border-red-200' },
     };
-    const conf = map[raw] || { label: status || '—', cls: 'bg-slate-50 text-slate-600 border-slate-100' };
-    return `<span class="inline-flex items-center text-[11px] px-2.5 py-0.5 rounded-full font-semibold border ${conf.cls}">${escapeHtml(conf.label)}</span>`;
+    const conf = map[raw] || { label: status || '—', cls: 'bg-canvas text-mid border-hairline' };
+    return `<span class="inline-flex items-center text-[12px] px-2 py-0.5 rounded-full font-medium border ${conf.cls}">${escapeHtml(conf.label)}</span>`;
   }
 
   /** Ưu tiên 1 trạng thái hiển thị trên thẻ đơn (không dồn 2 badge) */
@@ -1279,8 +1293,28 @@
   function saveCoupons(list) { localStorage.setItem(LS_COUPONS, JSON.stringify(list)); }
 
   /* ─── Auth UI ─── */
+  function setLoggedInUI(on) {
+    document.body.classList.toggle('logged-in', !!on);
+    const floats = document.getElementById('support-floats');
+    if (floats) {
+      floats.hidden = !on;
+      floats.setAttribute('aria-hidden', on ? 'false' : 'true');
+      if (!on) {
+        // đóng chat + ẩn hoàn toàn khi logout
+        if (typeof toggleAiChat === 'function') {
+          try { toggleAiChat(false); } catch (_) {}
+        }
+        floats.classList.add('hidden');
+      } else {
+        floats.classList.remove('hidden');
+      }
+    }
+  }
+
   function showAuth() {
     currentUser = null;
+    window.currentUser = null;
+    setLoggedInUI(false);
     document.getElementById('auth-screen').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
   }
@@ -1288,6 +1322,7 @@
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
     await refreshUser();
+    setLoggedInUI(true);
     navigateTo('products');
   }
   async function refreshUser() {
@@ -1345,14 +1380,14 @@
 
   /* ─── Products ─── */
   const COLOR_MAP = {
-    emerald: 'bg-emerald-50 text-emerald-600',
-    orange: 'bg-orange-50 text-orange-600',
-    violet: 'bg-violet-50 text-violet-600',
-    blue: 'bg-brand-50 text-brand-600',
-    sky: 'bg-sky-50 text-sky-600',
-    teal: 'bg-teal-50 text-teal-600',
-    red: 'bg-red-50 text-red-600',
-    amber: 'bg-amber-50 text-amber-600',
+    emerald: 'bg-canvas text-ink',
+    orange: 'bg-canvas text-ink',
+    violet: 'bg-canvas text-ink',
+    blue: 'bg-canvas text-ink',
+    sky: 'bg-canvas text-ink',
+    teal: 'bg-canvas text-ink',
+    red: 'bg-canvas text-ink',
+    amber: 'bg-canvas text-ink',
   };
   function skeletonProducts(n = 6) {
     return Array.from({ length: n }, () =>
@@ -2286,6 +2321,7 @@
       if (!confirm('Đăng xuất?')) return;
       try { await api('/auth/logout', { method: 'POST' }); } catch (_) {}
       setToken(null);
+      aiState.open = false;
       showAuth();
     };
     document.getElementById('brand-btn').onclick = () => navigateTo('products');
@@ -2448,12 +2484,12 @@
      Không chặn click (canvas pointer-events: none, z-index: 0)
      ═══════════════════════════════════════════════════════════════ */
   const FALL_FX = {
-    mode: 'sakura',   // 'sakura' = hoa đào | 'snow' = tuyết
-    count: 55,        // số lượng hạt desktop
-    speed: 0.85,      // tốc độ rơi
-    wind: 0.35,       // gió ngang
-    opacity: 0.55,    // độ trong suốt
-    mobileCount: 28,  // số hạt mobile (mượt hơn)
+    mode: 'snow',     // monochrome UI → tuyết xám/trắng (sakura = hoa đào)
+    count: 40,        // số lượng hạt desktop
+    speed: 0.7,       // tốc độ rơi
+    wind: 0.25,       // gió ngang
+    opacity: 0.4,     // độ trong suốt
+    mobileCount: 22,  // số hạt mobile (mượt hơn)
   };
 
   function initFallingFx() {
@@ -2814,7 +2850,13 @@
   }
 
   function toggleAiChat(force) {
-    aiState.open = force !== undefined ? force : !aiState.open;
+    // Chỉ cho mở chat khi đã đăng nhập
+    if (!currentUser && force !== false) {
+      toast('Vui lòng đăng nhập để dùng AI Hỗ Trợ.', true);
+      return;
+    }
+    aiState.open = force !== undefined ? !!force : !aiState.open;
+    if (!currentUser) aiState.open = false;
     const panel = document.getElementById('ai-chat-panel');
     const fab = document.getElementById('ai-chat-toggle');
     if (!panel) return;
@@ -2927,16 +2969,8 @@
       const a = e.target.closest('[data-ai-action]');
       if (a) aiHandleAction(a.dataset.aiAction);
     });
-    document.getElementById('zalo-float-btn')?.addEventListener('click', e => {
-      // link mặc định; fallback toast nếu bị chặn
-      setTimeout(() => {
-        if (document.visibilityState === 'visible') {
-          /* ok */
-        }
-      }, 300);
-    });
-    // Hiện FAB cả khi auth + app
-    document.getElementById('support-floats')?.classList.remove('hidden');
+    // FAB chỉ hiện sau login (body.logged-in) — ẩn mặc định
+    setLoggedInUI(!!currentUser && !!getToken());
   }
 
   async function boot() {
