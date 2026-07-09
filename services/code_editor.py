@@ -273,9 +273,120 @@ def _collect_context(paths: list, open_file: str = '', open_content: str = '') -
     return '\n'.join(chunks)
 
 
+def _flatten_file_list(nodes=None, out=None):
+    """Danh sách path file trong project (để offline AI / context)."""
+    if out is None:
+        out = []
+    if nodes is None:
+        nodes = list_tree()
+    for n in nodes:
+        if n.get('type') == 'file':
+            out.append(n['path'])
+        elif n.get('children'):
+            _flatten_file_list(n['children'], out)
+    return out
+
+
+def _offline_ai_reply(message: str, open_file: str = '', open_content: str = '') -> str:
+    """
+    Trả lời không cần API key: liệt kê cấu trúc, tóm tắt file đang mở.
+    Sửa code phức tạp vẫn cần XAI_API_KEY / OPENAI_API_KEY.
+    """
+    msg_l = (message or '').lower()
+    files = _flatten_file_list()
+
+    want_tree = any(k in msg_l for k in (
+        'cấu trúc', 'cau truc', 'cấu trúc file', 'list file', 'liệt kê', 'liet ke',
+        'cây thư mục', 'tree', 'file chính', 'file chinh', 'danh sách file', 'danh sach file',
+    ))
+    want_explain = any(k in msg_l for k in (
+        'giải thích', 'giai thich', 'file đang mở', 'file dang mo', 'đang làm gì',
+        'dang lam gi', 'mô tả file', 'mo ta file', 'file này', 'file nay',
+    ))
+
+    parts = []
+    if want_tree or (not want_explain and not open_file):
+        # Nhóm theo thư mục gốc
+        roots = {}
+        for p in files:
+            top = p.split('/')[0] if '/' in p else '(root)'
+            roots.setdefault(top, []).append(p)
+        lines = ['## Cấu trúc file chính của web\n']
+        for root in sorted(roots.keys()):
+            paths = sorted(roots[root])
+            lines.append(f'### {root}/  ({len(paths)} file)')
+            for p in paths[:40]:
+                lines.append(f'- `{p}`')
+            if len(paths) > 40:
+                lines.append(f'- … và {len(paths) - 40} file khác')
+            lines.append('')
+        lines.append(f'**Tổng:** {len(files)} file (đã ẩn .env, data, __pycache__).')
+        parts.append('\n'.join(lines))
+
+    if want_explain or (open_file and not want_tree):
+        if open_file:
+            content = open_content or ''
+            nlines = content.count('\n') + (1 if content else 0)
+            preview = '\n'.join(content.splitlines()[:25])
+            if len(preview) > 1500:
+                preview = preview[:1500] + '\n…'
+            hint = ''
+            low = open_file.lower()
+            if low.endswith('.env.example') or 'env' in low:
+                hint = 'File mẫu biến môi trường (PORT, JWT, bank, Casso, SMTP, AI key…). Không chứa secret thật.'
+            elif low.endswith('server.py'):
+                hint = 'Backend Flask: API auth, sản phẩm, nạp tiền, admin, webhook Casso.'
+            elif low.endswith('config.py'):
+                hint = 'Đọc biến môi trường → cấu hình app (bank, AI, security).'
+            elif 'index.html' in low:
+                hint = 'Frontend chính SPA: đăng nhập, sản phẩm, ví, đơn, admin.'
+            elif low.endswith('.css'):
+                hint = 'Stylesheet giao diện.'
+            elif low.endswith('.js'):
+                hint = 'Script frontend (logic UI / admin / assistant).'
+            elif low.endswith('render.yaml'):
+                hint = 'Blueprint deploy Render (service + env).'
+            elif low.endswith('database.py'):
+                hint = 'Lớp truy cập DB (SQLite/PostgreSQL).'
+            else:
+                hint = 'File mã nguồn / cấu hình của project.'
+            parts.append(
+                f'## File đang mở: `{open_file}`\n'
+                f'- Khoảng **{nlines}** dòng, **{len(content)}** ký tự\n'
+                f'- Vai trò: {hint}\n\n'
+                f'### Preview (đầu file)\n```\n{preview or "(trống)"}\n```'
+            )
+        else:
+            parts.append('Chưa mở file nào. Chọn file bên trái rồi hỏi lại.')
+
+    if not parts:
+        parts.append(
+            '## Chế độ offline (chưa có API key AI)\n\n'
+            'Hiện **chưa cấu hình** `XAI_API_KEY` hoặc `OPENAI_API_KEY` trên Render — '
+            'nên không gọi được Grok/GPT để **sửa code tự động**.\n\n'
+            '**Bạn vẫn có thể hỏi:**\n'
+            '- «Liệt kê cấu trúc file chính của web»\n'
+            '- «Giải thích file đang mở đang làm gì»\n\n'
+            '**Để bật AI full (sửa CSS/HTML/Python):**\n'
+            '1. Render Dashboard → **ai-pro-store** → **Environment**\n'
+            '2. Thêm `XAI_API_KEY` = key từ https://console.x.ai\n'
+            '   (hoặc `OPENAI_API_KEY` từ OpenAI)\n'
+            '3. Save → đợi redeploy → thử lại.\n'
+        )
+    else:
+        if not AI.get('api_key'):
+            parts.append(
+                '\n---\n'
+                '_Offline mode — chỉ liệt kê/tóm tắt file. '
+                'Gắn `XAI_API_KEY` trên Render để AI sửa code tự động._'
+            )
+
+    return '\n\n'.join(parts)
+
+
 def _call_llm(messages):
     if not AI['api_key']:
-        raise RuntimeError('Chưa cấu hình API key AI (XAI_API_KEY hoặc OPENAI_API_KEY).')
+        raise RuntimeError('NO_API_KEY')
     payload = json.dumps({
         'model': CODE_EDITOR['ai_model'],
         'messages': messages,
@@ -341,19 +452,18 @@ def ai_chat(message: str, history=None, open_file: str = '', open_content: str =
     if client_ip and not _check_rate(client_ip):
         raise PermissionError('Bạn gửi quá nhiều yêu cầu AI. Thử lại sau 1 giờ.')
 
+    # Không có API key → offline helper (liệt kê / giải thích file), không báo lỗi cứng
+    if not AI.get('api_key'):
+        offline = _offline_ai_reply(message, open_file=open_file or '', open_content=open_content or '')
+        return {
+            'message': offline,
+            'edits': [],
+            'model': 'offline-local',
+            'offline': True,
+        }
+
     ctx_block = _collect_context(context_paths or [], open_file, open_content)
-    file_list = []
-    for item in list_tree():
-        if item['type'] == 'file':
-            file_list.append(item['path'])
-        elif item.get('children'):
-            def _flatten(nodes):
-                for n in nodes:
-                    if n['type'] == 'file':
-                        file_list.append(n['path'])
-                    elif n.get('children'):
-                        _flatten(n['children'])
-            _flatten(item['children'])
+    file_list = _flatten_file_list()
 
     system = (
         f"{SYSTEM_PROMPT}\n\n"
@@ -369,7 +479,20 @@ def ai_chat(message: str, history=None, open_file: str = '', open_content: str =
             msgs.append({'role': role, 'content': content[:3000]})
     msgs.append({'role': 'user', 'content': message})
 
-    raw = _call_llm(msgs)
+    try:
+        raw = _call_llm(msgs)
+    except RuntimeError as e:
+        # API lỗi / key invalid → fallback offline thay vì chỉ hiện lỗi
+        if 'NO_API_KEY' in str(e) or '401' in str(e) or 'API key' in str(e).lower():
+            offline = _offline_ai_reply(message, open_file=open_file or '', open_content=open_content or '')
+            return {
+                'message': offline + f'\n\n_(Chi tiết API: {e})_',
+                'edits': [],
+                'model': 'offline-local',
+                'offline': True,
+            }
+        raise
+
     parsed = _parse_ai_response(raw)
     edits = parsed.get('edits') or []
     safe_edits = []

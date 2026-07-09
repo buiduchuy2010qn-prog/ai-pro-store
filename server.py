@@ -18,7 +18,7 @@ from config import (
     JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD, BANK, WEBHOOK_SECRET, CASSO,
     ZALO_PHONE, SITE_NAME, WELCOME_MSG, OTP_EXPIRE_MINUTES,
     OTP_MAX_ATTEMPTS, OTP_RATE_LIMIT_PER_HOUR, PORT, SECURITY, GOOGLE_DRIVE,
-    CODE_EDITOR,
+    CODE_EDITOR, AI,
 )
 from services import security as sec
 from services.email_service import send_otp_email
@@ -376,6 +376,7 @@ def health():
             'lockoutAttempts': SECURITY['lockout_attempts'],
             # Bump khi sửa WAF — client/admin kiểm tra deploy
             'payloadScan': 'v2-code-editor-skip',
+            'aiConfigured': bool(AI.get('api_key')),
         },
     }
     try:
