@@ -2128,6 +2128,63 @@ def admin_orders():
     return jsonify({'orders': orders})
 
 
+@app.route('/api/admin/orders/<int:oid>/fulfill', methods=['POST'])
+@admin_required
+def admin_order_fulfill(oid):
+    """Admin cập nhật Email + Zalo khách để cấp/nâng cấp tài khoản + ghi chú + trạng thái hỗ trợ."""
+    d = request.get_json() or {}
+    contact_email = (d.get('contactEmail') or d.get('contact_email') or '').strip()
+    contact_phone = (d.get('contactPhone') or d.get('contact_phone') or d.get('zalo') or '').strip()
+    admin_note = (d.get('adminNote') or d.get('note') or '').strip()
+    status = (d.get('status') or '').strip()  # pending | in_progress | completed | cancelled
+
+    conn = db.get_conn()
+    order = db.fetchone(conn, 'SELECT * FROM orders WHERE id = ?', (oid,))
+    if not order:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy đơn hàng.'}), 404
+
+    # Cập nhật contact trên đơn
+    db.execute(conn,
+        'UPDATE orders SET contact_email = ?, contact_phone = ? WHERE id = ?',
+        (contact_email or None, contact_phone or None, oid))
+
+    sn = db.fetchone(conn, 'SELECT * FROM support_notifications WHERE order_id = ?', (oid,))
+    support_item = None
+    if sn:
+        from services.support_notification_service import update_note, update_status, get_notification, VALID_STATUSES
+        # Lưu email vào customer_email nếu admin điền
+        if contact_email:
+            db.execute(conn, 'UPDATE support_notifications SET customer_email = ? WHERE id = ?',
+                       (contact_email, sn['id']))
+        note_parts = []
+        if contact_email:
+            note_parts.append(f'Email KH: {contact_email}')
+        if contact_phone:
+            note_parts.append(f'Zalo/SĐT: {contact_phone}')
+        if admin_note:
+            note_parts.append(admin_note)
+        if note_parts:
+            update_note(conn, sn['id'], ' | '.join(note_parts), request.user['id'])
+        if status in VALID_STATUSES:
+            update_status(conn, sn['id'], status, request.user['id'])
+        support_item = get_notification(conn, sn['id'])
+
+    db.commit(conn)
+    order2 = db.fetchone(conn, '''
+        SELECT o.id,o.product_id,o.product_name AS product,o.price,o.quantity,o.status,o.order_code,
+               o.created_at AS date,o.contact_email,o.contact_phone,u.email,u.name AS customer_name
+        FROM orders o JOIN users u ON u.id=o.user_id WHERE o.id = ?''', (oid,))
+    db.close(conn)
+    item = fmt_order_row(order2, {
+        'email': order2['email'], 'customerName': order2['customer_name'],
+        'contactEmail': order2.get('contact_email') or '',
+        'contactPhone': order2.get('contact_phone') or '',
+    })
+    item['support'] = support_item
+    return jsonify({'ok': True, 'order': item})
+
+
 @app.route('/api/admin/transactions')
 @admin_required
 def admin_transactions():
