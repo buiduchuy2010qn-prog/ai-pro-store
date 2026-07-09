@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Pro Store — Tài khoản AI Premium</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta name="app-ui" content="v3-order-card-vn-zalo">
+  <meta name="app-ui" content="v4-motion-light-blue">
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -27,13 +27,34 @@
               700: '#1d4ed8',
               800: '#1e40af',
               900: '#1e3a8a',
-            }
+            },
+            zalo: { DEFAULT: '#0068FF', dark: '#0054cc' }
           },
           boxShadow: {
             soft: '0 4px 16px rgba(15, 23, 42, 0.06)',
             card: '0 8px 24px rgba(37, 99, 235, 0.08)',
             lift: '0 12px 32px rgba(37, 99, 235, 0.12)',
-          }
+          },
+          transitionDuration: { 300: '300ms' },
+          keyframes: {
+            'modal-in': {
+              '0%': { opacity: '0', transform: 'translateY(12px) scale(0.98)' },
+              '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+            },
+            'backdrop-in': {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+            'fade-up': {
+              '0%': { opacity: '0', transform: 'translateY(8px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+          },
+          animation: {
+            'modal-in': 'modal-in 0.3s ease-out both',
+            'backdrop-in': 'backdrop-in 0.3s ease-out both',
+            'fade-up': 'fade-up 0.3s ease-out both',
+          },
         }
       }
     };
@@ -42,11 +63,64 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     body { font-family: 'Inter', system-ui, sans-serif; }
     .nav-active { background: #fff; color: #1d4ed8; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
-    .fade-in { animation: fadeIn .25s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    /* View transition mượt 300ms */
+    .fade-in { animation: fadeUp .3s ease-out both; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Product card motion */
+    .product-card {
+      transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease;
+    }
+    .product-card:hover {
+      transform: scale(1.02) translateY(-2px);
+      box-shadow: 0 12px 32px rgba(37, 99, 235, 0.12);
+      border-color: #93c5fd;
+    }
+
+    /* Buttons: nhấn thật active:scale-95 */
+    .btn-press {
+      transition: transform .15s ease, background-color .3s ease, box-shadow .3s ease, opacity .3s ease;
+    }
+    .btn-press:active:not(:disabled) { transform: scale(0.95); }
+
+    /* Modal open state */
+    .modal-backdrop {
+      transition: opacity .3s ease;
+    }
+    .modal-panel {
+      animation: modalIn .3s ease-out both;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(16px) scale(0.98); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Skeleton pulse */
+    .skel {
+      background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+      background-size: 200% 100%;
+      animation: skel 1.2s ease-in-out infinite;
+      border-radius: 1rem;
+    }
+    @keyframes skel {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
     .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen antialiased">
@@ -81,7 +155,7 @@
           </div>
           <div id="turnstile-login" class="flex justify-center"></div>
           <p id="login-error" class="text-red-500 text-sm hidden"></p>
-          <button type="submit" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-soft transition">
+          <button type="submit" class="btn-press w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-soft">
             <i class="fas fa-sign-in-alt mr-2"></i>Đăng nhập
           </button>
         </form>
@@ -109,7 +183,7 @@
           </div>
           <div id="turnstile-register" class="flex justify-center"></div>
           <p id="register-error" class="text-red-500 text-sm hidden"></p>
-          <button type="submit" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-soft transition">
+          <button type="submit" class="btn-press w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-soft">
             <i class="fas fa-user-plus mr-2"></i>Tạo tài khoản
           </button>
         </form>
@@ -174,7 +248,7 @@
           <p class="text-brand-100 text-xs font-bold uppercase tracking-wider mb-2"><i class="fas fa-bolt mr-1"></i> AI Pro Store</p>
           <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Tài khoản AI Premium</h1>
           <p class="text-brand-100 text-sm mt-2 max-w-xl">Gemini · ChatGPT · Claude — Mua nhanh, nạp VietQR/Casso tự động, giao dịch an toàn.</p>
-          <button type="button" data-view="wallet" class="mt-4 inline-flex items-center gap-2 bg-white text-brand-700 font-semibold px-5 py-2.5 rounded-xl shadow-soft hover:bg-brand-50 transition">
+          <button type="button" data-view="wallet" class="btn-press mt-4 inline-flex items-center gap-2 bg-white text-brand-700 font-semibold px-5 py-2.5 rounded-xl shadow-soft hover:bg-brand-50">
             <i class="fas fa-wallet"></i> Nạp tiền ngay
           </button>
         </div>
@@ -208,7 +282,7 @@
               <p id="coupon-msg" class="text-xs mt-1.5 hidden"></p>
             </div>
             <p class="text-xs text-slate-500 mb-4">Số dư ví: <strong id="cart-balance" class="text-brand-600">0đ</strong></p>
-            <button type="button" id="checkout-btn" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-soft">
+            <button type="button" id="checkout-btn" class="btn-press w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-soft disabled:opacity-50">
               <i class="fas fa-credit-card mr-2"></i>Thanh toán bằng ví
             </button>
             <button type="button" data-view="products" class="w-full mt-2 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">
@@ -250,7 +324,7 @@
                 <button type="button" data-amount="500000" class="quick-amt px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold hover:border-brand-400 hover:text-brand-700">500K</button>
                 <button type="button" data-amount="1000000" class="quick-amt px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold hover:border-brand-400 hover:text-brand-700">1M</button>
               </div>
-              <button type="button" id="create-topup-btn" class="w-full mt-4 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-soft">
+              <button type="button" id="create-topup-btn" class="btn-press w-full mt-4 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-soft">
                 <i class="fas fa-qrcode mr-2"></i>Tạo QR &amp; yêu cầu nạp
               </button>
             </div>
@@ -412,8 +486,8 @@
   </div>
 
   <!-- Purchase contact modal (khi SP yêu cầu email/zalo) -->
-  <div id="purchase-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-    <div class="bg-white rounded-2xl shadow-lift w-full max-w-md p-6 fade-in">
+  <div id="purchase-modal" class="modal-backdrop fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+    <div class="modal-panel bg-white rounded-2xl shadow-lift w-full max-w-md p-6">
       <h3 class="font-bold text-lg mb-1">Xác nhận mua</h3>
       <p id="purchase-name" class="text-sm text-slate-500 mb-4"></p>
       <div id="purchase-email-wrap" class="hidden mb-3">
@@ -425,15 +499,15 @@
         <input id="purchase-phone" type="tel" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
       </div>
       <div class="flex gap-2">
-        <button type="button" id="purchase-confirm" class="flex-1 py-2.5 rounded-xl bg-brand-600 text-white font-semibold text-sm">Xác nhận</button>
-        <button type="button" id="purchase-cancel" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium">Hủy</button>
+        <button type="button" id="purchase-confirm" class="btn-press flex-1 py-2.5 rounded-xl bg-brand-600 text-white font-semibold text-sm">Xác nhận</button>
+        <button type="button" id="purchase-cancel" class="btn-press flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium">Hủy</button>
       </div>
     </div>
   </div>
 
   <!-- Admin: Modal cấp / nâng cấp tài khoản (Email + Zalo) -->
-  <div id="fulfill-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-    <div class="bg-white rounded-2xl shadow-lift w-full max-w-lg p-6 fade-in max-h-[90vh] overflow-y-auto">
+  <div id="fulfill-modal" class="modal-backdrop fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+    <div class="modal-panel bg-white rounded-2xl shadow-lift w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
       <div class="flex items-start justify-between gap-3 mb-4">
         <div>
           <h3 class="font-bold text-lg text-slate-800"><i class="fas fa-user-check text-brand-600 mr-2"></i>Cấp / nâng cấp tài khoản</h3>
@@ -484,10 +558,10 @@
         </div>
 
         <div class="flex gap-2 pt-1">
-          <button type="submit" class="flex-1 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm shadow-soft">
+          <button type="submit" class="btn-press flex-1 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm shadow-soft">
             <i class="fas fa-save mr-1"></i> Lưu thông tin cấp TK
           </button>
-          <button type="button" id="fulfill-cancel" class="px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium">Đóng</button>
+          <button type="button" id="fulfill-cancel" class="btn-press px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium">Đóng</button>
         </div>
       </form>
     </div>
@@ -671,9 +745,19 @@
     red: 'bg-red-50 text-red-600',
     amber: 'bg-amber-50 text-amber-600',
   };
+  function skeletonProducts(n = 6) {
+    return Array.from({ length: n }, () =>
+      `<div class="bg-white rounded-2xl border border-slate-100 p-5 space-y-3 animate-pulse">
+        <div class="flex gap-3"><div class="skel w-12 h-12 shrink-0"></div><div class="flex-1 space-y-2"><div class="skel h-4 w-48 max-w-full"></div><div class="skel h-3 w-20"></div></div></div>
+        <div class="skel h-3 w-full"></div><div class="skel h-3 w-40 max-w-full"></div>
+        <div class="flex justify-between pt-2"><div class="skel h-6 w-24"></div><div class="skel h-9 w-28"></div></div>
+      </div>`
+    ).join('');
+  }
+
   async function loadProducts() {
     const grid = document.getElementById('products-grid');
-    grid.innerHTML = '<div class="col-span-full text-center text-slate-400 py-10">Đang tải…</div>';
+    grid.innerHTML = skeletonProducts(6);
     try {
       const { products } = await api('/products');
       productsCache = Object.fromEntries(products.map(p => [p.id, p]));
@@ -681,13 +765,14 @@
         grid.innerHTML = emptyState('Chưa có sản phẩm.');
         return;
       }
-      grid.innerHTML = products.map(p => {
+      grid.innerHTML = products.map((p, i) => {
         const col = COLOR_MAP[p.color] || COLOR_MAP.blue;
         const icon = p.icon || 'fa-box';
         return `
-        <article class="bg-white rounded-2xl border border-slate-100 shadow-soft hover:shadow-card hover:border-brand-200 transition p-5 flex flex-col">
+        <article class="product-card bg-white rounded-2xl border border-slate-100 shadow-soft p-5 flex flex-col"
+                 style="animation-delay:${Math.min(i * 40, 240)}ms">
           <div class="flex items-start gap-3 mb-3">
-            <div class="w-12 h-12 rounded-xl ${col} flex items-center justify-center shrink-0">
+            <div class="w-12 h-12 rounded-xl ${col} flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-105">
               <i class="fas ${escapeHtml(icon)} text-lg"></i>
             </div>
             <div class="min-w-0">
@@ -699,10 +784,14 @@
           <div class="flex items-center justify-between gap-2 pt-3 border-t border-slate-50">
             <span class="text-lg font-extrabold text-brand-700">${formatMoney(p.price)}</span>
             <div class="flex gap-2">
-              <button type="button" onclick="addToCart(${p.id})" class="px-3 py-2 rounded-xl border border-slate-200 text-slate-600 hover:border-brand-300 hover:text-brand-700 text-sm" title="Thêm giỏ">
+              <button type="button" onclick="addToCart(${p.id})"
+                class="btn-press px-3 py-2 rounded-xl border border-slate-200 text-slate-600 hover:border-brand-300 hover:text-brand-700 text-sm" title="Thêm giỏ">
                 <i class="fas fa-cart-plus"></i>
               </button>
-              <button type="button" onclick="buyNow(${p.id})" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold">Mua ngay</button>
+              <button type="button" onclick="buyNow(${p.id})"
+                class="btn-press px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-sm">
+                Mua ngay
+              </button>
             </div>
           </div>
         </article>`;
@@ -840,6 +929,13 @@
     await processCheckout(lines, appliedCoupon, {}, {});
   }
 
+  function replayModalAnim(modalEl) {
+    const panel = modalEl.querySelector('.modal-panel');
+    if (!panel) return;
+    panel.style.animation = 'none';
+    void panel.offsetWidth;
+    panel.style.animation = '';
+  }
   function openPurchaseModal(line) {
     const mode = line.contactMode || 'none';
     document.getElementById('purchase-name').textContent = line.name + ' ×' + line.qty;
@@ -849,6 +945,7 @@
     document.getElementById('purchase-phone').value = '';
     const m = document.getElementById('purchase-modal');
     m.classList.remove('hidden'); m.classList.add('flex');
+    replayModalAnim(m);
   }
   function closePurchaseModal() {
     const m = document.getElementById('purchase-modal');
@@ -1153,17 +1250,17 @@
               <span class="font-extrabold text-emerald-600 text-base mr-1">${formatMoney(o.price || 0)}</span>
               ${zLink
                 ? `<a href="${escapeHtml(zLink)}" target="_blank" rel="noopener noreferrer"
-                      class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold shadow-sm transition">
-                     <i class="fas fa-comment-dots"></i> Liên hệ Zalo
+                      class="btn-press inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#0068FF] hover:bg-[#0054cc] text-white text-xs font-semibold shadow-sm">
+                     <i class="fas fa-comment-dots"></i> Zalo
                    </a>`
                 : `<button type="button" disabled
                       class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200 text-slate-400 text-xs font-semibold cursor-not-allowed"
                       title="Chưa có số Zalo">
-                     <i class="fas fa-comment-dots"></i> Liên hệ Zalo
+                     <i class="fas fa-comment-dots"></i> Zalo
                    </button>`
               }
               <button type="button" onclick="openFulfillModal(${o.id})"
-                class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold shadow-sm transition">
+                class="btn-press inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold shadow-sm">
                 <i class="fas fa-user-check"></i> Cấp / nâng cấp
               </button>
             </div>
@@ -1192,6 +1289,7 @@
     const m = document.getElementById('fulfill-modal');
     m.classList.remove('hidden');
     m.classList.add('flex');
+    replayModalAnim(m);
   }
   function closeFulfillModal() {
     const m = document.getElementById('fulfill-modal');
