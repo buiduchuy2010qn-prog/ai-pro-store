@@ -183,32 +183,164 @@ def valid_email(email):
 
 
 def gen_order_code(oid):
-    return f'DH{oid:06d}'
+    """Mã đơn dễ đọc: DH-000001"""
+    try:
+        return f'DH-{int(oid):06d}'
+    except (TypeError, ValueError):
+        return f'DH-{oid}'
 
 
 def gen_tx_code(tid):
     return f'GD{tid:06d}'
 
 
+ORDER_STATUSES = ('pending', 'paid', 'processing', 'completed', 'cancelled', 'refunded')
+ORDER_STATUS_LABELS = {
+    'pending': 'Chờ xử lý',
+    'paid': 'Đã thanh toán',
+    'processing': 'Đang xử lý',
+    'completed': 'Hoàn thành',
+    'cancelled': 'Đã hủy',
+    'refunded': 'Đã hoàn tiền',
+    # legacy / support
+    'success': 'Hoàn tất',
+    'in_progress': 'Đang hỗ trợ',
+    'rejected': 'Đã từ chối',
+}
+PAYMENT_STATUSES = ('pending', 'paid', 'failed', 'refunded')
+PAYMENT_STATUS_LABELS = {
+    'pending': 'Chờ thanh toán',
+    'paid': 'Đã thanh toán',
+    'failed': 'Thanh toán lỗi',
+    'refunded': 'Đã hoàn tiền',
+    'success': 'Đã thanh toán',
+}
+ORDER_EVENT_META = {
+    'created': {'title': 'Đơn hàng được tạo', 'icon': 'fa-file-circle-plus'},
+    'paid': {'title': 'Thanh toán thành công', 'icon': 'fa-credit-card'},
+    'processing': {'title': 'Đang xử lý', 'icon': 'fa-spinner'},
+    'completed': {'title': 'Hoàn thành', 'icon': 'fa-circle-check'},
+    'cancelled': {'title': 'Đã hủy', 'icon': 'fa-ban'},
+    'refunded': {'title': 'Đã hoàn tiền', 'icon': 'fa-rotate-left'},
+    'note': {'title': 'Ghi chú', 'icon': 'fa-note-sticky'},
+    'status': {'title': 'Cập nhật trạng thái', 'icon': 'fa-pen'},
+}
+
+
+def normalize_order_status(val):
+    s = str(val or '').strip().lower()
+    if s in ('success',):
+        return 'completed'
+    if s in ('in_progress',):
+        return 'processing'
+    return s if s in ORDER_STATUSES else (s or 'pending')
+
+
+def append_order_event(conn, order_id, event_type, title=None, description='', actor_id=None):
+    meta = ORDER_EVENT_META.get(event_type, {})
+    title = title or meta.get('title') or event_type
+    return db.insert_returning_id(conn,
+        'INSERT INTO order_events (order_id, event_type, title, description, actor_id) VALUES (?,?,?,?,?)',
+        (order_id, event_type, title, description or '', actor_id))
+
+
+def list_order_events(conn, order_id):
+    rows = db.fetchall(conn,
+        'SELECT * FROM order_events WHERE order_id = ? ORDER BY id ASC', (order_id,))
+    return [{
+        'id': r['id'],
+        'type': r['event_type'],
+        'title': r['title'],
+        'description': r.get('description') or '',
+        'actorId': r.get('actor_id'),
+        'createdAt': format_dt_vn(r.get('created_at')),
+        'icon': ORDER_EVENT_META.get(r['event_type'], {}).get('icon', 'fa-circle'),
+    } for r in rows]
+
+
+def build_order_timeline(conn, order, tx=None):
+    """Timeline từ order_events; fallback synthetic nếu chưa có log."""
+    events = list_order_events(conn, order['id'])
+    if events:
+        return events
+    created = format_dt_vn(order.get('created_at'))
+    timeline = [{
+        'id': None, 'type': 'created', 'title': 'Đơn hàng được tạo',
+        'description': f"Mã {order.get('order_code') or gen_order_code(order['id'])}",
+        'actorId': None, 'createdAt': created, 'icon': 'fa-file-circle-plus',
+    }]
+    pay = (order.get('payment_status') or '').lower()
+    if pay in ('paid', 'success') or (tx and str(tx.get('status', '')).lower() in ('success', 'paid', 'completed')):
+        timeline.append({
+            'id': None, 'type': 'paid', 'title': 'Thanh toán thành công',
+            'description': f"{int(order.get('price') or 0):,}đ".replace(',', '.') + ' qua ví',
+            'actorId': None,
+            'createdAt': format_dt_vn((tx or {}).get('created_at') or order.get('created_at')),
+            'icon': 'fa-credit-card',
+        })
+    st = normalize_order_status(order.get('status'))
+    if st == 'processing':
+        timeline.append({
+            'id': None, 'type': 'processing', 'title': 'Đang xử lý',
+            'description': '', 'actorId': None,
+            'createdAt': format_dt_vn(order.get('updated_at') or order.get('created_at')),
+            'icon': 'fa-spinner',
+        })
+    if st == 'completed':
+        timeline.append({
+            'id': None, 'type': 'completed', 'title': 'Hoàn thành',
+            'description': 'Đơn hàng đã hoàn tất',
+            'actorId': None,
+            'createdAt': format_dt_vn(order.get('updated_at') or order.get('created_at')),
+            'icon': 'fa-circle-check',
+        })
+    if st == 'cancelled':
+        timeline.append({
+            'id': None, 'type': 'cancelled', 'title': 'Đã hủy',
+            'description': '', 'actorId': None,
+            'createdAt': format_dt_vn(order.get('updated_at') or order.get('created_at')),
+            'icon': 'fa-ban',
+        })
+    if st == 'refunded' or pay == 'refunded':
+        timeline.append({
+            'id': None, 'type': 'refunded', 'title': 'Đã hoàn tiền',
+            'description': '', 'actorId': None,
+            'createdAt': format_dt_vn(order.get('updated_at') or order.get('created_at')),
+            'icon': 'fa-rotate-left',
+        })
+    return timeline
+
+
 def fmt_order_row(row, extra=None):
     qty = int(row.get('quantity') or 1)
+    status = normalize_order_status(row.get('status'))
+    pay = (row.get('payment_status') or 'paid').lower()
+    if pay == 'success':
+        pay = 'paid'
     item = {
         'id': row['id'],
         'orderCode': row.get('order_code') or gen_order_code(row['id']),
         'product': row.get('product') or row.get('product_name'),
+        'productName': row.get('product') or row.get('product_name'),
         'productId': row.get('product_id'),
         'price': row['price'],
         'quantity': qty,
-        'status': row['status'],
+        'status': status,
+        'statusLabel': ORDER_STATUS_LABELS.get(status, status),
+        'paymentStatus': pay,
+        'paymentStatusLabel': PAYMENT_STATUS_LABELS.get(pay, pay),
+        'adminNote': row.get('admin_note') or '',
+        'note': row.get('admin_note') or '',
         'date': format_dt_vn(row.get('date') or row.get('created_at', '')),
         'createdAt': format_dt_vn(row.get('date') or row.get('created_at', '')),
+        'updatedAt': format_dt_vn(row.get('updated_at') or ''),
     }
     if extra:
         item.update(extra)
     return item
 
 
-def fetch_order_detail(conn, oid, user_view=False):
+def fetch_order_detail(conn, oid, user_view=False, admin_view=False):
     order = db.fetchone(conn, 'SELECT * FROM orders WHERE id = ?', (oid,))
     if not order:
         return None
@@ -220,10 +352,35 @@ def fetch_order_detail(conn, oid, user_view=False):
             "SELECT * FROM transactions WHERE user_id = ? AND type = 'purchase' AND description LIKE ? ORDER BY id DESC LIMIT 1",
             (order['user_id'], f"%{order['product_name']}%"))
     detail = fmt_order_row(order)
+    prod_icon = (product or {}).get('image') or 'fa-box'
+    prod_color = (product or {}).get('color') or 'blue'
+    # Ảnh SP: nếu image là URL/base64 thì trả imageUrl; nếu là FA icon thì icon
+    if prod_icon and (str(prod_icon).startswith('http') or str(prod_icon).startswith('data:') or '/' in str(prod_icon)):
+        detail['productImage'] = prod_icon
+        detail['productIcon'] = 'fa-box'
+    else:
+        detail['productImage'] = None
+        detail['productIcon'] = prod_icon if str(prod_icon).startswith('fa-') else f'fa-{prod_icon}' if prod_icon else 'fa-box'
+    detail['productColor'] = prod_color
     detail['productDesc'] = (product or {}).get('description', '')
     detail['contactMode'] = norm_contact_mode((product or {}).get('contact_mode'))
     detail.update(order_contact_fields(order))
-    detail['customer'] = {'fullName': user['name'], 'email': user['email']} if user else None
+    paid_amount = int(tx['amount']) if tx else int(order.get('price') or 0)
+    detail['paidAmount'] = paid_amount if (detail['paymentStatus'] in ('paid', 'refunded')) else 0
+    detail['buyerEmail'] = (user or {}).get('email') or ''
+    detail['customer'] = {
+        'fullName': (user or {}).get('name') or '',
+        'email': (user or {}).get('email') or '',
+    }
+    if admin_view and user:
+        detail['customer'] = {
+            'id': user['id'],
+            'userId': user['id'],
+            'fullName': user.get('name') or '',
+            'email': user.get('email') or '',
+            'balance': int(user.get('balance') or 0),
+            'role': user.get('role') or 'user',
+        }
     from services.support_notification_service import get_by_order_id, fmt_notification
     sn_row = db.fetchone(conn, 'SELECT * FROM support_notifications WHERE order_id = ?', (oid,))
     if sn_row:
@@ -244,7 +401,10 @@ def fetch_order_detail(conn, oid, user_view=False):
             'description': tx['description'],
             'status': tx['status'],
             'date': format_dt_vn(tx['created_at']),
+            'createdAt': format_dt_vn(tx['created_at']),
         }
+    detail['timeline'] = build_order_timeline(conn, order, tx)
+    detail['isAdminView'] = bool(admin_view)
     return detail
 
 
@@ -1190,7 +1350,9 @@ def user_transactions():
 def user_orders():
     conn = db.get_conn()
     rows = db.fetchall(conn,
-        'SELECT id,product_id,product_name AS product,price,quantity,status,order_code,created_at AS date FROM orders WHERE user_id = ? ORDER BY id DESC',
+        '''SELECT id,product_id,product_name AS product,price,quantity,status,payment_status,
+                  order_code,admin_note,created_at AS date,updated_at
+           FROM orders WHERE user_id = ? ORDER BY id DESC''',
         (request.user['id'],))
     from services.support_notification_service import map_by_order_ids
     support_map = map_by_order_ids(conn, [r['id'] for r in rows], request.user['id'])
@@ -1267,9 +1429,10 @@ def order_create():
 
     db.execute(conn, 'UPDATE users SET balance = balance - ? WHERE id = ?', (total_price, user['id']))
     db.execute(conn, 'UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?', (qty, pid, qty))
+    # Mua bằng ví → đã thanh toán; trạng thái đơn: completed (tài khoản digital)
     oid = db.insert_returning_id(conn,
-        'INSERT INTO orders (user_id,product_id,product_name,price,quantity,status,contact_email,contact_phone) VALUES (?,?,?,?,?,?,?,?)',
-        (user['id'], pid, product['name'], total_price, qty, 'completed', contact_email or None, contact_phone or None))
+        'INSERT INTO orders (user_id,product_id,product_name,price,quantity,status,payment_status,contact_email,contact_phone) VALUES (?,?,?,?,?,?,?,?,?)',
+        (user['id'], pid, product['name'], total_price, qty, 'completed', 'paid', contact_email or None, contact_phone or None))
     order_code = gen_order_code(oid)
     db.execute(conn, 'UPDATE orders SET order_code = ? WHERE id = ?', (order_code, oid))
     tx_desc = f"Mua {qty}x {product['name']}" if qty > 1 else f"Mua {product['name']}"
@@ -1278,6 +1441,12 @@ def order_create():
     txid = db.insert_returning_id(conn,
         'INSERT INTO transactions (user_id,type,amount,description,status,order_id) VALUES (?,?,?,?,?,?)',
         (user['id'], 'purchase', total_price, tx_desc, 'success', oid))
+    # Timeline: tạo → thanh toán → hoàn thành
+    append_order_event(conn, oid, 'created', description=f'Mã {order_code} · {qty}x {product["name"]}', actor_id=user['id'])
+    append_order_event(conn, oid, 'paid',
+                       description=f'Thanh toán {total_price:,}đ từ ví'.replace(',', '.'),
+                       actor_id=user['id'])
+    append_order_event(conn, oid, 'completed', description='Đơn hàng hoàn tất', actor_id=user['id'])
     from services.support_notification_service import create_for_order
     support_nid = create_for_order(conn, user, oid, product, contact_email, contact_phone,
                                    quantity=qty, total_price=total_price)
@@ -1303,16 +1472,18 @@ def order_create():
 @app.route('/api/orders/<int:oid>')
 @auth_required
 def order_detail(oid):
+    """User xem chi tiết đơn của mình (admin cũng được)."""
     conn = db.get_conn()
     order = db.fetchone(conn, 'SELECT user_id FROM orders WHERE id = ?', (oid,))
     if not order:
         db.close(conn)
         return jsonify({'error': 'Không tìm thấy đơn hàng.'}), 404
-    if order['user_id'] != request.user['id'] and request.user['role'] != 'admin':
+    is_owner = order['user_id'] == request.user['id']
+    is_admin = request.user['role'] == 'admin'
+    if not is_owner and not is_admin:
         db.close(conn)
-        return jsonify({'error': 'Không có quyền.'}), 403
-    user_view = order['user_id'] == request.user['id'] and request.user['role'] != 'admin'
-    detail = fetch_order_detail(conn, oid, user_view=user_view)
+        return jsonify({'error': 'Bạn không có quyền xem đơn hàng này.'}), 403
+    detail = fetch_order_detail(conn, oid, user_view=is_owner and not is_admin, admin_view=is_admin)
     db.close(conn)
     return jsonify({'order': detail})
 
@@ -2372,8 +2543,9 @@ def admin_user_delete(uid):
 def admin_orders():
     conn = db.get_conn()
     rows = db.fetchall(conn, '''
-        SELECT o.id,o.product_id,o.product_name AS product,o.price,o.quantity,o.status,o.order_code,o.created_at AS date,
-               o.contact_email,o.contact_phone,u.email,u.name AS customer_name
+        SELECT o.id,o.product_id,o.product_name AS product,o.price,o.quantity,o.status,o.payment_status,
+               o.order_code,o.admin_note,o.created_at AS date,o.updated_at,
+               o.contact_email,o.contact_phone,u.email,u.name AS customer_name,u.id AS user_id
         FROM orders o JOIN users u ON u.id=o.user_id ORDER BY o.id DESC''')
     from services.support_notification_service import map_by_order_ids, STATUS_LABELS
     support_map = map_by_order_ids(conn, [r['id'] for r in rows])
@@ -2381,6 +2553,7 @@ def admin_orders():
     for r in rows:
         item = fmt_order_row(r, {
             'email': r['email'], 'customerName': r['customer_name'],
+            'userId': r.get('user_id'),
             'contactEmail': r.get('contact_email') or '',
             'contactPhone': r.get('contact_phone') or '',
         })
@@ -2391,6 +2564,97 @@ def admin_orders():
         orders.append(item)
     db.close(conn)
     return jsonify({'orders': orders})
+
+
+@app.route('/api/admin/orders/<int:oid>')
+@admin_required
+def admin_order_detail(oid):
+    """Admin xem chi tiết mọi đơn (kèm khách + số dư)."""
+    conn = db.get_conn()
+    detail = fetch_order_detail(conn, oid, user_view=False, admin_view=True)
+    if not detail:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy đơn hàng.'}), 404
+    db.close(conn)
+    return jsonify({'order': detail})
+
+
+@app.route('/api/admin/orders/<int:oid>/status', methods=['PATCH', 'POST'])
+@admin_required
+def admin_order_status(oid):
+    """Admin cập nhật trạng thái đơn hàng."""
+    d = request.get_json() or {}
+    new_status = normalize_order_status(d.get('status') or d.get('orderStatus'))
+    if new_status not in ORDER_STATUSES:
+        return jsonify({
+            'error': f'Trạng thái không hợp lệ. Cho phép: {", ".join(ORDER_STATUSES)}'
+        }), 400
+    note = (d.get('note') or d.get('description') or '').strip()
+    conn = db.get_conn()
+    order = db.fetchone(conn, 'SELECT * FROM orders WHERE id = ?', (oid,))
+    if not order:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy đơn hàng.'}), 404
+    old = normalize_order_status(order.get('status'))
+    now_sql = db.sql_now()
+    # Cập nhật payment_status khi refunded / paid
+    pay = (order.get('payment_status') or 'paid').lower()
+    if new_status == 'refunded':
+        pay = 'refunded'
+    elif new_status == 'paid' and pay == 'pending':
+        pay = 'paid'
+    db.execute(conn,
+        f'UPDATE orders SET status = ?, payment_status = ?, updated_at = {now_sql} WHERE id = ?',
+        (new_status, pay, oid))
+    label = ORDER_STATUS_LABELS.get(new_status, new_status)
+    old_label = ORDER_STATUS_LABELS.get(old, old)
+    desc = note or f'{old_label} → {label}'
+    event_type = new_status if new_status in ORDER_EVENT_META else 'status'
+    append_order_event(conn, oid, event_type, title=ORDER_EVENT_META.get(event_type, {}).get('title') or label,
+                       description=desc, actor_id=request.user['id'])
+    # Đồng bộ support notification nếu có
+    sn = db.fetchone(conn, 'SELECT id FROM support_notifications WHERE order_id = ?', (oid,))
+    if sn:
+        from services.support_notification_service import update_status, VALID_STATUSES
+        # map order status → support status
+        support_map = {
+            'pending': 'pending', 'paid': 'pending', 'processing': 'in_progress',
+            'completed': 'completed', 'cancelled': 'cancelled', 'refunded': 'cancelled',
+        }
+        s_status = support_map.get(new_status)
+        if s_status in VALID_STATUSES:
+            try:
+                update_status(conn, sn['id'], s_status, request.user['id'])
+            except Exception as e:
+                print(f'[OrderStatus] support sync: {e}')
+    db.commit(conn)
+    detail = fetch_order_detail(conn, oid, admin_view=True)
+    db.close(conn)
+    return jsonify({'ok': True, 'order': detail, 'message': f'Đã cập nhật trạng thái: {label}'})
+
+
+@app.route('/api/admin/orders/<int:oid>/note', methods=['PATCH', 'POST'])
+@admin_required
+def admin_order_note(oid):
+    """Admin thêm / cập nhật ghi chú đơn hàng."""
+    d = request.get_json() or {}
+    note = (d.get('note') or d.get('adminNote') or d.get('admin_note') or '').strip()
+    conn = db.get_conn()
+    order = db.fetchone(conn, 'SELECT id FROM orders WHERE id = ?', (oid,))
+    if not order:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy đơn hàng.'}), 404
+    now_sql = db.sql_now()
+    db.execute(conn,
+        f'UPDATE orders SET admin_note = ?, updated_at = {now_sql} WHERE id = ?',
+        (note, oid))
+    if note:
+        append_order_event(conn, oid, 'note', title='Ghi chú admin',
+                           description=note[:500], actor_id=request.user['id'])
+    db.commit(conn)
+    detail = fetch_order_detail(conn, oid, admin_view=True)
+    db.close(conn)
+    return jsonify({'ok': True, 'order': detail, 'message': 'Đã lưu ghi chú.'})
 
 
 @app.route('/api/admin/orders/<int:oid>/fulfill', methods=['POST'])

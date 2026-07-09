@@ -119,6 +119,9 @@ def migrate(conn):
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN IF NOT EXISTS last_fingerprint TEXT')
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN IF NOT EXISTS trust_score INTEGER DEFAULT 100')
         _safe_alter(conn, 'ALTER TABLE orders ADD COLUMN IF NOT EXISTS quantity INTEGER DEFAULT 1')
+        _safe_alter(conn, 'ALTER TABLE orders ADD COLUMN IF NOT EXISTS admin_note TEXT')
+        _safe_alter(conn, "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'paid'")
+        _safe_alter(conn, 'ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP')
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN IF NOT EXISTS google_drive_refresh_token TEXT')
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN IF NOT EXISTS google_drive_email TEXT')
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN IF NOT EXISTS google_drive_connected_at TIMESTAMP')
@@ -143,12 +146,21 @@ def migrate(conn):
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN last_fingerprint TEXT')
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN trust_score INTEGER DEFAULT 100')
         _safe_alter(conn, 'ALTER TABLE orders ADD COLUMN quantity INTEGER DEFAULT 1')
+        _safe_alter(conn, 'ALTER TABLE orders ADD COLUMN admin_note TEXT')
+        _safe_alter(conn, "ALTER TABLE orders ADD COLUMN payment_status TEXT DEFAULT 'paid'")
+        _safe_alter(conn, 'ALTER TABLE orders ADD COLUMN updated_at TEXT')
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN google_drive_refresh_token TEXT')
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN google_drive_email TEXT')
         _safe_alter(conn, 'ALTER TABLE users ADD COLUMN google_drive_connected_at TEXT')
     execute(conn, 'UPDATE orders SET quantity = 1 WHERE quantity IS NULL OR quantity < 1')
-    for row in fetchall(conn, "SELECT id FROM orders WHERE order_code IS NULL OR order_code = ''"):
-        execute(conn, 'UPDATE orders SET order_code = ? WHERE id = ?', (f"DH{row['id']:06d}", row['id']))
+    execute(conn, "UPDATE orders SET payment_status = 'paid' WHERE payment_status IS NULL OR payment_status = ''")
+    for row in fetchall(conn, "SELECT id, order_code FROM orders"):
+        code = (row.get('order_code') or '').strip()
+        want = f"DH-{row['id']:06d}"
+        # Chuẩn hóa mã cũ DH000001 / rỗng → DH-000001
+        if not code or (code.startswith('DH') and not code.startswith('DH-')):
+            execute(conn, 'UPDATE orders SET order_code = ? WHERE id = ?', (want, row['id']))
+    _ensure_order_events_table(conn)
     _ensure_security_tables(conn)
     _ensure_social_tables(conn)
     if IS_PG:
@@ -163,6 +175,35 @@ def migrate(conn):
         _safe_alter(conn, "ALTER TABLE social_posts ADD COLUMN post_meta TEXT DEFAULT '{}'")
     _ensure_social_audience_table(conn)
     commit(conn)
+
+
+def _ensure_order_events_table(conn):
+    """Timeline / lịch sử trạng thái đơn hàng."""
+    n = sql_now()
+    if IS_PG:
+        execute(conn, '''CREATE TABLE IF NOT EXISTS order_events (
+            id SERIAL PRIMARY KEY,
+            order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+            event_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            actor_id INTEGER,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW())''')
+        execute(conn, 'CREATE INDEX IF NOT EXISTS idx_order_events_order ON order_events(order_id)')
+    else:
+        execute(conn, f'''CREATE TABLE IF NOT EXISTS order_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id INTEGER NOT NULL,
+            event_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            actor_id INTEGER,
+            created_at TEXT DEFAULT ({n}),
+            FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE)''')
+        try:
+            execute(conn, 'CREATE INDEX IF NOT EXISTS idx_order_events_order ON order_events(order_id)')
+        except Exception:
+            pass
 
 
 def _ensure_social_tables(conn):
