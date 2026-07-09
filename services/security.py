@@ -21,15 +21,24 @@ _ALERT_COOLDOWN = {}
 
 SEVERITY = {'low': 1, 'medium': 2, 'high': 3, 'critical': 4}
 
+# XSS/SQLi heuristics — pattern event handler phải có ranh giới (tránh dính SECONDS=, content=)
 DANGEROUS_PATTERNS = [
     re.compile(r'(\bUNION\b.*\bSELECT\b)', re.I),
     re.compile(r'(\bDROP\b.*\bTABLE\b)', re.I),
     re.compile(r'(\bINSERT\b.*\bINTO\b)', re.I),
     re.compile(r'(<script[\s>])', re.I),
     re.compile(r'(javascript:)', re.I),
-    re.compile(r'(on\w+\s*=)', re.I),
+    # Chỉ bắt HTML event handler: " onclick=", '<onload=', ";onerror="
+    # KHÔNG match SECONDS=, content=, confirmation= (false positive AI code editor)
+    re.compile(r'(?:^|[\s\"\'`<;/])on[a-z]{2,}\s*=', re.I),
     re.compile(r'(\.\./)', re.I),
 ]
+
+# Key chứa mã nguồn / file editor — không quét XSS event-handler (code hợp lệ có onclick=)
+CODE_CONTENT_KEYS = frozenset({
+    'openContent', 'open_content', 'content', 'code', 'source',
+    'fileContent', 'file_content', 'body',
+})
 
 SENSITIVE_PATHS = {
     '/api/auth/login': ('auth_login', SECURITY['rate_auth_per_min']),
@@ -229,7 +238,17 @@ SOCIAL_POST_MAX_BODY = 14_000_000
 SOCIAL_VIDEO_UPLOAD_MAX_BODY = 10 * 1024 * 1024
 
 
-def scan_payload(obj, depth=0, parent_key=None):
+# Endpoint admin code editor: cho phép openContent dài + không chặn mã nguồn hợp lệ
+CODE_EDITOR_API_PATHS = frozenset({
+    '/api/admin/code/ai/chat',
+    '/api/admin/code/file',
+    '/api/admin/code/apply',
+})
+MAX_CODE_STRING_LEN = 2_000_000
+CODE_EDITOR_MAX_BODY = 2_500_000
+
+
+def scan_payload(obj, depth=0, parent_key=None, code_mode=False):
     if depth > 8:
         raise ValueError('Payload quá sâu.')
     if isinstance(obj, dict):
@@ -237,17 +256,19 @@ def scan_payload(obj, depth=0, parent_key=None):
             if isinstance(k, str):
                 sanitize_string(k, max_len=120)
             key = k if isinstance(k, str) else None
-            scan_payload(v, depth + 1, parent_key=key)
+            scan_payload(v, depth + 1, parent_key=key, code_mode=code_mode)
     elif isinstance(obj, list):
         if len(obj) > 200:
             raise ValueError('Danh sách quá dài.')
         for item in obj:
-            scan_payload(item, depth + 1, parent_key=parent_key)
+            scan_payload(item, depth + 1, parent_key=parent_key, code_mode=code_mode)
     elif isinstance(obj, str):
         if parent_key in MEDIA_PAYLOAD_KEYS and obj.startswith('data:video/'):
             limit = MAX_VIDEO_STRING_LEN
         elif parent_key in MEDIA_PAYLOAD_KEYS:
             limit = MAX_IMAGE_STRING_LEN
+        elif code_mode and parent_key in CODE_CONTENT_KEYS:
+            limit = MAX_CODE_STRING_LEN
         else:
             limit = 20000
         if len(obj) > limit:
@@ -255,6 +276,12 @@ def scan_payload(obj, depth=0, parent_key=None):
         if parent_key in MEDIA_PAYLOAD_KEYS and (
             obj.startswith('data:image/') or obj.startswith('data:video/')
         ):
+            return
+        # Mã nguồn / openContent: chỉ chặn SQLi thô, không chặn onclick= / ../ trong path code
+        if code_mode and parent_key in CODE_CONTENT_KEYS:
+            for pat in DANGEROUS_PATTERNS[:3]:  # UNION/DROP/INSERT only
+                if pat.search(obj):
+                    raise ValueError('Payload chứa nội dung nguy hiểm.')
             return
         for pat in DANGEROUS_PATTERNS:
             if pat.search(obj):
@@ -276,12 +303,14 @@ def validate_request_body(req):
         max_bytes = max(max_bytes, SOCIAL_VIDEO_UPLOAD_MAX_BODY)
         if not req.is_json:
             return
+    if req.path in CODE_EDITOR_API_PATHS:
+        max_bytes = max(max_bytes, CODE_EDITOR_MAX_BODY)
     if cl > max_bytes:
         raise ValueError('Payload quá lớn.')
     if req.is_json:
         data = req.get_json(silent=True)
         if data is not None:
-            scan_payload(data)
+            scan_payload(data, code_mode=(req.path in CODE_EDITOR_API_PATHS))
 
 
 # ─── CSRF (double-submit: bootstrap token + header) ───
