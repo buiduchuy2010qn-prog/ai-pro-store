@@ -731,17 +731,42 @@
               <button type="button" data-atab="products" class="admin-tab px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white border border-slate-200 text-slate-600">Sản phẩm</button>
               <button type="button" data-atab="topups" class="admin-tab px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white border border-slate-200 text-slate-600">Nạp tiền <span id="admin-pending-badge" class="ml-1 bg-red-500 text-white text-[10px] px-1.5 rounded-full">0</span></button>
               <button type="button" data-atab="orders" class="admin-tab px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white border border-slate-200 text-slate-600">Đơn hàng / Cấp TK</button>
+              <button type="button" data-atab="order-notifs" class="admin-tab px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white border border-slate-200 text-slate-600">
+                Thông Báo Đơn Hàng
+                <span id="admin-order-notif-badge" class="ml-1 bg-red-500 text-white text-[10px] px-1.5 rounded-full hidden">0</span>
+              </button>
               <button type="button" data-atab="support" class="admin-tab px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white border border-slate-200 text-slate-600">Hỗ trợ nâng cấp <span id="admin-support-badge" class="ml-1 bg-amber-500 text-white text-[10px] px-1.5 rounded-full">0</span></button>
               <button type="button" data-atab="coupons" class="admin-tab px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white border border-slate-200 text-slate-600">Mã giảm giá</button>
               <button type="button" data-atab="transactions" class="admin-tab px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white border border-slate-200 text-slate-600">Giao dịch</button>
             </div>
           </div>
 
-          <div id="atab-dashboard" class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div class="bg-white rounded-2xl border border-slate-100 shadow-soft p-4"><p class="text-xs text-slate-500">Doanh thu</p><p id="stat-revenue" class="text-xl font-extrabold text-emerald-600 mt-1">0đ</p></div>
-            <div class="bg-white rounded-2xl border border-slate-100 shadow-soft p-4"><p class="text-xs text-slate-500">Đơn hàng</p><p id="stat-orders" class="text-xl font-extrabold mt-1">0</p></div>
-            <div class="bg-white rounded-2xl border border-slate-100 shadow-soft p-4"><p class="text-xs text-slate-500">Nạp chờ</p><p id="stat-pending" class="text-xl font-extrabold text-amber-500 mt-1">0</p></div>
-            <div class="bg-white rounded-2xl border border-slate-100 shadow-soft p-4"><p class="text-xs text-slate-500">Users</p><p id="stat-users" class="text-xl font-extrabold mt-1">0</p></div>
+          <div id="atab-dashboard" class="space-y-4">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div class="bg-white rounded-2xl border border-slate-100 shadow-soft p-4"><p class="text-xs text-slate-500">Doanh thu</p><p id="stat-revenue" class="text-xl font-extrabold text-emerald-600 mt-1">0đ</p></div>
+              <div class="bg-white rounded-2xl border border-slate-100 shadow-soft p-4"><p class="text-xs text-slate-500">Đơn hàng</p><p id="stat-orders" class="text-xl font-extrabold mt-1">0</p></div>
+              <div class="bg-white rounded-2xl border border-slate-100 shadow-soft p-4"><p class="text-xs text-slate-500">Nạp chờ</p><p id="stat-pending" class="text-xl font-extrabold text-amber-500 mt-1">0</p></div>
+              <div class="bg-white rounded-2xl border border-slate-100 shadow-soft p-4"><p class="text-xs text-slate-500">Users</p><p id="stat-users" class="text-xl font-extrabold mt-1">0</p></div>
+            </div>
+            <!-- Card: đơn mới cần xử lý -->
+            <button type="button" id="dash-new-orders-card"
+              class="w-full text-left bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl shadow-soft p-4 sm:p-5 hover:border-amber-300 transition group">
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                  <span class="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl shadow-sm shrink-0">
+                    <i class="fas fa-bell"></i>
+                  </span>
+                  <div class="min-w-0">
+                    <p class="font-bold text-slate-800 text-base">Đơn hàng mới cần xử lý</p>
+                    <p class="text-xs text-slate-500 mt-0.5">Đơn <code class="text-amber-700">pending</code> / <code class="text-amber-700">paid</code> chưa xử lý · bấm để xem thông báo</p>
+                  </div>
+                </div>
+                <div class="text-right shrink-0">
+                  <p id="stat-orders-need" class="text-3xl font-extrabold text-amber-600">0</p>
+                  <p class="text-[11px] text-slate-400 mt-0.5"><span id="stat-notif-unread">0</span> chưa xem</p>
+                </div>
+              </div>
+            </button>
           </div>
 
           <!-- Admin: Người dùng + lịch sử đăng nhập -->
@@ -820,6 +845,28 @@
               Bấm <strong>Cấp / nâng cấp</strong> trên mỗi đơn để điền <strong>Email</strong> và <strong>Số Zalo</strong> của khách, ghi chú tài khoản đã giao và cập nhật trạng thái hỗ trợ.
             </div>
             <div id="admin-orders-list" class="space-y-3"></div>
+          </div>
+
+          <!-- Thông báo đơn hàng cho admin -->
+          <div id="atab-order-notifs" class="hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div>
+                <h2 class="font-bold text-slate-800 text-lg"><i class="fas fa-bell text-amber-500 mr-2"></i>Thông Báo Đơn Hàng</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Mỗi khi khách mua thành công, hệ thống tạo thông báo để bạn không bỏ sót.</p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <select id="order-notif-filter" class="rounded-xl border border-slate-200 px-3 py-2 text-sm bg-white">
+                  <option value="">Tất cả</option>
+                  <option value="unread">Chưa xem</option>
+                  <option value="read">Đã xem</option>
+                  <option value="handled">Đã xử lý</option>
+                </select>
+                <button type="button" id="order-notif-refresh" class="px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold hover:bg-brand-50">
+                  <i class="fas fa-sync-alt mr-1"></i>Làm mới
+                </button>
+              </div>
+            </div>
+            <div id="admin-order-notifs-list" class="space-y-3"></div>
           </div>
 
           <div id="atab-support" class="hidden">
@@ -979,6 +1026,27 @@
   <!-- Toast -->
   <div id="toast" class="fixed bottom-6 right-4 left-4 sm:left-auto z-50 pointer-events-none toast-hide opacity-0">
     <div id="toast-inner" class="bg-slate-800 text-white px-5 py-3 rounded-xl shadow-lift text-sm max-w-sm mx-auto sm:mx-0"></div>
+  </div>
+
+  <!-- Admin: toast đơn hàng mới (có nút Xem) -->
+  <div id="admin-order-toast" class="fixed bottom-6 right-4 left-4 sm:left-auto sm:right-5 z-[60] hidden max-w-sm mx-auto sm:mx-0">
+    <div class="bg-white border border-amber-200 rounded-2xl shadow-lift p-4 flex gap-3 items-start">
+      <span class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
+        <i class="fas fa-bell"></i>
+      </span>
+      <div class="min-w-0 flex-1">
+        <p class="font-bold text-slate-800 text-sm">Có đơn hàng mới cần xử lý!</p>
+        <p id="admin-order-toast-msg" class="text-xs text-slate-500 mt-0.5 line-clamp-2"></p>
+        <div class="flex flex-wrap gap-2 mt-2">
+          <button type="button" id="admin-order-toast-view" class="btn-press px-3 py-1.5 rounded-lg bg-brand-600 text-white text-xs font-semibold">
+            Xem đơn hàng
+          </button>
+          <button type="button" id="admin-order-toast-dismiss" class="btn-press px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600">
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Global loading overlay (mua / nạp) -->
@@ -1490,6 +1558,8 @@
   function showAuth() {
     currentUser = null;
     window.currentUser = null;
+    stopAdminNotifPolling();
+    hideAdminOrderToast();
     setLoggedInUI(false);
     document.getElementById('auth-screen').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
@@ -1500,6 +1570,8 @@
     await refreshUser();
     setLoggedInUI(true);
     navigateTo('products');
+    if (currentUser?.role === 'admin') startAdminNotifPolling();
+    else stopAdminNotifPolling();
   }
   async function refreshUser() {
     const data = await api('/auth/me');
@@ -1510,6 +1582,8 @@
     const isAdmin = currentUser.role === 'admin';
     document.getElementById('admin-nav-btn').classList.toggle('hidden', !isAdmin);
     document.getElementById('admin-mobile-btn').classList.toggle('hidden', !isAdmin);
+    if (isAdmin) startAdminNotifPolling();
+    else stopAdminNotifPolling();
   }
 
   /* ─── Navigation ─── */
@@ -2088,9 +2162,17 @@
   }
 
   /* ─── Admin ─── */
+  /* Polling thông báo đơn mới (admin online) */
+  const ADMIN_NOTIF_POLL_MS = 15000;
+  let _adminNotifTimer = null;
+  let _adminNotifLastId = Number(localStorage.getItem('admin_notif_last_id') || 0) || 0;
+  const _adminNotifToasted = new Set(); // tránh toast trùng cùng 1 đơn / notif
+  let _adminToastOrderId = null;
+  let _adminToastNotifId = null;
+
   function switchAdminTab(tab) {
     adminTab = tab;
-    ['dashboard','users','products','topups','orders','support','coupons','transactions'].forEach(t => {
+    ['dashboard','users','products','topups','orders','order-notifs','support','coupons','transactions'].forEach(t => {
       document.getElementById('atab-' + t)?.classList.toggle('hidden', t !== tab);
     });
     document.querySelectorAll('.admin-tab').forEach(b => {
@@ -2102,10 +2184,228 @@
     if (tab === 'products') loadAdminProducts();
     if (tab === 'topups') loadAdminTopups();
     if (tab === 'orders') loadAdminOrders();
+    if (tab === 'order-notifs') loadAdminOrderNotifs();
     if (tab === 'support') loadAdminSupport();
     if (tab === 'coupons') renderAdminCoupons();
     if (tab === 'transactions') loadAdminTx();
   }
+
+  function updateAdminOrderNotifBadge(count) {
+    const el = document.getElementById('admin-order-notif-badge');
+    if (!el) return;
+    const n = Number(count) || 0;
+    el.textContent = n > 99 ? '99+' : String(n);
+    el.classList.toggle('hidden', n <= 0);
+  }
+
+  function playAdminNotifSound() {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(880, ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.12);
+      g.gain.setValueAtTime(0.0001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.28);
+      o.connect(g); g.connect(ctx.destination);
+      o.start();
+      o.stop(ctx.currentTime + 0.3);
+      setTimeout(() => { try { ctx.close(); } catch (_) {} }, 400);
+    } catch (_) {}
+  }
+
+  function showAdminOrderToast(notif) {
+    const key = 'n' + (notif.id || '') + '-o' + (notif.orderId || '');
+    if (_adminNotifToasted.has(key)) return;
+    _adminNotifToasted.add(key);
+    _adminToastOrderId = notif.orderId || null;
+    _adminToastNotifId = notif.id || null;
+    const el = document.getElementById('admin-order-toast');
+    const msg = document.getElementById('admin-order-toast-msg');
+    if (msg) {
+      msg.textContent = [
+        notif.orderCode || ('#' + notif.orderId),
+        notif.customerName || notif.customerEmail,
+        notif.productName,
+      ].filter(Boolean).join(' · ');
+    }
+    if (el) {
+      el.classList.remove('hidden');
+      clearTimeout(showAdminOrderToast._t);
+      showAdminOrderToast._t = setTimeout(() => hideAdminOrderToast(), 12000);
+    }
+    playAdminNotifSound();
+  }
+  function hideAdminOrderToast() {
+    document.getElementById('admin-order-toast')?.classList.add('hidden');
+  }
+
+  let _adminNotifBootstrapped = false;
+
+  async function pollAdminOrderNotifs(silent) {
+    if (!currentUser || currentUser.role !== 'admin') return;
+    try {
+      const data = await api('/admin/notifications/unread-count');
+      updateAdminOrderNotifBadge(data.unreadCount ?? data.count ?? 0);
+      const needEl = document.getElementById('stat-orders-need');
+      const unreadEl = document.getElementById('stat-notif-unread');
+      if (needEl && data.ordersNeedProcess != null) needEl.textContent = data.ordersNeedProcess;
+      if (unreadEl && (data.unreadCount != null || data.count != null)) {
+        unreadEl.textContent = data.unreadCount ?? data.count ?? 0;
+      }
+      // Lần đầu: neo lastId ở notif mới nhất, không spam toast cũ
+      if (!_adminNotifBootstrapped) {
+        _adminNotifBootstrapped = true;
+        const boot = await api('/admin/notifications?limit=1');
+        const newest = (boot.notifications || [])[0];
+        if (newest?.id && newest.id > _adminNotifLastId) {
+          _adminNotifLastId = newest.id;
+          localStorage.setItem('admin_notif_last_id', String(_adminNotifLastId));
+        }
+        return;
+      }
+      // Lấy notif mới hơn lastId
+      const { notifications } = await api('/admin/notifications?afterId=' + _adminNotifLastId + '&limit=10');
+      const list = notifications || [];
+      for (const n of list) {
+        if (n.id > _adminNotifLastId) {
+          _adminNotifLastId = n.id;
+          localStorage.setItem('admin_notif_last_id', String(_adminNotifLastId));
+        }
+        if (n.status === 'unread') showAdminOrderToast(n);
+      }
+      if (!silent && adminTab === 'order-notifs') loadAdminOrderNotifs();
+    } catch (_) { /* im lặng khi poll */ }
+  }
+
+  function startAdminNotifPolling() {
+    stopAdminNotifPolling();
+    if (!currentUser || currentUser.role !== 'admin') return;
+    _adminNotifBootstrapped = false;
+    pollAdminOrderNotifs(true);
+    _adminNotifTimer = setInterval(() => pollAdminOrderNotifs(true), ADMIN_NOTIF_POLL_MS);
+  }
+  function stopAdminNotifPolling() {
+    if (_adminNotifTimer) {
+      clearInterval(_adminNotifTimer);
+      _adminNotifTimer = null;
+    }
+  }
+
+  function notifStatusBadge(st) {
+    const map = {
+      unread:  { label: 'Chưa xem',  cls: 'bg-red-50 text-red-600 border-red-200' },
+      read:    { label: 'Đã xem',    cls: 'bg-sky-50 text-sky-700 border-sky-200' },
+      handled: { label: 'Đã xử lý',  cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    };
+    const c = map[st] || { label: st || '—', cls: 'bg-slate-50 text-slate-600 border-slate-100' };
+    return `<span class="inline-flex items-center text-[11px] px-2.5 py-0.5 rounded-full font-semibold border ${c.cls}">${escapeHtml(c.label)}</span>`;
+  }
+
+  async function loadAdminOrderNotifs() {
+    const list = document.getElementById('admin-order-notifs-list');
+    if (!list) return;
+    const status = document.getElementById('order-notif-filter')?.value || '';
+    list.innerHTML = '<p class="text-center text-slate-400 py-8 text-sm">Đang tải…</p>';
+    try {
+      const qs = status ? ('?status=' + encodeURIComponent(status)) : '';
+      const data = await api('/admin/notifications' + qs);
+      updateAdminOrderNotifBadge(data.unreadCount || 0);
+      const items = data.notifications || [];
+      if (!items.length) {
+        list.innerHTML = emptyState('Không có thông báo.', 'fa-bell-slash');
+        return;
+      }
+      list.innerHTML = items.map(n => {
+        const unreadCls = n.status === 'unread' ? 'border-amber-200 bg-amber-50/40' : 'border-slate-100 bg-white';
+        return `
+        <article class="rounded-2xl border ${unreadCls} shadow-soft p-4 sm:p-5">
+          <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
+            <div class="flex flex-wrap items-center gap-2 min-w-0">
+              <span class="font-bold text-slate-800 tracking-tight">${escapeHtml(n.orderCode || ('#' + n.orderId))}</span>
+              ${notifStatusBadge(n.status)}
+              ${n.orderStatus ? badge(n.orderStatus) : ''}
+            </div>
+            <span class="text-[11px] text-slate-400 whitespace-nowrap">${escapeHtml(n.createdAt || '')}</span>
+          </div>
+          <p class="text-sm font-semibold text-amber-800 mb-2">
+            <i class="fas fa-exclamation-circle mr-1"></i>${escapeHtml(n.title || 'Có đơn hàng mới cần xử lý')}
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-slate-600 mb-3">
+            <div><span class="text-slate-400">Khách:</span> <strong>${escapeHtml(n.customerName || '—')}</strong></div>
+            <div class="truncate" title="${escapeHtml(n.customerEmail || '')}"><span class="text-slate-400">Email:</span> ${escapeHtml(n.customerEmail || '—')}</div>
+            <div class="sm:col-span-2"><span class="text-slate-400">Sản phẩm:</span> <strong>${escapeHtml(n.productName || '—')}</strong>
+              · <span class="font-bold text-emerald-600">${formatMoney(n.productPrice || 0)}</span></div>
+          </div>
+          <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
+            <button type="button" onclick="viewAdminNotifOrder(${n.id}, ${n.orderId || 0})"
+              class="btn-press inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold">
+              <i class="fas fa-eye"></i> Xem chi tiết đơn
+            </button>
+            ${n.status === 'unread' ? `
+            <button type="button" onclick="markAdminNotifRead(${n.id})"
+              class="btn-press inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50">
+              <i class="fas fa-envelope-open"></i> Đánh dấu đã xem
+            </button>` : ''}
+            ${n.status !== 'handled' ? `
+            <button type="button" onclick="markAdminNotifHandled(${n.id})"
+              class="btn-press inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100">
+              <i class="fas fa-check-double"></i> Đánh dấu đã xử lý
+            </button>` : `
+            <span class="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium px-2 py-2">
+              <i class="fas fa-check-circle"></i> Đã xử lý ${n.handledAt ? '· ' + escapeHtml(n.handledAt) : ''}
+            </span>`}
+          </div>
+        </article>`;
+      }).join('');
+    } catch (e) {
+      list.innerHTML = emptyState(e.message, 'fa-exclamation-circle');
+    }
+  }
+
+  async function viewAdminNotifOrder(notifId, orderId) {
+    try {
+      if (notifId) {
+        await api('/admin/notifications/' + notifId + '/read', { method: 'PATCH', body: '{}' });
+        updateAdminOrderNotifBadge(
+          Math.max(0, (Number(document.getElementById('admin-order-notif-badge')?.textContent) || 1) - 1)
+        );
+      }
+    } catch (_) {}
+    if (orderId) openOrderDetail(orderId, true);
+    if (adminTab === 'order-notifs') loadAdminOrderNotifs();
+    pollAdminOrderNotifs(true);
+  }
+
+  async function markAdminNotifRead(nid) {
+    try {
+      const r = await api('/admin/notifications/' + nid + '/read', { method: 'PATCH', body: '{}' });
+      toast('Đã đánh dấu đã xem');
+      updateAdminOrderNotifBadge(r.unreadCount ?? 0);
+      loadAdminOrderNotifs();
+    } catch (e) { toast(e.message, true); }
+  }
+
+  async function markAdminNotifHandled(nid) {
+    if (!confirm('Đánh dấu đã xử lý? Đơn hàng sẽ chuyển sang «Đang xử lý».')) return;
+    try {
+      const r = await api('/admin/notifications/' + nid + '/handled', {
+        method: 'PATCH',
+        body: JSON.stringify({ orderStatus: 'processing' }),
+      });
+      toast(r.message || 'Đã đánh dấu xử lý xong');
+      updateAdminOrderNotifBadge(r.unreadCount ?? 0);
+      loadAdminOrderNotifs();
+      pollAdminOrderNotifs(true);
+    } catch (e) { toast(e.message, true); }
+  }
+  window.viewAdminNotifOrder = viewAdminNotifOrder;
+  window.markAdminNotifRead = markAdminNotifRead;
+  window.markAdminNotifHandled = markAdminNotifHandled;
 
   let adminSelectedUserId = null;
   async function loadAdminUsers() {
@@ -2174,6 +2474,17 @@
       document.getElementById('stat-pending').textContent = d.pendingTopups || 0;
       document.getElementById('stat-users').textContent = d.totalUsers || 0;
       document.getElementById('admin-pending-badge').textContent = d.pendingTopups || 0;
+      const need = d.ordersNeedProcess ?? 0;
+      const unread = d.adminUnreadNotifications ?? 0;
+      const needEl = document.getElementById('stat-orders-need');
+      const unreadEl = document.getElementById('stat-notif-unread');
+      if (needEl) needEl.textContent = need;
+      if (unreadEl) unreadEl.textContent = unread;
+      updateAdminOrderNotifBadge(unread);
+      if (d.pendingSupportNotifications != null) {
+        const sb = document.getElementById('admin-support-badge');
+        if (sb) sb.textContent = d.pendingSupportNotifications;
+      }
     } catch (e) { toast(e.message, true); }
   }
   const CONTACT_MODE_LABELS = {
@@ -2559,6 +2870,20 @@
     };
     document.querySelectorAll('.admin-tab').forEach(b => {
       b.onclick = () => switchAdminTab(b.dataset.atab);
+    });
+    document.getElementById('dash-new-orders-card')?.addEventListener('click', () => {
+      switchAdminTab('order-notifs');
+    });
+    document.getElementById('order-notif-filter')?.addEventListener('change', loadAdminOrderNotifs);
+    document.getElementById('order-notif-refresh')?.addEventListener('click', loadAdminOrderNotifs);
+    document.getElementById('admin-order-toast-dismiss')?.addEventListener('click', hideAdminOrderToast);
+    document.getElementById('admin-order-toast-view')?.addEventListener('click', async () => {
+      hideAdminOrderToast();
+      const oid = _adminToastOrderId;
+      const nid = _adminToastNotifId;
+      if (currentView !== 'admin') navigateTo('admin');
+      switchAdminTab('order-notifs');
+      if (nid || oid) await viewAdminNotifOrder(nid, oid);
     });
     document.getElementById('prod-form').onsubmit = async (e) => {
       e.preventDefault();

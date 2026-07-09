@@ -1429,10 +1429,10 @@ def order_create():
 
     db.execute(conn, 'UPDATE users SET balance = balance - ? WHERE id = ?', (total_price, user['id']))
     db.execute(conn, 'UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?', (qty, pid, qty))
-    # Mua bằng ví → đã thanh toán; trạng thái đơn: completed (tài khoản digital)
+    # Mua bằng ví → payment paid; đơn ở trạng thái paid để admin xử lý / cấp TK
     oid = db.insert_returning_id(conn,
         'INSERT INTO orders (user_id,product_id,product_name,price,quantity,status,payment_status,contact_email,contact_phone) VALUES (?,?,?,?,?,?,?,?,?)',
-        (user['id'], pid, product['name'], total_price, qty, 'completed', 'paid', contact_email or None, contact_phone or None))
+        (user['id'], pid, product['name'], total_price, qty, 'paid', 'paid', contact_email or None, contact_phone or None))
     order_code = gen_order_code(oid)
     db.execute(conn, 'UPDATE orders SET order_code = ? WHERE id = ?', (order_code, oid))
     tx_desc = f"Mua {qty}x {product['name']}" if qty > 1 else f"Mua {product['name']}"
@@ -1441,15 +1441,20 @@ def order_create():
     txid = db.insert_returning_id(conn,
         'INSERT INTO transactions (user_id,type,amount,description,status,order_id) VALUES (?,?,?,?,?,?)',
         (user['id'], 'purchase', total_price, tx_desc, 'success', oid))
-    # Timeline: tạo → thanh toán → hoàn thành
+    # Timeline: tạo → thanh toán (chờ admin xử lý)
     append_order_event(conn, oid, 'created', description=f'Mã {order_code} · {qty}x {product["name"]}', actor_id=user['id'])
     append_order_event(conn, oid, 'paid',
                        description=f'Thanh toán {total_price:,}đ từ ví'.replace(',', '.'),
                        actor_id=user['id'])
-    append_order_event(conn, oid, 'completed', description='Đơn hàng hoàn tất', actor_id=user['id'])
     from services.support_notification_service import create_for_order
     support_nid = create_for_order(conn, user, oid, product, contact_email, contact_phone,
                                    quantity=qty, total_price=total_price)
+    # Thông báo admin: đơn mới cần xử lý
+    from services.admin_notification_service import create_for_order as create_admin_notif
+    admin_notif_id = create_admin_notif(
+        conn, user, oid, product,
+        order_code=order_code, total_price=total_price, order_status='paid',
+    )
     db.commit(conn)
     bal = db.fetchone(conn, 'SELECT balance FROM users WHERE id = ?', (user['id'],))['balance']
     db.close(conn)
@@ -1457,8 +1462,9 @@ def order_create():
     return jsonify({
         'orderId': oid, 'orderCode': order_code, 'transactionCode': gen_tx_code(txid),
         'product': product['name'], 'price': total_price, 'quantity': qty, 'unitPrice': unit_price,
-        'balance': bal,
+        'balance': bal, 'status': 'paid',
         'supportNotificationId': support_nid,
+        'adminNotificationId': admin_notif_id,
         'support': {
             'id': support_nid,
             'orderId': oid,
@@ -2330,6 +2336,10 @@ def admin_dashboard():
     deco_outfits = db.fetchone(conn, 'SELECT COUNT(*) AS c FROM decoration_saved_outfits')['c']
     from services.support_notification_service import pending_count
     pending_support = pending_count(conn)
+    from services import admin_notification_service as an
+    admin_unread = an.unread_count(conn)
+    admin_unhandled = an.unhandled_count(conn)
+    orders_need_process = an.pending_orders_count(conn)
     db.close(conn)
     return jsonify({
         'revenue': int(product_rev),
@@ -2347,6 +2357,9 @@ def admin_dashboard():
         } for r in top_items],
         'totalOrders': int(orders), 'pendingTopups': int(pending),
         'pendingSupportNotifications': int(pending_support),
+        'adminUnreadNotifications': int(admin_unread),
+        'adminUnhandledNotifications': int(admin_unhandled),
+        'ordersNeedProcess': int(orders_need_process),
         'totalUsers': int(users), 'bankTransactions': int(bank_tx),
     })
 
@@ -2368,6 +2381,113 @@ def admin_support_unread_count():
     count = pending_count(conn)
     db.close(conn)
     return jsonify({'count': count})
+
+
+# ─── Admin: Thông báo đơn hàng ───
+@app.route('/api/admin/notifications')
+@admin_required
+def admin_notifications_list():
+    from services import admin_notification_service as an
+    status = (request.args.get('status') or '').strip().lower()
+    try:
+        limit = min(200, max(1, int(request.args.get('limit') or 100)))
+    except (TypeError, ValueError):
+        limit = 100
+    after_id = request.args.get('afterId') or request.args.get('after_id')
+    conn = db.get_conn()
+    if after_id is not None and str(after_id).strip() != '':
+        try:
+            aid = int(after_id)
+        except (TypeError, ValueError):
+            aid = 0
+        items = an.latest_unread(conn, after_id=aid, limit=limit, format_dt=format_dt_vn)
+        unread = an.unread_count(conn)
+        unhandled = an.unhandled_count(conn)
+        db.close(conn)
+        return jsonify({
+            'notifications': items,
+            'unreadCount': unread,
+            'unhandledCount': unhandled,
+        })
+    items = an.list_notifications(
+        conn, status=status if status in an.VALID_STATUSES else None,
+        limit=limit, format_dt=format_dt_vn,
+    )
+    unread = an.unread_count(conn)
+    unhandled = an.unhandled_count(conn)
+    need = an.pending_orders_count(conn)
+    db.close(conn)
+    return jsonify({
+        'notifications': items,
+        'unreadCount': unread,
+        'unhandledCount': unhandled,
+        'ordersNeedProcess': need,
+    })
+
+
+@app.route('/api/admin/notifications/unread-count')
+@admin_required
+def admin_notifications_unread_count():
+    from services import admin_notification_service as an
+    conn = db.get_conn()
+    unread = an.unread_count(conn)
+    unhandled = an.unhandled_count(conn)
+    need = an.pending_orders_count(conn)
+    db.close(conn)
+    return jsonify({
+        'count': unread,
+        'unreadCount': unread,
+        'unhandledCount': unhandled,
+        'ordersNeedProcess': need,
+    })
+
+
+@app.route('/api/admin/notifications/<int:nid>/read', methods=['PATCH', 'POST'])
+@admin_required
+def admin_notification_read(nid):
+    from services import admin_notification_service as an
+    conn = db.get_conn()
+    item = an.mark_read(conn, nid, format_dt=format_dt_vn)
+    if not item:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy thông báo.'}), 404
+    db.commit(conn)
+    unread = an.unread_count(conn)
+    db.close(conn)
+    return jsonify({'ok': True, 'notification': item, 'unreadCount': unread})
+
+
+@app.route('/api/admin/notifications/<int:nid>/handled', methods=['PATCH', 'POST'])
+@admin_required
+def admin_notification_handled(nid):
+    from services import admin_notification_service as an
+    d = request.get_json(silent=True) or {}
+    # Mặc định: chuyển đơn sang processing khi admin đánh dấu đã xử lý
+    order_status = (d.get('orderStatus') or d.get('status') or 'processing').strip().lower()
+    if order_status not in ORDER_STATUSES:
+        order_status = 'processing'
+    conn = db.get_conn()
+    item, oid = an.mark_handled(conn, nid, order_status=order_status, format_dt=format_dt_vn)
+    if not item:
+        db.close(conn)
+        return jsonify({'error': 'Không tìm thấy thông báo.'}), 404
+    if oid:
+        append_order_event(
+            conn, oid,
+            order_status if order_status in ORDER_EVENT_META else 'status',
+            title=ORDER_EVENT_META.get(order_status, {}).get('title') or f'Cập nhật: {order_status}',
+            description='Admin đánh dấu đã xử lý thông báo đơn hàng',
+            actor_id=request.user['id'],
+        )
+    db.commit(conn)
+    unread = an.unread_count(conn)
+    unhandled = an.unhandled_count(conn)
+    db.close(conn)
+    return jsonify({
+        'ok': True, 'notification': item,
+        'unreadCount': unread, 'unhandledCount': unhandled,
+        'message': 'Đã đánh dấu xử lý xong.',
+    })
 
 
 @app.route('/api/admin/support-notifications')

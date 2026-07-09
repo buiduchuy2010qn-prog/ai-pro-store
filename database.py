@@ -161,6 +161,7 @@ def migrate(conn):
         if not code or (code.startswith('DH') and not code.startswith('DH-')):
             execute(conn, 'UPDATE orders SET order_code = ? WHERE id = ?', (want, row['id']))
     _ensure_order_events_table(conn)
+    _ensure_admin_notifications_table(conn)
     _ensure_security_tables(conn)
     _ensure_social_tables(conn)
     if IS_PG:
@@ -202,6 +203,54 @@ def _ensure_order_events_table(conn):
             FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE)''')
         try:
             execute(conn, 'CREATE INDEX IF NOT EXISTS idx_order_events_order ON order_events(order_id)')
+        except Exception:
+            pass
+
+
+def _ensure_admin_notifications_table(conn):
+    """Thông báo đơn hàng mới cho admin."""
+    n = sql_now()
+    if IS_PG:
+        execute(conn, '''CREATE TABLE IF NOT EXISTS admin_notifications (
+            id SERIAL PRIMARY KEY,
+            type TEXT NOT NULL DEFAULT 'new_order',
+            order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+            user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            customer_name TEXT DEFAULT '',
+            customer_email TEXT DEFAULT '',
+            product_name TEXT DEFAULT '',
+            product_price INTEGER DEFAULT 0,
+            order_status TEXT DEFAULT 'paid',
+            title TEXT NOT NULL DEFAULT 'Có đơn hàng mới cần xử lý',
+            message TEXT NOT NULL DEFAULT 'Có đơn hàng mới cần xử lý',
+            status TEXT NOT NULL DEFAULT 'unread',
+            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            read_at TIMESTAMP,
+            handled_at TIMESTAMP)''')
+        execute(conn, 'CREATE INDEX IF NOT EXISTS idx_admin_notif_status ON admin_notifications(status)')
+        execute(conn, 'CREATE INDEX IF NOT EXISTS idx_admin_notif_order ON admin_notifications(order_id)')
+    else:
+        execute(conn, f'''CREATE TABLE IF NOT EXISTS admin_notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type TEXT NOT NULL DEFAULT 'new_order',
+            order_id INTEGER,
+            user_id INTEGER,
+            customer_name TEXT DEFAULT '',
+            customer_email TEXT DEFAULT '',
+            product_name TEXT DEFAULT '',
+            product_price INTEGER DEFAULT 0,
+            order_status TEXT DEFAULT 'paid',
+            title TEXT NOT NULL DEFAULT 'Có đơn hàng mới cần xử lý',
+            message TEXT NOT NULL DEFAULT 'Có đơn hàng mới cần xử lý',
+            status TEXT NOT NULL DEFAULT 'unread',
+            created_at TEXT DEFAULT ({n}),
+            read_at TEXT,
+            handled_at TEXT,
+            FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL)''')
+        try:
+            execute(conn, 'CREATE INDEX IF NOT EXISTS idx_admin_notif_status ON admin_notifications(status)')
+            execute(conn, 'CREATE INDEX IF NOT EXISTS idx_admin_notif_order ON admin_notifications(order_id)')
         except Exception:
             pass
 
