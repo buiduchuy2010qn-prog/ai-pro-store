@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Pro Store — Tài khoản AI Premium</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta name="app-ui" content="v5-anim-60fps">
+  <meta name="app-ui" content="v6-falling-particles">
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -249,20 +249,66 @@
       overflow: hidden;
     }
 
+    /* ── Falling particles canvas (dưới UI, không chặn click) ── */
+    #fx-fall {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      /* Lớp nền mờ phía dưới canvas để gradient nhẹ */
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(59, 130, 246, 0.12), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(147, 197, 253, 0.15), transparent 50%),
+        #f8fafc;
+    }
+    .app-layer {
+      position: relative;
+      z-index: 1;
+    }
+    /* Login form entrance */
+    .login-card-enter {
+      animation: loginEnter .55s cubic-bezier(.22, 1, .36, 1) both;
+    }
+    @keyframes loginEnter {
+      from { opacity: 0; transform: translate3d(0, 28px, 0) scale(.96); }
+      to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
       }
+      #fx-fall { display: none !important; }
     }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen antialiased">
 
+  <!--
+    ════════════════════════════════════════════════════════════════
+    HIỆU ỨNG NỀN RƠI (Falling Background) — Tuyết / Hoa đào
+    ────────────────────────────────────────────────────────────────
+    Canvas #fx-fall: full-screen, z-index:0, pointer-events:none
+    Cấu hình trong JS: FALL_FX = { mode, count, speed, ... }
+    mode: 'snow' | 'sakura'
+    ════════════════════════════════════════════════════════════════
+  -->
+  <canvas id="fx-fall" aria-hidden="true"></canvas>
+
   <!-- ═══════════════════ AUTH ═══════════════════ -->
-  <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-brand-50 via-white to-slate-100">
-    <div class="w-full max-w-md bg-white rounded-2xl shadow-card border border-slate-100 overflow-hidden fade-in">
+  <div id="auth-screen" class="app-layer min-h-screen flex items-center justify-center p-4">
+    <div class="login-card-enter w-full max-w-md bg-white/90 backdrop-blur-md rounded-2xl shadow-card border border-slate-100/80 overflow-hidden">
       <div class="px-8 pt-10 pb-6 text-center bg-gradient-to-br from-brand-600 to-brand-700 text-white">
         <div class="inline-flex w-14 h-14 rounded-2xl bg-white/15 items-center justify-center mb-3">
           <i class="fas fa-bolt text-2xl"></i>
@@ -327,10 +373,10 @@
   </div>
 
   <!-- ═══════════════════ APP ═══════════════════ -->
-  <div id="app" class="hidden min-h-screen flex flex-col">
+  <div id="app" class="app-layer hidden min-h-screen flex flex-col">
 
     <!-- Header -->
-    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-100 shadow-soft">
+    <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-100/80 shadow-soft">
       <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
         <button type="button" id="brand-btn" class="flex items-center gap-2.5 shrink-0">
           <span class="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center shadow-soft">
@@ -1820,10 +1866,171 @@
   window.openFulfillFromSupport = openFulfillFromSupport;
 
   /* ─── Boot ─── */
+  /* ═══════════════════════════════════════════════════════════════
+     HIỆU ỨNG TUYẾT / HOA ĐÀO RƠI — Falling Particles (Canvas 2D)
+     ───────────────────────────────────────────────────────────────
+     TÙY CHỈNH NHANH tại FALL_FX bên dưới:
+       mode   : 'sakura' | 'snow'   — hoa đào hoặc tuyết
+       count  : số hạt (40–120 khuyến nghị, mobile tự giảm)
+       speed  : hệ số tốc độ rơi (0.4 – 1.5)
+       wind   : gió ngang (âm = trái, dương = phải)
+       opacity: độ mờ hạt (0.15 – 0.85)
+     Không chặn click (canvas pointer-events: none, z-index: 0)
+     ═══════════════════════════════════════════════════════════════ */
+  const FALL_FX = {
+    mode: 'sakura',   // 'sakura' = hoa đào | 'snow' = tuyết
+    count: 55,        // số lượng hạt desktop
+    speed: 0.85,      // tốc độ rơi
+    wind: 0.35,       // gió ngang
+    opacity: 0.55,    // độ trong suốt
+    mobileCount: 28,  // số hạt mobile (mượt hơn)
+  };
+
+  function initFallingFx() {
+    const canvas = document.getElementById('fx-fall');
+    if (!canvas) return;
+    // Tôn trọng prefers-reduced-motion
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      canvas.style.display = 'none';
+      return;
+    }
+
+    const ctx = canvas.getContext('2d', { alpha: true });
+    let w = 0, h = 0, dpr = 1, particles = [], raf = 0, running = true;
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2); // cap 2x — 60fps
+      w = window.innerWidth;
+      h = window.innerHeight;
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      spawn();
+    }
+
+    function isMobile() {
+      return w < 768 || (navigator.maxTouchPoints > 0 && w < 1024);
+    }
+
+    function spawn() {
+      const n = isMobile() ? FALL_FX.mobileCount : FALL_FX.count;
+      particles = [];
+      for (let i = 0; i < n; i++) {
+        particles.push(makeParticle(true));
+      }
+    }
+
+    function makeParticle(randomY) {
+      const size = FALL_FX.mode === 'snow'
+        ? 1.5 + Math.random() * 3.5
+        : 4 + Math.random() * 7;
+      return {
+        x: Math.random() * w,
+        y: randomY ? Math.random() * h : -20 - Math.random() * 40,
+        r: size,
+        // tốc độ dọc / ngang
+        vy: (0.4 + Math.random() * 1.1) * FALL_FX.speed,
+        vx: (Math.random() - 0.5) * FALL_FX.wind * 1.2,
+        rot: Math.random() * Math.PI * 2,
+        vr: (Math.random() - 0.5) * 0.04, // xoay cánh hoa
+        sway: Math.random() * Math.PI * 2,
+        swaySpd: 0.01 + Math.random() * 0.02,
+        op: (0.35 + Math.random() * 0.65) * FALL_FX.opacity,
+        // petal shape variation
+        petal: Math.floor(Math.random() * 3),
+      };
+    }
+
+    /** Vẽ 1 cánh hoa đào (sakura petal) */
+    function drawSakura(p) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.globalAlpha = p.op;
+      const s = p.r;
+      // gradient hồng nhạt → pink
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, s);
+      g.addColorStop(0, 'rgba(255, 214, 232, 0.95)');
+      g.addColorStop(0.55, 'rgba(251, 182, 206, 0.85)');
+      g.addColorStop(1, 'rgba(244, 114, 182, 0.35)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      // ellipse cánh hoa
+      ctx.ellipse(0, 0, s * 0.55, s, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // gân giữa cánh
+      ctx.strokeStyle = 'rgba(244, 114, 182, 0.25)';
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(0, -s * 0.7);
+      ctx.lineTo(0, s * 0.7);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    /** Vẽ bông tuyết tròn mềm */
+    function drawSnow(p) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.globalAlpha = p.op;
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, p.r);
+      g.addColorStop(0, 'rgba(255,255,255,0.95)');
+      g.addColorStop(0.6, 'rgba(191, 219, 254, 0.7)');
+      g.addColorStop(1, 'rgba(147, 197, 253, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, 0, p.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function tick() {
+      if (!running) return;
+      ctx.clearRect(0, 0, w, h);
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.sway += p.swaySpd;
+        p.x += p.vx + Math.sin(p.sway) * 0.35;
+        p.y += p.vy;
+        p.rot += p.vr;
+
+        if (p.y > h + 24 || p.x < -30 || p.x > w + 30) {
+          particles[i] = makeParticle(false);
+          continue;
+        }
+        if (FALL_FX.mode === 'snow') drawSnow(p);
+        else drawSakura(p);
+      }
+      raf = requestAnimationFrame(tick);
+    }
+
+    // Pause khi tab ẩn — tiết kiệm CPU
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        running = false;
+        cancelAnimationFrame(raf);
+      } else {
+        running = true;
+        raf = requestAnimationFrame(tick);
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      clearTimeout(resize._t);
+      resize._t = setTimeout(resize, 120);
+    });
+
+    resize();
+    raf = requestAnimationFrame(tick);
+  }
+
   async function boot() {
     bindEvents();
     attachRipple(document);
     updateCartBadge(false);
+    initFallingFx(); // nền rơi login + dashboard
     if (window.SecurityClient) {
       await SecurityClient.bootstrap();
       await SecurityClient.renderTurnstile('turnstile-login');
