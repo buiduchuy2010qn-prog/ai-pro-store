@@ -288,6 +288,14 @@ def scan_payload(obj, depth=0, parent_key=None, code_mode=False):
                 raise ValueError('Payload chứa nội dung nguy hiểm.')
 
 
+def _is_code_editor_path(path: str) -> bool:
+    """Match /api/admin/code/* kể cả trailing slash hoặc prefix proxy."""
+    p = (path or '').rstrip('/')
+    if p in CODE_EDITOR_API_PATHS:
+        return True
+    return p.startswith('/api/admin/code/')
+
+
 def validate_request_body(req):
     if req.method not in WRITE_METHODS:
         return
@@ -303,14 +311,22 @@ def validate_request_body(req):
         max_bytes = max(max_bytes, SOCIAL_VIDEO_UPLOAD_MAX_BODY)
         if not req.is_json:
             return
-    if req.path in CODE_EDITOR_API_PATHS:
+    code_editor = _is_code_editor_path(req.path)
+    if code_editor:
         max_bytes = max(max_bytes, CODE_EDITOR_MAX_BODY)
     if cl > max_bytes:
         raise ValueError('Payload quá lớn.')
     if req.is_json:
         data = req.get_json(silent=True)
         if data is not None:
-            scan_payload(data, code_mode=(req.path in CODE_EDITOR_API_PATHS))
+            # Code editor gửi full file source — không quét XSS/SQLi trên openContent
+            # (false positive: SECONDS=, onclick= trong HTML, ../ trong path, v.v.)
+            if code_editor:
+                msg = data.get('message') if isinstance(data, dict) else None
+                if isinstance(msg, str) and len(msg) > 8000:
+                    raise ValueError('Tin nhắn quá dài.')
+                return
+            scan_payload(data, code_mode=False)
 
 
 # ─── CSRF (double-submit: bootstrap token + header) ───

@@ -374,6 +374,8 @@ def health():
             'hsts': SECURITY.get('force_hsts') or True,
             'jwtExpireHours': SECURITY['jwt_expire_hours'],
             'lockoutAttempts': SECURITY['lockout_attempts'],
+            # Bump khi sửa WAF — client/admin kiểm tra deploy
+            'payloadScan': 'v2-code-editor-skip',
         },
     }
     try:
