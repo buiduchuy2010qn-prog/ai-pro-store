@@ -62,6 +62,50 @@ def fmt_user(row):
     }
 
 
+def _parse_device_from_ua(ua: str) -> str:
+    """Tóm tắt thiết bị / trình duyệt từ User-Agent (hiển thị hồ sơ bảo mật)."""
+    s = (ua or '').strip()
+    if not s:
+        return 'Không xác định'
+    browser = 'Trình duyệt khác'
+    if 'Edg/' in s or 'Edge/' in s:
+        browser = 'Microsoft Edge'
+    elif 'Chrome/' in s and 'Chromium' not in s:
+        browser = 'Chrome'
+    elif 'Firefox/' in s:
+        browser = 'Firefox'
+    elif 'Safari/' in s and 'Chrome' not in s:
+        browser = 'Safari'
+    elif 'OPR/' in s or 'Opera' in s:
+        browser = 'Opera'
+    device = 'Desktop'
+    if re.search(r'iPhone|iPad|iPod', s, re.I):
+        device = 'iOS'
+    elif re.search(r'Android', s, re.I):
+        device = 'Android'
+    elif re.search(r'Mobile|webOS', s, re.I):
+        device = 'Mobile'
+    elif re.search(r'Windows', s, re.I):
+        device = 'Windows'
+    elif re.search(r'Mac OS|Macintosh', s, re.I):
+        device = 'macOS'
+    elif re.search(r'Linux', s, re.I):
+        device = 'Linux'
+    return f'{device} · {browser}'
+
+
+def _location_from_ip(ip: str) -> str:
+    """Địa điểm ước tính (không gọi API ngoài) — hiển thị an toàn."""
+    ip = (ip or '').strip()
+    if not ip or ip in ('0.0.0.0', '::1', '127.0.0.1'):
+        return 'Mạng cục bộ'
+    if ip.startswith(('10.', '192.168.', '172.16.', '172.17.', '172.18.', '172.19.',
+                      '172.2', '172.30.', '172.31.')):
+        return 'Mạng nội bộ (LAN)'
+    # Không geo-IP bên thứ ba — admin/user vẫn thấy IP trong cột riêng
+    return 'Internet (theo IP)'
+
+
 def fmt_product(row):
     return {
         'id': row['id'], 'name': row['name'], 'desc': row['description'],
@@ -754,13 +798,17 @@ def auth_sessions():
     current_jti = (getattr(request, 'jwt_payload', None) or {}).get('jti')
     sessions = []
     for r in rows:
+        ua = r['user_agent'] or ''
         sessions.append({
             'jti': r['jti'],
-            'ip': r['ip'],
-            'userAgent': (r['user_agent'] or '')[:80],
+            'ip': r['ip'] or '',
+            'userAgent': ua[:200],
+            'device': _parse_device_from_ua(ua),
+            'location': _location_from_ip(r['ip']),
             'current': r['jti'] == current_jti,
             'revoked': bool(r.get('revoked')),
-            'lastSeen': str(r['last_seen']),
+            'lastSeen': str(r['last_seen'] or ''),
+            'createdAt': str(r['created_at'] or r['last_seen'] or ''),
         })
     return jsonify({'sessions': sessions})
 

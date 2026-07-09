@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Pro Store — Tài khoản AI Premium</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta name="app-ui" content="v6-falling-particles">
+  <meta name="app-ui" content="v7-security-profile">
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -391,6 +391,7 @@
           <button type="button" data-view="wallet" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-500 hover:text-brand-700 transition">Ví</button>
           <button type="button" data-view="orders" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-500 hover:text-brand-700 transition">Đơn hàng</button>
           <button type="button" data-view="transactions" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-500 hover:text-brand-700 transition">Lịch sử</button>
+          <button type="button" data-view="profile" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-500 hover:text-brand-700 transition">Hồ sơ</button>
           <button type="button" data-view="admin" id="admin-nav-btn" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold text-brand-700 hidden">Admin</button>
         </nav>
 
@@ -399,10 +400,10 @@
             <i class="fas fa-shopping-cart text-slate-600"></i>
             <span id="cart-badge" class="hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-600 text-white text-[10px] font-bold flex items-center justify-center">0</span>
           </button>
-          <div class="text-right hidden sm:block pl-2 border-l border-slate-100">
+          <button type="button" data-view="profile" class="text-right hidden sm:block pl-2 border-l border-slate-100 hover:opacity-80 transition" title="Hồ sơ bảo mật">
             <div id="user-name" class="text-sm font-semibold text-slate-800 leading-tight"></div>
             <div id="header-balance" class="text-xs font-bold text-brand-600"></div>
-          </div>
+          </button>
           <button type="button" id="logout-btn" class="p-2.5 rounded-xl border border-slate-200 text-slate-500 hover:text-red-500 hover:border-red-200 transition" title="Đăng xuất">
             <i class="fas fa-sign-out-alt"></i>
           </button>
@@ -417,6 +418,7 @@
         <button type="button" data-view="wallet" class="mobile-nav w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-brand-50">Ví tiền</button>
         <button type="button" data-view="orders" class="mobile-nav w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-brand-50">Đơn hàng</button>
         <button type="button" data-view="transactions" class="mobile-nav w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-brand-50">Lịch sử</button>
+        <button type="button" data-view="profile" class="mobile-nav w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-brand-50">Hồ sơ bảo mật</button>
         <button type="button" data-view="admin" id="admin-mobile-btn" class="mobile-nav w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium text-brand-700 hidden">Admin</button>
       </div>
     </header>
@@ -547,6 +549,61 @@
       <section id="view-transactions" class="hidden fade-in">
         <h1 class="text-2xl font-extrabold mb-6 text-slate-800"><i class="fas fa-history text-brand-600 mr-2"></i>Lịch sử giao dịch</h1>
         <div id="tx-list" class="space-y-3"></div>
+      </section>
+
+      <!-- ── Security Profile (Hồ sơ bảo mật) ── -->
+      <section id="view-profile" class="hidden fade-in">
+        <h1 class="text-2xl font-extrabold mb-2 text-slate-800">
+          <i class="fas fa-shield-alt text-brand-600 mr-2"></i>Hồ sơ bảo mật
+        </h1>
+        <p class="text-sm text-slate-500 mb-6">Thông tin tài khoản và lịch sử đăng nhập trên các thiết bị.</p>
+
+        <!-- User summary cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-soft p-5">
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Họ tên</p>
+            <p id="profile-name" class="mt-1 font-bold text-slate-800 truncate">—</p>
+          </div>
+          <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-soft p-5">
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Email</p>
+            <p id="profile-email" class="mt-1 font-bold text-slate-800 truncate text-sm">—</p>
+          </div>
+          <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-soft p-5">
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Số dư ví</p>
+            <p id="profile-balance" class="mt-1 font-extrabold text-brand-700">—</p>
+          </div>
+        </div>
+
+        <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-100 shadow-soft overflow-hidden">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-slate-100">
+            <div>
+              <h2 class="font-bold text-slate-800"><i class="fas fa-laptop mr-2 text-brand-500"></i>Lịch sử đăng nhập</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Các phiên đăng nhập gần đây (thiết bị / IP)</p>
+            </div>
+            <button type="button" id="revoke-sessions-btn"
+              class="btn-press px-4 py-2 rounded-xl border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50">
+              <i class="fas fa-sign-out-alt mr-1"></i>Đăng xuất thiết bị khác
+            </button>
+          </div>
+
+          <!-- Table: Thời gian | Địa điểm | Thiết bị | IP -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left min-w-[640px]">
+              <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th class="px-5 py-3 font-semibold">Thời gian</th>
+                  <th class="px-5 py-3 font-semibold">Địa điểm</th>
+                  <th class="px-5 py-3 font-semibold">Thiết bị / Trình duyệt</th>
+                  <th class="px-5 py-3 font-semibold">Địa chỉ IP</th>
+                  <th class="px-5 py-3 font-semibold">Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody id="login-history-body" class="divide-y divide-slate-50">
+                <tr><td colspan="5" class="px-5 py-10 text-center text-slate-400">Đang tải…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <!-- ── Admin ── -->
@@ -993,6 +1050,7 @@
     if (view === 'wallet') renderWallet();
     if (view === 'orders') loadOrders();
     if (view === 'transactions') loadTransactions();
+    if (view === 'profile') loadProfile();
     if (view === 'admin') loadAdmin();
     if (location.hash !== '#' + view) location.hash = view;
     attachRipple(el);
@@ -1273,6 +1331,54 @@
     } finally {
       setBtnLoading(btn, false);
       hideLoader();
+    }
+  }
+
+  /* ─── Security Profile + Login history table ─── */
+  async function loadProfile() {
+    await refreshUser();
+    document.getElementById('profile-name').textContent = currentUser.fullName || currentUser.name || '—';
+    document.getElementById('profile-email').textContent = currentUser.email || '—';
+    document.getElementById('profile-balance').textContent = formatMoney(currentUser.balance);
+    const tbody = document.getElementById('login-history-body');
+    tbody.innerHTML = `<tr><td colspan="5" class="px-5 py-8 text-center text-slate-400">
+      <span class="inline-block w-5 h-5 border-2 border-brand-200 border-t-brand-600 rounded-full animate-spin"></span>
+    </td></tr>`;
+    try {
+      const { sessions } = await api('/auth/sessions');
+      if (!sessions?.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="px-5 py-10 text-center text-slate-400">Chưa có lịch sử đăng nhập.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = sessions.map(s => {
+        const time = s.lastSeen || s.createdAt || '—';
+        const loc = s.location || '—';
+        const device = s.device || s.userAgent || '—';
+        const ip = s.ip || '—';
+        const st = s.revoked
+          ? '<span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">Đã thu hồi</span>'
+          : s.current
+            ? '<span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold border border-emerald-100">Phiên hiện tại</span>'
+            : '<span class="text-[11px] px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 font-semibold border border-brand-100">Hoạt động</span>';
+        return `
+        <tr class="hover:bg-brand-50/40 transition-colors duration-200">
+          <td class="px-5 py-3.5 text-slate-700 whitespace-nowrap">
+            <i class="far fa-clock text-brand-400 mr-1.5"></i>${escapeHtml(time)}
+          </td>
+          <td class="px-5 py-3.5 text-slate-600">
+            <i class="fas fa-map-marker-alt text-brand-400 mr-1.5"></i>${escapeHtml(loc)}
+          </td>
+          <td class="px-5 py-3.5 text-slate-700 max-w-[220px]">
+            <div class="truncate" title="${escapeHtml(s.userAgent || device)}">
+              <i class="fas fa-laptop text-brand-400 mr-1.5"></i>${escapeHtml(device)}
+            </div>
+          </td>
+          <td class="px-5 py-3.5 font-mono text-xs text-slate-600">${escapeHtml(ip)}</td>
+          <td class="px-5 py-3.5">${st}</td>
+        </tr>`;
+      }).join('');
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="5" class="px-5 py-8 text-center text-red-500 text-sm">${escapeHtml(e.message)}</td></tr>`;
     }
   }
 
@@ -1755,6 +1861,14 @@
     document.getElementById('apply-coupon-btn').onclick = applyCoupon;
     document.getElementById('checkout-btn').onclick = checkout;
     document.getElementById('create-topup-btn').onclick = createTopup;
+    document.getElementById('revoke-sessions-btn')?.addEventListener('click', async () => {
+      if (!confirm('Đăng xuất tất cả thiết bị khác? Phiên hiện tại vẫn giữ.')) return;
+      try {
+        await api('/auth/sessions/revoke-all', { method: 'POST' });
+        toast('Đã đăng xuất các thiết bị khác');
+        loadProfile();
+      } catch (e) { toast(e.message, true); }
+    });
     document.querySelectorAll('.quick-amt').forEach(b => {
       b.onclick = () => { document.getElementById('topup-amount').value = b.dataset.amount; };
     });
@@ -2040,7 +2154,7 @@
       try {
         await showApp();
         const h = (location.hash || '').replace('#', '');
-        if (['products','cart','wallet','orders','transactions','admin'].includes(h)) navigateTo(h);
+        if (['products','cart','wallet','orders','transactions','profile','admin'].includes(h)) navigateTo(h);
         return;
       } catch (_) {
         setToken(null);
